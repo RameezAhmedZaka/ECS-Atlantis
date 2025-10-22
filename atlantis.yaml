@@ -54,23 +54,15 @@
 #         - apply
 
 
-version: 3
-
 projects:
   - name: applications
     dir: applications/*
-    # plan_requirements: [approved]
-    # apply_requirements: [approved]
-    # import_requirements: [approved]     
     autoplan:
-      when_modified: ["application/network/*.tf", "application/network/config/*.tfvars", "application/network/env/**/*.conf"]
+      when_modified: ["applications/**/*.tf", "applications/**/config/*.tfvars", "applications/**/env/**/*.conf"]
       enabled: true
-    # apply_requirements: [approved, mergeable]
 
   - name: databases
-    dir: databases/*          
+    dir: databases/*
     autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
+      when_modified: ["databases/**/*.tf", "databases/**/config/*.tfvars", "databases/**/env/**/*.conf"]
       enabled: true
-    # apply_requirements: [approved, mergeable]
-
