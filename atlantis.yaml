@@ -28,6 +28,32 @@
 #         - apply
 
 
+# version: 3
+
+# projects:
+#   - name: applications
+#     dir: applications/*      
+#     autoplan:
+#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
+#       enabled: true
+
+#   - name: databases
+#     dir: databases/*          
+#     autoplan:
+#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
+#       enabled: true
+
+# workflows:
+#   default:
+#     plan:
+#       steps:
+#         - init
+#         - plan
+#     apply:
+#       steps:
+#         - apply
+
+
 version: 3
 
 projects:
@@ -36,21 +62,12 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
       enabled: true
+    apply_requirements: [approved, mergeable]
 
   - name: databases
     dir: databases/*          
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
       enabled: true
-
-workflows:
-  default:
-    plan:
-      steps:
-        - init
-        - plan
-    apply:
-      steps:
-        - apply
-
+    apply_requirements: [approved, mergeable]
 
