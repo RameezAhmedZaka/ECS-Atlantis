@@ -58,11 +58,11 @@ projects:
   - name: application
     dir: application/*
     autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "modules/**/*.tfvars"]
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
 
-  - name: databases
-    dir: databases/*
-    autoplan:
-      when_modified: ["databases/**/*.tf", "databases/**/config/*.tfvars", "databases/**/env/**/*.conf"]
-      enabled: true
+  # - name: databases
+  #   dir: databases/*
+  #   autoplan:
+  #     when_modified: ["databases/**/*.tf", "databases/**/config/*.tfvars", "databases/**/env/**/*.conf"]
+  #     enabled: true

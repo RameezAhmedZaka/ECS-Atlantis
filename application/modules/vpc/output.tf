@@ -4,7 +4,7 @@ output "vpc_id" {
 }
 
 output "private_subnet_ids" {
-  # description = "Private subnet IDs"
+  description = "Private subnet IDs"
   value       = aws_subnet.privatesubnet[*].id
 }
 
