@@ -53,7 +53,7 @@
 #       steps:
 #         - apply
 
-
+version: 3
 projects:
   - name: applications
     dir: applications/*
