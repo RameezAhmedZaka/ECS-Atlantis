@@ -55,8 +55,6 @@
 
 
 version: 3
-apply_requirements: [approved]
-allowed_overrides: [workflow]
 
 projects:
   - name: applications
