@@ -59,9 +59,9 @@ version: 3
 projects:
   - name: applications
     dir: applications/*
-    plan_requirements: [approved]
+    # plan_requirements: [approved]
     # apply_requirements: [approved]
-    import_requirements: [approved]     
+    # import_requirements: [approved]     
     autoplan:
       when_modified: ["application/network/*.tf", "application/network/config/*.tfvars", "application/network/env/**/*.conf"]
       enabled: true
