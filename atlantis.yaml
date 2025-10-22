@@ -60,7 +60,6 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "modules/**/*.tfvars"]
       enabled: true
-    workflow: default
 
   - name: databases
     dir: databases/*
