@@ -39,7 +39,7 @@ atlantis_ecs = {
   containerPort                 = 4141
   hostPort                      = 4141
   atlantis_port                 = 4141
-  atlantis_repo_allowlist       = "github.com/organization-name/*" #specify repo to allowlist
+  atlantis_repo_allowlist       = "github.com/RameezAhmedZaka/*" #specify repo to allowlist
   atlantis_markdown_format      = "true"
   log_driver                    = "awslogs"
   log_stream_prefix             = "ecs"
@@ -57,17 +57,17 @@ atlantis_ecs = {
 }
 
 github_repositories_webhook = {
-  github_owner               = "owner-of-gihub-app" 
-  github_app_key_base64      = "github_app_key_base64" #base64 pemfile
-  github_app_pem_file        = "github_app_key_plain" #pem-file-as-it-is
+  github_owner               = "RameezAhmedZaka" 
+  github_app_key_base64      = "/github/app/key_base64"
+  github_app_pem_file        = "/github/app/pem_file" 
   create                     = true
-  repositories               = ["terraform"] # repositories to add webhook to
-  webhook_secret             = "test"
+  repositories               = ["ECS-Atlantis"] # repositories to add webhook to
+  webhook_secret             = "supersecret123"
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "github-app-id"
-  github_app_installation_id = "github-installation-id"
+  github_app_id              = "2153632"
+  github_app_installation_id = "91111286"
 }
 
 lb = {
@@ -101,5 +101,5 @@ atlantis_api_gateway = {
   to_port                  = 4141
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
-  api_id                   = "v0iztfg8vl"
+  api_id                   = "28anxlkkc3"
 }
