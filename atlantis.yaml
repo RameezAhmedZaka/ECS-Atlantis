@@ -55,19 +55,24 @@
 
 
 version: 3
+apply_requirements: [approved]
+allowed_overrides: [workflow]
 
 projects:
   - name: applications
-    dir: applications/*      
+    dir: applications/*
+    plan_requirements: [approved]
+    apply_requirements: [approved]
+    import_requirements: [approved]     
     autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
+      when_modified: ["application/network/*.tf", "application/network/config/*.tfvars", "application/network/env/**/*.conf"]
       enabled: true
-    apply_requirements: [approved, mergeable]
+    # apply_requirements: [approved, mergeable]
 
   - name: databases
     dir: databases/*          
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
       enabled: true
-    apply_requirements: [approved, mergeable]
+    # apply_requirements: [approved, mergeable]
 
