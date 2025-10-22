@@ -6,7 +6,7 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
       enabled: true
-    workflow: default
+    # workflow: default
     apply_requirements: [approved, mergeable]
 
   - name: databases
@@ -14,7 +14,7 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
       enabled: true
-    workflow: default
+    # workflow: default
     apply_requirements: [approved, mergeable]
 
 workflows:
