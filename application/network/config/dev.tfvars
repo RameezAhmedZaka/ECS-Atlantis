@@ -18,7 +18,7 @@ vpc = {
   route_table_public          = "k8s-public-rt"
   route_table_private         = "k8s-private-rt"
   cidr_block                  = "0.0.0.0/0"
-  eip_name                    = "nat-eip"
+  eip_name                    = "k8s-eip"
 }
 
 # ------------------------------
