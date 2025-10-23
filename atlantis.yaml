@@ -56,7 +56,7 @@
 version: 3
 projects:
   - name: application
-    dir: application/*
+    dir: application
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true

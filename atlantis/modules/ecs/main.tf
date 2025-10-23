@@ -88,6 +88,10 @@ resource "aws_ecs_task_definition" "backend_task" {
           value = var.atlantis_markdown_format
         },
         {
+        name : "ATLANTIS_REPO_CONFIG_JSON",
+        value : jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
+        },
+        {
           name  = "ATLANTIS_GH_APP_ID"
           value = var.github_app_id
         }
