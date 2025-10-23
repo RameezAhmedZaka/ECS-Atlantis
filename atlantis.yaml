@@ -253,16 +253,17 @@ workflows:
     plan:
       steps:
         - run:
-            name: Plan changed apps
-            env:
-              ENV: $ATLANTIS_WORKSPACE
+            shell: bash
             command: |
               set -euo pipefail
+              
+              # Export ENV from Atlantis workspace
+              ENV="${ATLANTIS_WORKSPACE:-staging}"
 
               # Collect unique application dirs that changed
               mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-                | grep -E "^application/[^/]+/" || true \
-                | awk -F/ "{print \$1\"/\"\$2}" \
+                | grep -E "^applications/[^/]+/" || true \
+                | awk -F/ '{print $1"/"$2}' \
                 | sort -u)
 
               if [[ ${#dirs[@]} -eq 0 ]]; then
