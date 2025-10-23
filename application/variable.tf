@@ -3,10 +3,10 @@ variable "aws_region" {
   type        = string
 }
 
-variable "profile" {
-  description = "Profile"
-  type        = string
-}
+# variable "profile" {
+#   description = "Profile"
+#   type        = string
+# }
 
 variable "vpc" {
   description = "VPC configuration"
