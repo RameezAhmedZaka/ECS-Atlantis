@@ -254,7 +254,7 @@ workflows:
             shell: bash
             command: |
               set -euo pipefail
-              ENV="${ATLANTIS_WORKSPACE}"
+              ENV="${ATLANTIS_WORKSPACE:-staging}"
 
               # Collect changed application directories
               mapfile -t dirs < <(
@@ -276,10 +276,8 @@ workflows:
                 if [[ -f "$d/main.tf" ]]; then
                   echo "=== Initializing $d ($ENV) ==="
 
-                  # Initialize Terraform with backend config
                   terraform -chdir="$d" init -upgrade -backend-config="env/${ENV}/${ENV}.conf"
 
-                  # Select or create workspace
                   terraform -chdir="$d" workspace select "$ENV" \
                     || terraform -chdir="$d" workspace new "$ENV"
 
@@ -296,7 +294,7 @@ workflows:
 
                   echo "$PLAN" >> "$PLANLIST"
                 else
-                  echo "Skipping it $d (no main.tf)"
+                  echo "Skipping $d (no main.tf)"
                 fi
               done
 
@@ -320,3 +318,4 @@ workflows:
                 echo "=== Applying $PLAN ==="
                 terraform apply -input=false "$PLAN"
               done < "$PLANLIST"
+
