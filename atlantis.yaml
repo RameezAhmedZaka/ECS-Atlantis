@@ -63,6 +63,7 @@ projects:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
     apply_requirements: [] 
+    destroy_requirements: []
 workflows:
   custom-run:
     plan:
@@ -76,10 +77,7 @@ workflows:
       steps:
         - apply:
             extra_args: ["-var-file=./config/dev.tfvars"]
-    destroy:
-      steps:
-        - destroy:
-            extra_args: ["-var-file=config/dev.tfvars"]
+
 
 
 
