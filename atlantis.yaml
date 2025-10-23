@@ -20,9 +20,17 @@ workflows:
       steps:
         - run: |
             echo "🔍 Detecting changed application subdirectories..."
-            git fetch origin $BASE_BRANCH --depth=1 >/dev/null 2>&1 || true
+            # Find base commit safely
+            BASE_COMMIT=$(git merge-base HEAD $(git rev-parse --abbrev-ref HEAD@{upstream} 2>/dev/null || echo HEAD~1))
 
-            CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD || true)
+            # Fall back if merge-base fails
+            if [ -z "$BASE_COMMIT" ]; then
+              echo "⚠️ Could not determine base commit, using HEAD~1"
+              BASE_COMMIT="HEAD~1"
+            fi
+
+            CHANGED_FILES=$(git diff --name-only $BASE_COMMIT...HEAD || true)
+
             echo "🧾 Changed files:"
             echo "$CHANGED_FILES"
 
@@ -43,7 +51,6 @@ workflows:
 
               echo "📦 Running Terraform plan for $dir"
               terraform plan -input=false -no-color -var-file="./config/production.tfvars" -out=tfplan
-
               cd - > /dev/null
             done
 
@@ -51,9 +58,12 @@ workflows:
       steps:
         - run: |
             echo "🔍 Detecting changed application subdirectories..."
-            git fetch origin $BASE_BRANCH --depth=1 >/dev/null 2>&1 || true
+            BASE_COMMIT=$(git merge-base HEAD $(git rev-parse --abbrev-ref HEAD@{upstream} 2>/dev/null || echo HEAD~1))
+            if [ -z "$BASE_COMMIT" ]; then
+              BASE_COMMIT="HEAD~1"
+            fi
 
-            CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD || true)
+            CHANGED_FILES=$(git diff --name-only $BASE_COMMIT...HEAD || true)
             echo "🧾 Changed files:"
             echo "$CHANGED_FILES"
 
