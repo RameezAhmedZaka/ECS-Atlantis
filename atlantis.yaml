@@ -53,32 +53,79 @@
 #       steps:
 #         - apply
 
+# version: 3
+# projects:
+#   - name: application
+#     dir: application
+#     workflow: custom-run
+
+#     autoplan:
+#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
+#       enabled: true
+#     apply_requirements: [] 
+# workflows:
+#   custom-run:
+#     plan:
+#       steps:
+        # - run:
+        #     command: ls
+#         - init
+#         - plan:
+#             extra_args: ["-var-file=./config/dev.tfvars"]
+#     apply:
+#       steps:
+#         - apply:
+#             extra_args: ["-var-file=./config/dev.tfvars"]
+
+
 version: 3
 projects:
-  - name: application
-    dir: application
-    workflow: custom-run
-
-    autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
-      enabled: true
+  - name: application-dev-deploy
+    dir: application/*
+    workspace: development
+    workflow: dev-workflow
     apply_requirements: [] 
+    autoplan:
+      when_modified: ["**/*.tf", "*.tf", "config/stage.tfvars", "config/production.tfvars"] 
+      enabled: true
+
+  - name: application-prod-deploy
+    dir: application/*
+    workspace: production
+    workflow: prod-workflow 
+    apply_requirements: []
+    autoplan:
+      when_modified: ["**/*.tf", "*.tf", "config/stage.tfvars", "config/production.tfvars"] 
+      enabled: true
+
 workflows:
-  custom-run:
+  dev-workflow:
     plan:
       steps:
         - run:
             command: ls
-        - init
-        - plan:
-            extra_args: ["-var-file=./config/dev.tfvars"]
+        - init:
+            extra_args: ["-backend-config=env/staging/stage.conf"]
+        - plan: 
+            extra_args: ["-var-file=./config/stage.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=./config/dev.tfvars"]
+            extra_args: ["-var-file=./config/stage.tfvars"]
 
-
-
+  prod-workflow:
+    plan:
+      steps:
+        - run:
+            command: ls      
+        - init:
+            extra_args: ["-backend-config=env/production/prod.conf"]
+        - plan: 
+            extra_args: ["-var-file=./config/production.tfvars"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["-var-file=./config/production.tfvars"]
 
 
   # - name: databases
