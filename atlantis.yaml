@@ -60,7 +60,21 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
+workflows:
+  default:
+    plan:
+      steps:
+        - init
+        - plan:
+            extra_args: ["-var-file=config/dev.tfvars"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["-var-file=config/dev.tfvars"]
 
+
+
+            
   # - name: databases
   #   dir: databases/*
   #   autoplan:
