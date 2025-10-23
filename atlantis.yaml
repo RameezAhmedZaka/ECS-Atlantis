@@ -253,9 +253,9 @@ workflows:
     plan:
       steps:
         - run: |
-            bash -lc '
+            '
             set -euo pipefail
-            ENV="${workspace}"
+            ENV="${ATLANTIS_WORKSPACE}"
 
             # Collect unique application dirs that changed (e.g., application/callisto-catalog)
             mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
@@ -303,9 +303,9 @@ workflows:
     apply:
       steps:
         - run: |
-            bash -lc '
+            '
             set -euo pipefail
-            ENV="${workspace}"
+            ENV="${ATLANTIS_WORKSPACE}"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 
             if [[ ! -s "$PLANLIST" ]]; then
