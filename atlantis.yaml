@@ -62,6 +62,7 @@ projects:
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
+    apply_requirements: [] 
 workflows:
   custom-run:
     plan:
