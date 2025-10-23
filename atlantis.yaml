@@ -85,7 +85,6 @@ projects:
     workspace: development
     workflow: dev-workflow
     apply_requirements: []
-    plan_requirements: [] 
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]  #"custom_file"
       enabled: true
@@ -95,7 +94,6 @@ projects:
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
-    plan_requirements: [] 
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
       enabled: true
