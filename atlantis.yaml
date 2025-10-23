@@ -103,29 +103,64 @@ workflows:
     plan:
       steps:
         - run:
-            command: ls
-        - init:
-            extra_args: ["-backend-config=env/staging/stage.conf"]
-        - plan: 
-            extra_args: ["-var-file=./config/stage.tfvars"]
+            command: |
+              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+                terraform -chdir=$d init -backend-config="$d/env/staging/stage.conf"
+                terraform -chdir=$d plan -var-file="$d/config/stage.tfvars"
+              done
     apply:
       steps:
-        - apply:
-            extra_args: ["-var-file=./config/stage.tfvars"]
+        - run:
+            command: |
+              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+                terraform -chdir=$d apply -var-file="$d/config/stage.tfvars" -auto-approve
+              done
 
   prod-workflow:
     plan:
       steps:
         - run:
-            command: ls      
-        - init:
-            extra_args: ["-backend-config=env/production/prod.conf"]
-        - plan: 
-            extra_args: ["-var-file=./config/production.tfvars"]
+            command: |
+              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+                terraform -chdir=$d init -backend-config="$d/env/production/prod.conf"
+                terraform -chdir=$d plan -var-file="$d/config/production.tfvars"
+              done
     apply:
       steps:
-        - apply:
-            extra_args: ["-var-file=./config/production.tfvars"]
+        - run:
+            command: |
+              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+                terraform -chdir=$d apply -var-file="$d/config/production.tfvars" -auto-approve
+              done
+
+# workflows:
+#   dev-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init:
+#             extra_args: ["-backend-config=env/staging/stage.conf"]
+#         - plan: 
+#             extra_args: ["-var-file=./config/stage.tfvars"]
+#     apply:
+#       steps:
+#         - apply:
+#             extra_args: ["-var-file=./config/stage.tfvars"]
+
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls      
+#         - init:
+#             extra_args: ["-backend-config=env/production/prod.conf"]
+#         - plan: 
+#             extra_args: ["-var-file=./config/production.tfvars"]
+#     apply:
+#       steps:
+#         - apply:
+#             extra_args: ["-var-file=./config/production.tfvars"]
 
 
   # - name: databases
