@@ -65,8 +65,9 @@ workflows:
     plan:
       steps:
         - init
+        - run: echo "Current path $(pwd)"
         - plan:
-            extra_args: ["-var-file=${PWD}/config/dev.tfvars"]
+            extra_args: ["-var-file=./config/dev.tfvars"]
     apply:
       steps:
         - apply:
