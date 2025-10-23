@@ -81,21 +81,21 @@
 version: 3
 projects:
   - name: application-dev-deploy
-    dir: application/**
+    dir: application/
     workspace: development
     workflow: dev-workflow
     apply_requirements: [] 
     autoplan:
-      when_modified: [ "*.tf", "config/stage.tfvars", "config/production.tfvars"]  #"custom_file"
+      when_modified: ["*/**/*.tf", "*.tf", "*/./config/stage.tfvars", "*/./config/production.tfvars"]  #"custom_file"
       enabled: true
 
   - name: application-prod-deploy
-    dir: application/**
+    dir: application/
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
     autoplan:
-      when_modified: ["*.tf", "config/stage.tfvars", "config/production.tfvars"] 
+      when_modified: ["*/**/*.tf", "*.tf", "*/./config/stage.tfvars", "*/./config/production.tfvars"] 
       enabled: true
 
 workflows:
