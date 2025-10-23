@@ -81,7 +81,7 @@
 version: 3
 projects:
   - name: adot-dev-deploy
-    dir: "application/**" 
+    dir: application
     workspace: development
     workflow: dev-workflow
     apply_requirements: []
@@ -89,8 +89,8 @@ projects:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]  #"custom_file"
       enabled: true
 
-  - name: adot-prod-deployS
-    dir: "application/**" 
+  - name: adot-prod-deploy
+    dir: application
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
