@@ -252,69 +252,47 @@ workflows:
   matrix-tf:
     plan:
       steps:
-        - run: |
-            '
-            set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
+        - run:
+            shell: bash
+            command: |
+              set -euo pipefail
+              ENV="${ATLANTIS_WORKSPACE:-staging}"
 
-            # Collect unique application dirs that changed (e.g., application/callisto-catalog)
-            mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-              | grep -E "^application/[^/]+/" || true \
-              | awk -F/ "{print \$1\"/\"\$2}" \
-              | sort -u)
+              # Collect unique application dirs that changed
+              mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
+                | grep -E "^application/[^/]+/" || true \
+                | awk -F/ '{print $1"/"$2}' \
+                | sort -u)
 
-            if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "No changed application directories."
-              exit 0
-            fi
-
-            # Keep a list of plan files to apply later
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            : > "$PLANLIST"
-
-            for d in "${dirs[@]}"; do
-              if [[ -f "$d/main.tf" ]]; then
-                echo "=== Planning $d ($ENV) ==="
-                terraform -chdir="$d" init -upgrade
-
-                # Use workspaces per env if the module supports it
-                terraform -chdir="$d" workspace select "$ENV" \
-                  || terraform -chdir="$d" workspace new "$ENV"
-
-                TFVARS="$d/config/${ENV}.tfvars"
-                PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
-
-                if [[ -f "$TFVARS" ]]; then
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
-                else
-                  echo "No tfvars for $d and env $ENV — proceeding without -var-file"
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
-                fi
-
-                echo "$PLAN" >> "$PLANLIST"
-              else
-                echo "Skipping $d (no main.tf)"
+              if [[ ${#dirs[@]} -eq 0 ]]; then
+                echo "No changed application directories."
+                exit 0
               fi
-            done
 
-            echo "Plan files recorded in $PLANLIST"
-            '
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              : > "$PLANLIST"
 
-    apply:
-      steps:
-        - run: |
-            '
-            set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              for d in "${dirs[@]}"; do
+                if [[ -f "$d/main.tf" ]]; then
+                  echo "=== Planning $d ($ENV) ==="
+                  terraform -chdir="$d" init -upgrade
+                  terraform -chdir="$d" workspace select "$ENV" \
+                    || terraform -chdir="$d" workspace new "$ENV"
 
-            if [[ ! -s "$PLANLIST" ]]; then
-              echo "No plan files to apply."
-              exit 0
-            fi
+                  TFVARS="$d/config/${ENV}.tfvars"
+                  PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
-            while IFS= read -r PLAN; do
-              echo "=== Applying $PLAN ==="
-              terraform apply -input=false "$PLAN"
-            done < "$PLANLIST"
-            '
+                  if [[ -f "$TFVARS" ]]; then
+                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
+                  else
+                    echo "No tfvars for $d and env $ENV — proceeding without -var-file"
+                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
+                  fi
+
+                  echo "$PLAN" >> "$PLANLIST"
+                else
+                  echo "Skipping $d (no main.tf)"
+                fi
+              done
+
+              echo "Plan files recorded in $PLANLIST"
