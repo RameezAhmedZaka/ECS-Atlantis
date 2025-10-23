@@ -64,8 +64,10 @@ workflows:
   default:
     plan:
       steps:
+        - run:
+            name: Show current directory
+            command: pwd
         - init
-        - run: echo "Current path $(pwd)"
         - plan:
             extra_args: ["-var-file=./config/dev.tfvars"]
     apply:
