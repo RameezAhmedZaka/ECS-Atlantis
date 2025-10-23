@@ -296,7 +296,7 @@ workflows:
 
                   echo "$PLAN" >> "$PLANLIST"
                 else
-                  echo "Skipping $d (no main.tf)"
+                  echo "Skipping it $d (no main.tf)"
                 fi
               done
 
