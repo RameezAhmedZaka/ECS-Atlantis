@@ -1,225 +1,3 @@
-# version: 3
-
-# projects:
-#   - name: application
-#     dir: application/*      
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
-#       enabled: true
-#     # workflow: default
-#     apply_requirements: [approved, mergeable]
-
-#   - name: databases
-#     dir: databases/*          
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
-#       enabled: true
-#     # workflow: default
-#     apply_requirements: [approved, mergeable]
-
-# workflows:
-#   default:
-#     plan:
-#       steps:
-#         - init
-#         - plan
-#     apply:
-#       steps:
-#         - apply
-
-
-# version: 3
-
-# projects:
-#   - name: application
-#     dir: application/*      
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
-#       enabled: true
-
-#   - name: databases
-#     dir: databases/*          
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "env/**/*.conf"]
-#       enabled: true
-
-# workflows:
-#   default:
-#     plan:
-#       steps:
-#         - init
-#         - plan
-#     apply:
-#       steps:
-#         - apply
-
-# version: 3
-# projects:
-#   - name: application
-#     dir: application
-#     workflow: custom-run
-
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
-#       enabled: true
-#     apply_requirements: [] 
-# workflows:
-#   custom-run:
-#     plan:
-#       steps:
-        # - run:
-        #     command: ls
-#         - init
-#         - plan:
-#             extra_args: ["-var-file=./config/dev.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/dev.tfvars"]
- 
- ###
-
-# version: 3
-# projects:
-#   - name: adot-dev-deploy
-#     dir: application/adot
-#     workspace: development
-#     workflow: dev-workflow
-#     apply_requirements: []
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
-#       enabled: true
-
-#   - name: adot-prod-deploy
-#     dir: application/adot
-#     workspace: production
-#     workflow: prod-workflow
-#     apply_requirements: []
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
-#       enabled: true
-
-#   - name: apollo-dev-deploy
-#     dir: application/apollo
-#     workspace: development
-#     workflow: dev-workflow
-#     apply_requirements: []
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
-#       enabled: true
-
-#   - name: apollo-prod-deploy
-#     dir: application/apollo
-#     workspace: production
-#     workflow: prod-workflow
-#     apply_requirements: []
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
-#       enabled: true
-
-# workflows:
-#   dev-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/staging/stage.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=config/stage.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=config/stage.tfvars"]
-
-#   prod-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/production/prod.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=./config/production.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/production.tfvars"]
-
-####
-
-# workflows:
-#   dev-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: |
-#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-#                 terraform -chdir=$d init -backend-config="$d/env/staging/stage.conf"
-#                 terraform -chdir=$d plan -var-file="$d/config/stage.tfvars"
-#               done
-#     apply:
-#       steps:
-#         - run:
-#             command: |
-#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-#                 terraform -chdir=$d apply -var-file="$d/config/stage.tfvars" -auto-approve
-#               done
-
-#   prod-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: |
-#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-#                 terraform -chdir=$d init -backend-config="$d/env/production/prod.conf"
-#                 terraform -chdir=$d plan -var-file="$d/config/production.tfvars"
-#               done
-#     apply:
-#       steps:
-#         - run:
-#             command: |
-#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-#                 terraform -chdir=$d apply -var-file="$d/config/production.tfvars" -auto-approve
-#               done
-
-# workflows:
-#   dev-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/staging/stage.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=./config/stage.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/stage.tfvars"]
-
-#   prod-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls      
-#         - init:
-#             extra_args: ["-backend-config=env/production/prod.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=./config/production.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/production.tfvars"]
-
-
-  # - name: databases
-  #   dir: databases/*
-  #   autoplan:
-  #     when_modified: ["databases/**/*.tf", "databases/**/config/*.tfvars", "databases/**/env/**/*.conf"]
-  #     enabled: true
-
-
 version: 3
 automerge: true
 parallel_plan: true
@@ -250,72 +28,47 @@ workflows:
   matrix-tf:
     plan:
       steps:
-        - run:
-            shell: bash
-            command: |
-              set -euo pipefail
-              ENV="${ATLANTIS_WORKSPACE:-staging}"
+        # Step 1: Detect changed subdirectories inside application/
+        - run: |
+            echo "🔍 Detecting changed application subdirectories..."
+            CHANGED_DIRS=$(git diff --name-only $BASE_BRANCH...$HEAD | grep '^application/' | cut -d'/' -f1-2 | sort -u || true)
 
-              # Collect changed application directories
-              mapfile -t dirs < <(
-                printf "%s\n" $CHANGED_FILES \
-                  | grep -E "^application/[^/]+/" \
-                  | awk -F/ '{print $1"/"$2}' \
-                  | sort -u
-              )
+            if [ -z "$CHANGED_DIRS" ]; then
+              echo "✅ No changes detected in application subdirectories."
+              exit 0
+            fi
 
-              if [[ ${#dirs[@]} -eq 0 ]]; then
-                echo "No changed application directories."
-                exit 0
-              fi
+            echo "🧩 Changed application directories:"
+            echo "$CHANGED_DIRS"
 
-              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-              : > "$PLANLIST"
+            for dir in $CHANGED_DIRS; do
+              echo "🚀 Running Terraform init for $dir"
+              cd "$dir"
+              terraform init -input=false -backend-config="./env/production/prod.conf"
 
-              for d in "${dirs[@]}"; do
-                if [[ -f "$d/main.tf" ]]; then
-                  echo "=== Initializing $d ($ENV) ==="
+              echo "📦 Running Terraform plan for $dir"
+              terraform plan -input=false -no-color -var-file="./config/production.tfvars" -out=tfplan
 
-                  terraform -chdir="$d" init -upgrade -backend-config="env/${ENV}/${ENV}.conf"
-
-                  terraform -chdir="$d" workspace select "$ENV" \
-                    || terraform -chdir="$d" workspace new "$ENV"
-
-                  TFVARS="$d/config/${ENV}.tfvars"
-                  PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
-
-                  echo "=== Planning $d ($ENV) ==="
-                  if [[ -f "$TFVARS" ]]; then
-                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
-                  else
-                    echo "No tfvars for $d — proceeding without -var-file"
-                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
-                  fi
-
-                  echo "$PLAN" >> "$PLANLIST"
-                else
-                  echo "Skipping $d (no main.tf)"
-                fi
-              done
-
-              echo "Plan files recorded in $PLANLIST"
+              cd - > /dev/null
+            done
 
     apply:
       steps:
-        - run:
-            shell: bash
-            command: |
-              set -euo pipefail
-              ENV="${ATLANTIS_WORKSPACE}"
-              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+        - run: |
+            echo "🔍 Detecting changed application subdirectories..."
+            CHANGED_DIRS=$(git diff --name-only $BASE_BRANCH...$HEAD | grep '^application/' | cut -d'/' -f1-2 | sort -u || true)
 
-              if [[ ! -s "$PLANLIST" ]]; then
-                echo "No plan files to apply."
-                exit 0
-              fi
+            if [ -z "$CHANGED_DIRS" ]; then
+              echo "✅ No changes detected to apply."
+              exit 0
+            fi
 
-              while IFS= read -r PLAN; do
-                echo "=== Applying $PLAN ==="
-                terraform apply -input=false "$PLAN"
-              done < "$PLANLIST"
+            echo "🧩 Changed application directories:"
+            echo "$CHANGED_DIRS"
 
+            for dir in $CHANGED_DIRS; do
+              echo "🚀 Applying Terraform for $dir"
+              cd "$dir"
+              terraform apply -input=false -auto-approve -var-file="./config/production.tfvars" tfplan || true
+              cd - > /dev/null
+            done
