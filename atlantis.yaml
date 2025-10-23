@@ -63,7 +63,7 @@ projects:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
 workflows:
-  default:
+  custom-run:
     plan:
       steps:
         - run:
