@@ -53,24 +53,24 @@
 #       steps:
 #         - apply
 
-# version: 3
-# projects:
-#   - name: application
-#     dir: application
-#     autoplan:
-#       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
-#       enabled: true
-# workflows:
-#   default:
-#     plan:
-#       steps:
-#         - init
-#         - plan:
-#             extra_args: ["-var-file=./config/dev.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/dev.tfvars"]
+version: 3
+projects:
+  - name: application
+    dir: application
+    autoplan:
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
+      enabled: true
+workflows:
+  default:
+    plan:
+      steps:
+        - init
+        - plan:
+            extra_args: ["-var-file=config/dev.tfvars"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["-var-file=./config/dev.tfvars"]
 
 
 
@@ -80,29 +80,3 @@
   #   autoplan:
   #     when_modified: ["databases/**/*.tf", "databases/**/config/*.tfvars", "databases/**/env/**/*.conf"]
   #     enabled: true
-
-version: 3
-projects:
-  - name: application
-    dir: application                     # root of your Terraform project
-    autoplan:
-      enabled: true
-      when_modified:
-        - "*.tf"                        # root module files
-        - "config/*.tfvars"             # variable files
-        - "modules/**/*.tf"             # all modules
-    workflow: default
-    apply_requirements: []               # no PR approval needed
-    import_requirements: []              # anyone can run import
-    vars:
-      - var_file: ./config/dev.tfvars      # tells Atlantis which tfvars to use
-
-workflows:
-  default:
-    plan:
-      steps:
-        - init
-        - plan
-    apply:
-      steps:
-        - apply
