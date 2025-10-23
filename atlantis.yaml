@@ -220,7 +220,6 @@
   #     enabled: true
 
 
-
 version: 3
 automerge: true
 parallel_plan: true
@@ -234,7 +233,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
   - name: apps-production
@@ -244,7 +243,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
 workflows:
@@ -252,7 +251,6 @@ workflows:
     plan:
       steps:
         - run:
-            name: Init and Plan changed applications
             shell: bash
             command: |
               set -euo pipefail
@@ -261,7 +259,7 @@ workflows:
               # Collect changed application directories
               mapfile -t dirs < <(
                 printf "%s\n" $CHANGED_FILES \
-                  | grep -E "^applications/[^/]+/" \
+                  | grep -E "^application/[^/]+/" \
                   | awk -F/ '{print $1"/"$2}' \
                   | sort -u
               )
@@ -277,13 +275,11 @@ workflows:
               for d in "${dirs[@]}"; do
                 if [[ -f "$d/main.tf" ]]; then
                   echo "=== Initializing $d ($ENV) ==="
-                  
-                  # Pull or bring the folder (if needed)
-                  # Optional: you can use git sparse checkout or just assume folder exists
-                  
-                  # Run terraform init with backend config
+
+                  # Initialize Terraform with backend config
                   terraform -chdir="$d" init -upgrade -backend-config="env/${ENV}/${ENV}.conf"
 
+                  # Select or create workspace
                   terraform -chdir="$d" workspace select "$ENV" \
                     || terraform -chdir="$d" workspace new "$ENV"
 
@@ -309,7 +305,6 @@ workflows:
     apply:
       steps:
         - run:
-            name: Apply changed applications
             shell: bash
             command: |
               set -euo pipefail
