@@ -1,5 +1,5 @@
 aws_region = "us-east-1"
-profile    = "admin"
+# profile    = "admin"
 # ------------------------------
 # VPC Configuration
 # ------------------------------
