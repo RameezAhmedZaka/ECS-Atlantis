@@ -81,8 +81,7 @@
 version: 3
 projects:
   - name: adot-dev-deploy
-    dir: application/*
-    terraform_version: v0.11.15
+    dir: "application/**" 
     workspace: development
     workflow: dev-workflow
     apply_requirements: []
@@ -91,8 +90,7 @@ projects:
       enabled: true
 
   - name: adot-prod-deployS
-    dir: application/*
-    terraform_version: v0.11.15
+    dir: "application/**" 
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
