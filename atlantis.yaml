@@ -66,15 +66,15 @@ workflows:
       steps:
         - init
         - plan:
-            extra_args: ["-var-file=config/dev.tfvars"]
+            extra_args: ["-var-file=./config/dev.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=config/dev.tfvars"]
+            extra_args: ["-var-file=./config/dev.tfvars"]
 
 
 
-            
+
   # - name: databases
   #   dir: databases/*
   #   autoplan:
