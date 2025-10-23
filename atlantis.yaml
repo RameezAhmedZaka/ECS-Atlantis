@@ -84,9 +84,10 @@ projects:
     dir: application/adot
     workspace: development
     workflow: dev-workflow
-    apply_requirements: [] 
+    apply_requirements: []
+    plan_requirements: [] 
     autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]  #"custom_file"
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]  #"custom_file"
       enabled: true
 
   - name: adot-prod-deploy
@@ -94,8 +95,9 @@ projects:
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
+    plan_requirements: [] 
     autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
       enabled: true
 
 
