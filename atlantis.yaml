@@ -65,8 +65,7 @@ workflows:
     plan:
       steps:
         - run:
-            name: Show current directory
-            command: pwd
+            command: ls
         - init
         - plan:
             extra_args: ["-var-file=./config/dev.tfvars"]
