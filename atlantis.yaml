@@ -80,58 +80,89 @@
 
 version: 3
 projects:
-  - name: application-dev-deploy
-    dir: application/
+  - name: adot-dev-deploy
+    dir: application/adot
     workspace: development
     workflow: dev-workflow
     apply_requirements: [] 
     autoplan:
-      when_modified: ["*/**/*.tf", "*.tf", "*/./config/stage.tfvars", "*/./config/production.tfvars"]  #"custom_file"
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]  #"custom_file"
       enabled: true
 
-  - name: application-prod-deploy
-    dir: application/
+  - name: adot-prod-deploy
+    dir: application/adot
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
     autoplan:
-      when_modified: ["*/**/*.tf", "*.tf", "*/./config/stage.tfvars", "*/./config/production.tfvars"] 
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf"]
       enabled: true
+
 
 workflows:
   dev-workflow:
     plan:
       steps:
         - run:
-            command: |
-              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-                terraform -chdir=$d init -backend-config="$d/env/staging/stage.conf"
-                terraform -chdir=$d plan -var-file="$d/config/stage.tfvars"
-              done
+            command: ls
+        - init:
+            extra_args: ["-backend-config=env/staging/stage.conf"]
+        - plan: 
+            extra_args: ["-var-file=./config/stage.tfvars"]
     apply:
       steps:
-        - run:
-            command: |
-              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-                terraform -chdir=$d apply -var-file="$d/config/stage.tfvars" -auto-approve
-              done
+        - apply:
+            extra_args: ["-var-file=./config/stage.tfvars"]
 
   prod-workflow:
     plan:
       steps:
         - run:
-            command: |
-              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-                terraform -chdir=$d init -backend-config="$d/env/production/prod.conf"
-                terraform -chdir=$d plan -var-file="$d/config/production.tfvars"
-              done
+            command: ls      
+        - init:
+            extra_args: ["-backend-config=env/production/prod.conf"]
+        - plan: 
+            extra_args: ["-var-file=./config/production.tfvars"]
     apply:
       steps:
-        - run:
-            command: |
-              for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
-                terraform -chdir=$d apply -var-file="$d/config/production.tfvars" -auto-approve
-              done
+        - apply:
+            extra_args: ["-var-file=./config/production.tfvars"]
+
+
+# workflows:
+#   dev-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: |
+#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+#                 terraform -chdir=$d init -backend-config="$d/env/staging/stage.conf"
+#                 terraform -chdir=$d plan -var-file="$d/config/stage.tfvars"
+#               done
+#     apply:
+#       steps:
+#         - run:
+#             command: |
+#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+#                 terraform -chdir=$d apply -var-file="$d/config/stage.tfvars" -auto-approve
+#               done
+
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: |
+#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+#                 terraform -chdir=$d init -backend-config="$d/env/production/prod.conf"
+#                 terraform -chdir=$d plan -var-file="$d/config/production.tfvars"
+#               done
+#     apply:
+#       steps:
+#         - run:
+#             command: |
+#               for d in $(find . -mindepth 1 -maxdepth 1 -type d); do
+#                 terraform -chdir=$d apply -var-file="$d/config/production.tfvars" -auto-approve
+#               done
 
 # workflows:
 #   dev-workflow:
