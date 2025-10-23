@@ -226,7 +226,6 @@ automerge: true
 parallel_plan: true
 parallel_apply: true
 
-# One project per environment. The custom workflow below loops over changed app dirs.
 projects:
   - name: apps-staging
     dir: .
@@ -258,16 +257,8 @@ workflows:
               set -euo pipefail
               ENV="${ATLANTIS_WORKSPACE:-staging}"
 
-              # Collect unique application dirs that changed
-              mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-                | grep -E "^application/[^/]+/" || true \
-                | awk -F/ '{print $1"/"$2}' \
-                | sort -u)
-
-              if [[ ${#dirs[@]} -eq 0 ]]; then
-                echo "No changed application directories."
-                exit 0
-              fi
+              # Loop through all apps
+              dirs=(application/*)
 
               PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
               : > "$PLANLIST"
@@ -276,6 +267,8 @@ workflows:
                 if [[ -f "$d/main.tf" ]]; then
                   echo "=== Planning $d ($ENV) ==="
                   terraform -chdir="$d" init -upgrade
+
+                  # Use workspaces per env if supported
                   terraform -chdir="$d" workspace select "$ENV" \
                     || terraform -chdir="$d" workspace new "$ENV"
 
@@ -296,3 +289,22 @@ workflows:
               done
 
               echo "Plan files recorded in $PLANLIST"
+
+    apply:
+      steps:
+        - run:
+            shell: bash
+            command: |
+              set -euo pipefail
+              ENV="${ATLANTIS_WORKSPACE:-staging}"
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+
+              if [[ ! -s "$PLANLIST" ]]; then
+                echo "No plan files to apply."
+                exit 0
+              fi
+
+              while IFS= read -r PLAN; do
+                echo "=== Applying $PLAN ==="
+                terraform apply -input=false "$PLAN"
+              done < "$PLANLIST"
