@@ -106,13 +106,13 @@ workflows:
         - run:
             command: ls
         - init:
-            extra_args: ["-backend-config=env/staging/stage.conf"]
+            extra_args: ["-backend-config=**/env/staging/stage.conf"]
         - plan: 
-            extra_args: ["-var-file=./config/stage.tfvars"]
+            extra_args: ["-var-file=**/config/stage.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=./config/stage.tfvars"]
+            extra_args: ["-var-file=**/config/stage.tfvars"]
 
   prod-workflow:
     plan:
@@ -120,13 +120,13 @@ workflows:
         - run:
             command: ls      
         - init:
-            extra_args: ["-backend-config=env/production/prod.conf"]
+            extra_args: ["-backend-config=**/env/production/prod.conf"]
         - plan: 
-            extra_args: ["-var-file=./config/production.tfvars"]
+            extra_args: ["-var-file=**/config/production.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=./config/production.tfvars"]
+            extra_args: ["-var-file=**/config/production.tfvars"]
 
 
 # workflows:
