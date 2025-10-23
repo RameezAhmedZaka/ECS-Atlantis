@@ -81,23 +81,40 @@
 version: 3
 projects:
   - name: adot-dev-deploy
-    dir: application
+    dir: applications/adot
     workspace: development
     workflow: dev-workflow
-    apply_requirements: []
-    autoplan:
-      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]  #"custom_file"
-      enabled: true
-
-  - name: adot-prod-deploy
-    dir: application
-    workspace: production
-    workflow: prod-workflow 
     apply_requirements: []
     autoplan:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
       enabled: true
 
+  - name: adot-prod-deploy
+    dir: applications/adot
+    workspace: production
+    workflow: prod-workflow
+    apply_requirements: []
+    autoplan:
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
+      enabled: true
+
+  - name: apollo-dev-deploy
+    dir: applications/apollo
+    workspace: development
+    workflow: dev-workflow
+    apply_requirements: []
+    autoplan:
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
+      enabled: true
+
+  - name: apollo-prod-deploy
+    dir: applications/apollo
+    workspace: production
+    workflow: prod-workflow
+    apply_requirements: []
+    autoplan:
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
+      enabled: true
 
 workflows:
   dev-workflow:
@@ -118,7 +135,7 @@ workflows:
     plan:
       steps:
         - run:
-            command: ls      
+            command: ls
         - init:
             extra_args: ["-backend-config=env/production/prod.conf"]
         - plan: 
@@ -127,6 +144,7 @@ workflows:
       steps:
         - apply:
             extra_args: ["-var-file=./config/production.tfvars"]
+
 
 
 # workflows:
