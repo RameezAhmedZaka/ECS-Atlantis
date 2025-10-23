@@ -76,6 +76,10 @@ workflows:
       steps:
         - apply:
             extra_args: ["-var-file=./config/dev.tfvars"]
+    destroy:
+      steps:
+        - destroy:
+            extra_args: ["-var-file=config/dev.tfvars"]
 
 
 
