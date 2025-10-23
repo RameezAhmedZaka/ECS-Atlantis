@@ -81,22 +81,21 @@
 version: 3
 projects:
   - name: adot-dev-deploy
-    dir: application/**
+    dir: application/.*/
     workspace: development
     workflow: dev-workflow
     apply_requirements: []
     autoplan:
-      when_modified: ["**/*.tf", "**/config/*.tfvars", "**/modules/**/*.tf", "*/**/*.tf"]  #"custom_file"
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]  #"custom_file"
       enabled: true
 
   - name: adot-prod-deploy
-    dir: application/**
-
+    dir: application/.*/
     workspace: production
     workflow: prod-workflow 
     apply_requirements: []
     autoplan:
-      when_modified: ["**/*.tf", "**/config/*.tfvars", "**/modules/**/*.tf", "*/**/*.tf"]
+      when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
       enabled: true
 
 
@@ -107,13 +106,13 @@ workflows:
         - run:
             command: ls
         - init:
-            extra_args: ["-backend-config=**/env/staging/stage.conf"]
+            extra_args: ["-backend-config=env/staging/stage.conf"]
         - plan: 
-            extra_args: ["-var-file=**/config/stage.tfvars"]
+            extra_args: ["-var-file=./config/stage.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=**/config/stage.tfvars"]
+            extra_args: ["-var-file=./config/stage.tfvars"]
 
   prod-workflow:
     plan:
@@ -121,13 +120,13 @@ workflows:
         - run:
             command: ls      
         - init:
-            extra_args: ["-backend-config=**/env/production/prod.conf"]
+            extra_args: ["-backend-config=env/production/prod.conf"]
         - plan: 
-            extra_args: ["-var-file=**/config/production.tfvars"]
+            extra_args: ["-var-file=./config/production.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=**/config/production.tfvars"]
+            extra_args: ["-var-file=./config/production.tfvars"]
 
 
 # workflows:
