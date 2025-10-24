@@ -2,16 +2,14 @@ version: 3
 automerge: false
 parallel_plan: true
 parallel_apply: true
-autodiscover:
-  mode: enabled
-  root: "application"  # Only discover in this specific directory
-  projects: 
-    name: "{{ .DirName }}"
+projects:
+  - name: "{{ .DirName }}-{{ .Workspace }}"
+    dir: "application/.*"
     workspace: "{{ .Workspace }}"
     autoplan:
-      when_modified: ["*.tf", "*.tfvars", "../../modules/**/*.tf"]
+      when_modified: ["*.tf", "*.tfvars", "config/{{ .Workspace }}.tfvars", "env/{{ .Workspace }}/**"]
     terraform_version: v1.5.0
-
+    apply_requirements: [mergeable]
 
 # version: 3
 # workflows:
