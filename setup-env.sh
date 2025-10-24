@@ -1,14 +1,13 @@
 # Generate projects and save into a temp file
-cd application || { echo "application folder not found"; exit 1; }
-
-# Traverse directories containing backend "s3"
-grep -Pl 'backend[\s]+"s3"' **/*.tf | rev | cut -d'/' -f2- | rev | sort | uniq | while read d; do
-  # Adjust dir path to include application/ prefix
-  full_path="application/$d"
-  
-  # Generate Atlantis project entry
-  echo '[ {"name": "'"$d"'","dir": "'"$full_path"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM
-done
+cd application
+ls
+grep -P 'backend[\s]+"s3"' **/*.tf |
+  rev | cut -d'/' -f2- | rev |
+  sort |
+  uniq |
+  while read d; do \
+    echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM; \
+  done
 
 
 
