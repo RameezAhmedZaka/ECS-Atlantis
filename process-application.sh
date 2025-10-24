@@ -50,7 +50,7 @@ for d in "${dirs[@]}"; do
       continue
     fi
 
-    # Initialize with backend config
+    # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
@@ -58,15 +58,8 @@ for d in "${dirs[@]}"; do
       continue
     }
 
-    # FIX: Handle workspace properly - try to select, create if doesn't exist
-    echo "Step 2: Setting workspace to $ENV..."
-    if ! timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null; then
-      echo "Workspace $ENV not found, creating it..."
-      timeout 30 terraform -chdir="$d" workspace new "$ENV" || {
-        echo ":x: Failed to create workspace $ENV"
-        continue
-      }
-    fi
+    # FIX: REMOVE workspace selection - let Atlantis handle it
+    echo "Step 2: Using workspace set by Atlantis"
 
     PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
