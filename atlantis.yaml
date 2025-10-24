@@ -2,7 +2,7 @@ version: 3
 automerge: false  # Disable until working
 parallel_plan: false  # Disable until working
 parallel_apply: false  # Disable until working 
-apply_requirements: [] 
+allow_overrides: true 
 
 projects:
   - name: apps-staging
