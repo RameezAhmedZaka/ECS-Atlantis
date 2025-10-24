@@ -4,7 +4,6 @@ workflows:
     plan:
       steps:
         - run:
-            name: "Setup environment"
             command: ./setup-env.sh
         - init:
             extra_args: ["-backend-config=env/staging/stage.conf"]
