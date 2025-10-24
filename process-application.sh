@@ -24,12 +24,12 @@ for d in "${dirs[@]}"; do
     
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="./env/production/prod.conf"
-        VAR_FILE="./config/production.tfvars"
+        BACKEND_CONFIG="application/adot/env/production/prod.conf"
+        VAR_FILE="$d/config/production.tfvars"
         ;;
       "staging")
-        BACKEND_CONFIG="./env/staging/stage.conf"
-        VAR_FILE="./config/stage.tfvars"
+        BACKEND_CONFIG="$d/env/staging/stage.conf"
+        VAR_FILE="$d/config/stage.tfvars"
         ;;
     esac
 
@@ -41,7 +41,7 @@ for d in "${dirs[@]}"; do
     echo "Step 1: Initializing..."
     if [[ -f "$BACKEND_CONFIG" ]]; then
       echo "Using backend config: $BACKEND_CONFIG"
-      timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
+      timeout 120 terraform init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
         echo "❌ Init failed for $d"
         continue
       }
