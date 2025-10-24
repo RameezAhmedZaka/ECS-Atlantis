@@ -28,7 +28,7 @@ workflows:
   run-script:
     plan:
       steps:
-        - run: ./terraform_env.sh
+        - run: terraform_env.sh
     apply:
       steps:
-        - run: ./terraform_env.sh
+        - run: terraform_env.sh
