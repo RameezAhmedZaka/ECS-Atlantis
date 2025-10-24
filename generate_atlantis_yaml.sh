@@ -1,6 +1,5 @@
 APPS_DIR="./application"
 OUTPUT_FILE="atlanti.yaml"
-
 # echo "version: 3" > $OUTPUT_FILE
 # echo "projects:" >> $OUTPUT_FILE
 
