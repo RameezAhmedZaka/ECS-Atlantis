@@ -1,7 +1,7 @@
 version: 3
 projects:
-  - name: dev-deploy
-    dir: .
+  - name: application
+    dir: application
     workspace: stage
     workflow: dev-workflow
     apply_requirements: []
@@ -9,8 +9,8 @@ projects:
       when_modified: ["*.tf", "config/*.tfvars", "modules/**/*.tf", "**/*.tf"]
       enabled: true
 
-  - name: prod-deploy
-    dir: .
+  - name: application-prod
+    dir: application
     workspace: production
     workflow: prod-workflow
     apply_requirements: []
@@ -22,30 +22,52 @@ workflows:
   dev-workflow:
     plan:
       steps:
-        - run:
-            command: ./setup-env.sh
-        - init:
-            extra_args: ["-backend-config=env/staging/stage.conf"]
-        - plan: 
-            extra_args: ["-var-file=./config/stage.tfvars"]
+        - run: |
+            for dir in $(ls application); do
+              if [ -f "application/$dir/backend.tf" ]; then
+                echo "Processing app: $dir"
+                cd "application/$dir" || exit 1
+                terraform init -backend-config="env/staging/stage.conf"
+                terraform plan -var-file="config/stage.tfvars" -out="$PWD/$ATLANTIS_REPO_NAME-$ATLANTIS_PULL_NUM.tfplan"
+                cd - >/dev/null
+              fi
+            done
     apply:
       steps:
-        - apply:
-            extra_args: ["-var-file=./config/stage.tfvars"]
+        - run: |
+            for dir in $(ls application); do
+              if [ -f "application/$dir/backend.tf" ]; then
+                echo "Applying app: $dir"
+                cd "application/$dir" || exit 1
+                terraform apply -var-file="config/stage.tfvars" "$PWD/$ATLANTIS_REPO_NAME-$ATLANTIS_PULL_NUM.tfplan"
+                cd - >/dev/null
+              fi
+            done
 
   prod-workflow:
     plan:
       steps:
-        - run:
-            command: ./setup-env.sh
-        - init:
-            extra_args: ["-backend-config=./env/production/prod.conf"]
-        - plan: 
-            extra_args: ["-var-file=./config/production.tfvars"]
+        - run: |
+            for dir in $(ls application); do
+              if [ -f "application/$dir/backend.tf" ]; then
+                echo "Processing app: $dir"
+                cd "application/$dir" || exit 1
+                terraform init -backend-config="env/production/prod.conf"
+                terraform plan -var-file="config/production.tfvars" -out="$PWD/$ATLANTIS_REPO_NAME-$ATLANTIS_PULL_NUM.tfplan"
+                cd - >/dev/null
+              fi
+            done
     apply:
       steps:
-        - apply:
-            extra_args: ["-var-file=./config/production.tfvars"]
+        - run: |
+            for dir in $(ls application); do
+              if [ -f "application/$dir/backend.tf" ]; then
+                echo "Applying app: $dir"
+                cd "application/$dir" || exit 1
+                terraform apply -var-file="config/production.tfvars" "$PWD/$ATLANTIS_REPO_NAME-$ATLANTIS_PULL_NUM.tfplan"
+                cd - >/dev/null
+              fi
+            done
 
 ####
 
