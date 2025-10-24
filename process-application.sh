@@ -24,12 +24,12 @@ for d in "${dirs[@]}"; do
     
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
-        VAR_FILE="config/production.tfvars"        # Relative to app directory
+        BACKEND_CONFIG="env/production/prod.conf"
+        VAR_FILE="config/production.tfvars"
         ;;
       "staging")
-        BACKEND_CONFIG="env/staging/stage.conf"    # Relative to app directory
-        VAR_FILE="config/stage.tfvars"             # Relative to app directory
+        BACKEND_CONFIG="env/staging/stage.conf"
+        VAR_FILE="config/stage.tfvars"
         ;;
     esac
 
@@ -37,8 +37,12 @@ for d in "${dirs[@]}"; do
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
 
-    # Check if files exist
-    if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
+    # DEBUG: Show what backend configuration will be used
+    echo "=== BACKEND CONFIGURATION ==="
+    if [[ -f "$d/$BACKEND_CONFIG" ]]; then
+      echo "Backend config file contents:"
+      cat "$d/$BACKEND_CONFIG"
+    else
       echo "❌ Backend config not found: $d/$BACKEND_CONFIG"
       ls -la "$d/env/" 2>/dev/null || echo "env directory not found"
       continue
@@ -50,13 +54,23 @@ for d in "${dirs[@]}"; do
       continue
     fi
 
-    # Initialize with backend config (ALWAYS use -chdir for consistency)
+    # DEBUG: Show current backend.tf (if exists)
+    if [[ -f "$d/backend.tf" ]]; then
+      echo "=== backend.tf CONTENTS ==="
+      cat "$d/backend.tf"
+    fi
+
+    # Initialize with backend config
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
       echo "❌ Init failed for $d"
       continue
     }
+
+    # DEBUG: Show which backend is actually being used
+    echo "=== ACTUAL BACKEND USED ==="
+    terraform -chdir="$d" show -json | jq -r '.values.backend.type' 2>/dev/null || echo "Could not determine backend"
 
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
