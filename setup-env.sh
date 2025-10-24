@@ -83,7 +83,7 @@
 
 #!/bin/bash
 
-APPS_DIR="./application"
+APPS_DIR="application"
 OUTPUT_FILE="atlantis.yaml"
 
 # echo "version: 3" > $OUTPUT_FILE
