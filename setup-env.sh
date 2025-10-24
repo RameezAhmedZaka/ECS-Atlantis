@@ -1,10 +1,10 @@
 # Generate projects and save into a temp file
-cd application
-grep -P 'backend[\s]+"s3"' **/*.tf | rev | cut -d'/' -f2- | rev | sort | uniq | while read d; do
-  echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM
-  APP_NAME=$(basename "$d")   # extract the app name
-  echo "App name: $APP_NAME"
-done > generated-projects.yaml
+# cd application
+# grep -P 'backend[\s]+"s3"' **/*.tf | rev | cut -d'/' -f2- | rev | sort | uniq | while read d; do
+#   echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM
+#   APP_NAME=$(basename "$d")   # extract the app name
+#   echo "App name: $APP_NAME"
+# done > generated-projects.yaml
 
 
 
@@ -58,91 +58,94 @@ done > generated-projects.yaml
 #             extra_args: ["-var-file=config/stage.tfvars"]
 #     apply:
 #       steps:APPS_DIR="./application"
-# OUTPUT_FILE="atlantis.yaml"
+#         - apply:
+#             extra_args: ["-var-file=config/stage.tfvars"]
+
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init:
+#             extra_args: ["-backend-config=env/production/prod.conf"]
+#         - plan: 
+#             extra_args: ["-var-file=./config/production.tfvars"]
+#     apply:
+#       steps:
+#         - apply:
+#             extra_args: ["-var-file=./config/production.tfvars"]
+# EOL
+
+# echo "Generated $OUTPUT_FILE with dev and prod workflows for all apps!"
+
+
+
+
+#!/bin/bash
+
+APPS_DIR="./application"
+OUTPUT_FILE="atlantis.yaml"
 
 # echo "version: 3" > $OUTPUT_FILE
 # echo "projects:" >> $OUTPUT_FILE
 
-# for app in "$APPS_DIR"/*; do
-#     if [ -d "$app" ]; then
-#         APP_NAME=$(basename "$app")
+for app in "$APPS_DIR"/*; do
+    if [ -d "$app" ]; then
+        APP_NAME=$(basename "$app")
 
-#         # Development project
-#         echo "  - name: ${APP_NAME}-dev-deploy" >> $OUTPUT_FILE
-#         echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
-#         echo "    workspace: development" >> $OUTPUT_FILE
-#         echo "    workflow: dev-workflow" >> $OUTPUT_FILE
-#         echo "    apply_requirements: []" >> $OUTPUT_FILE
-#         echo "    autoplan:" >> $OUTPUT_FILE
-#         echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
-#         echo "      enabled: true" >> $OUTPUT_FILE
-#         echo "" >> $OUTPUT_FILE
+        # Development project
+        echo "  - name: ${APP_NAME}-dev-deploy" >> $OUTPUT_FILE
+        echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
+        echo "    workspace: development" >> $OUTPUT_FILE
+        echo "    workflow: dev-workflow" >> $OUTPUT_FILE
+        echo "    apply_requirements: []" >> $OUTPUT_FILE
+        echo "    autoplan:" >> $OUTPUT_FILE
+        echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
+        echo "      enabled: true" >> $OUTPUT_FILE
+        echo "    plan_extra_args:" >> $OUTPUT_FILE
+        echo "      - \"-backend-config=/$APP_NAME/env/staging/stage.conf\"" >> $OUTPUT_FILE
+        echo "      - \"-var-file=/$APP_NAME/config/stage.tfvars\"" >> $OUTPUT_FILE
+        echo "" >> $OUTPUT_FILE
 
-#         # Production project
-#         echo "  - name: ${APP_NAME}-prod-deploy" >> $OUTPUT_FILE
-#         echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
-#         echo "    workspace: production" >> $OUTPUT_FILE
-#         echo "    workflow: prod-workflow" >> $OUTPUT_FILE
-#         echo "    apply_requirements: []" >> $OUTPUT_FILE
-#         echo "    autoplan:" >> $OUTPUT_FILE
-#         echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
-#         echo "      enabled: true" >> $OUTPUT_FILE
-#         echo "" >> $OUTPUT_FILE
-#     fi
-# done
+        # Production project
+        echo "  - name: ${APP_NAME}-prod-deploy" >> $OUTPUT_FILE
+        echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
+        echo "    workspace: production" >> $OUTPUT_FILE
+        echo "    workflow: prod-workflow" >> $OUTPUT_FILE
+        echo "    apply_requirements: []" >> $OUTPUT_FILE
+        echo "    autoplan:" >> $OUTPUT_FILE
+        echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
+        echo "      enabled: true" >> $OUTPUT_FILE
+        echo "    plan_extra_args:" >> $OUTPUT_FILE
+        echo "      - \"-backend-config=/$APP_NAME/env/production/prod.conf\"" >> $OUTPUT_FILE
+        echo "      - \"-var-file=/$APP_NAME/config/production.tfvars\"" >> $OUTPUT_FILE
+        echo "" >> $OUTPUT_FILE
+    fi
+done
 
-# # Workflows section
-# cat >> $OUTPUT_FILE <<EOL
-# workflows:
-#   dev-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/staging/stage.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=config/stage.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=config/stage.tfvars"]
+# Workflows section
+cat >> $OUTPUT_FILE <<EOL
 
-#   prod-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/production/prod.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=./config/production.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/production.tfvars"]
-# EOL
+workflows:
+  dev-workflow:
+    plan:
+      steps:
+        - run:
+            command: ls
+        - init: {}
+        - plan: {}
+    apply:
+      steps:
+        - apply: {}
 
-# echo "Generated $OUTPUT_FILE with dev and prod workflows for all apps!"
-
-
-#         - apply:
-#             extra_args: ["-var-file=config/stage.tfvars"]
-
-#   prod-workflow:
-#     plan:
-#       steps:
-#         - run:
-#             command: ls
-#         - init:
-#             extra_args: ["-backend-config=env/production/prod.conf"]
-#         - plan: 
-#             extra_args: ["-var-file=./config/production.tfvars"]
-#     apply:
-#       steps:
-#         - apply:
-#             extra_args: ["-var-file=./config/production.tfvars"]
-# EOL
-
-# echo "Generated $OUTPUT_FILE with dev and prod workflows for all apps!"
-
+  prod-workflow:
+    plan:
+      steps:
+        - run:
+            command: ls
+        - init: {}
+        - plan: {}
+    apply:
+      steps:
+        - apply: {}
+EOL
