@@ -24,12 +24,12 @@ for d in "${dirs[@]}"; do
     
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="application/$d/env/production/prod.conf"
-        VAR_FILE="application/$d/config/production.tfvars"
+        BACKEND_CONFIG="$d/env/production/prod.conf"
+        VAR_FILE="$d/config/production.tfvars"
         ;;
       "staging")
-        BACKEND_CONFIG="application/$d/env/staging/stage.conf"
-        VAR_FILE="application/$d/config/stage.tfvars"
+        BACKEND_CONFIG="$d/env/staging/stage.conf"
+        VAR_FILE="$d/config/stage.tfvars"
         ;;
     esac
 
