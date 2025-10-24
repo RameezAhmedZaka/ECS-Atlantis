@@ -3,6 +3,7 @@ automerge: true
 parallel_plan: true
 parallel_apply: true
 
+# One project per environment. The custom workflow below loops over changed app dirs.
 projects:
   - name: apps-staging
     dir: .
@@ -29,14 +30,16 @@ workflows:
     plan:
       steps:
         - run: |
+            export ATLANTIS_WORKSPACE="$ATLANTIS_WORKSPACE"
+            bash -c '
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE:-staging}"
+            ENV="${ATLANTIS_WORKSPACE}"
 
             # Collect unique application dirs that changed (e.g., application/callisto-catalog)
             CHANGED_FILES="${ATLANTIS_PULL_REQUEST_CHANGED_FILES:-}"
             mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
               | grep -E "^application/[^/]+/" || true \
-              | awk -F/ '{print $1"/"$2}' \
+              | awk -F/ "{print \$1\"/\"\$2}" \
               | sort -u)
 
             if [[ ${#dirs[@]} -eq 0 ]]; then
@@ -74,12 +77,15 @@ workflows:
             done
 
             echo "Plan files recorded in $PLANLIST"
+            '
 
     apply:
       steps:
         - run: |
+            export ATLANTIS_WORKSPACE="$ATLANTIS_WORKSPACE"
+            bash -c '
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE:-staging}"
+            ENV="${ATLANTIS_WORKSPACE}"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 
             if [[ ! -s "$PLANLIST" ]]; then
@@ -91,3 +97,4 @@ workflows:
               echo "=== Applying $PLAN ==="
               terraform apply -input=false "$PLAN"
             done < "$PLANLIST"
+            '
