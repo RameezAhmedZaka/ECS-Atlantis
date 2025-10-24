@@ -58,10 +58,11 @@ for d in "${dirs[@]}"; do
       continue
     }
 
-    # FIX: Use default workspace instead of environment workspace
-    echo "Step 2: Setting workspace..."
-    timeout 30 terraform -chdir="$d" workspace select "default" 2>/dev/null || {
-      echo "Using default workspace"
+    # FIX: Use environment-specific workspace instead of forcing "default"
+    echo "Step 2: Setting workspace to $ENV..."
+    timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null || {
+      echo "Workspace $ENV not found, creating it..."
+      timeout 30 terraform -chdir="$d" workspace new "$ENV"
     }
 
     PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
@@ -74,7 +75,7 @@ for d in "${dirs[@]}"; do
       continue
     }
 
-    # FIX: Store the directory along with plan path for apply
+    # Store the directory along with plan path for apply
     echo "$d|$PLAN" >> "$PLANLIST"
     echo ":white_check_mark: Successfully planned $APP_NAME"
     
