@@ -1,28 +1,43 @@
 version: 3
-workflows:
-  dev-workflow:
-    plan:
-      steps:
-        - run:
-            command: ./terraform_env.sh
-            output: show
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
+automerge: false
+parallel_plan: true
+parallel_apply: true
+autodiscover:
+  mode: enabled
+  root: "application"  # Only discover in this specific directory
+  projects: 
+    name: "{{ .DirName }}"
+    workspace: "{{ .Workspace }}"
+    autoplan:
+      when_modified: ["*.tf", "*.tfvars", "../../modules/**/*.tf"]
+    terraform_version: v1.5.0
 
-  prod-workflow:
-    plan:
-      steps:
-        - run:
-            command: ./terraform_env.sh
-            output: show
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
+
+# version: 3
+# workflows:
+#   dev-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ./terraform_env.sh
+#             output: show
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
+
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ./terraform_env.sh
+#             output: show
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
 
 
 
