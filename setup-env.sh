@@ -1,16 +1,3 @@
-# # Generate projects and save into a temp file
-# cd application
-# ls
-# grep -P 'backend[\s]+"s3"' **/*.tf |
-#   rev | cut -d'/' -f2- | rev |
-#   sort |
-#   uniq |
-#   while read d; do \
-#     echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM; \
-#   done
-
-
-
 !/bin/bash
 
 APPS_DIR="application"
@@ -53,29 +40,45 @@ for app in "$APPS_DIR"/*; do
     fi
 done
 
-# Workflows section
-cat >> $OUTPUT_FILE <<EOL
+# # Workflows section
+# cat >> $OUTPUT_FILE <<EOL
 
-workflows:
-  dev-workflow:
-    plan:
-      steps:
-        - run:
-            command: ls
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
+# workflows:
+#   dev-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
 
-  prod-workflow:
-    plan:
-      steps:
-        - run:
-            command: ls
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
-EOL
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
+# EOL
+
+
+
+
+
+
+# # Generate projects and save into a temp file
+# cd application
+# ls
+# grep -P 'backend[\s]+"s3"' **/*.tf |
+#   rev | cut -d'/' -f2- | rev |
+#   sort |
+#   uniq |
+#   while read d; do \
+#     echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM; \
+#   done
