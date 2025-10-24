@@ -11,7 +11,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
   - name: apps-production
@@ -21,7 +21,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
 workflows:
@@ -39,8 +39,8 @@ workflows:
             echo "=== CHANGED_FILES ==="
             echo "$CHANGED_FILES"
 
-            # Use find to get all applications since CHANGED_FILES might not work
-            mapfile -t dirs < <(find applications -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u)
+            # Use find to get all application since CHANGED_FILES might not work
+            mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u)
 
             if [[ ${#dirs[@]} -eq 0 ]]; then
               echo "No application directories found."
@@ -49,11 +49,11 @@ workflows:
             fi
 
             if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "Still no applications found. Using hardcoded list for testing."
-              mapfile -t dirs < <(echo -e "applications/adot\napplications/apollo")
+              echo "Still no application found. Using hardcoded list for testing."
+              mapfile -t dirs < <(echo -e "application/adot\napplication/apollo")
             fi
 
-            echo "Found ${#dirs[@]} applications:"
+            echo "Found ${#dirs[@]} application:"
             printf "  - %s\n" "${dirs[@]}"
 
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
