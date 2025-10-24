@@ -12,7 +12,7 @@ projects:
       enabled: true
       when_modified:
         - "application/**"
-    workflow: matrix-tf
+    workflow: staging-workflow
 
   - name: apps-production
     dir: .
@@ -22,142 +22,40 @@ projects:
       enabled: true
       when_modified:
         - "application/**"
-    workflow: matrix-tf
+    workflow: production-workflow
 
 workflows:
-  matrix-tf:
+  staging-workflow:
     plan:
       steps:
         - run: |
             set -euo pipefail
-            ENV="$ATLANTIS_WORKSPACE"
-            echo "=== Environment: $ENV ==="
-
-            # Debug: Print all available environment variables
-            echo "=== Available Environment Variables ==="
-            env | grep ATLANTIS || true
-            echo "=== CHANGED_FILES ==="
-            echo "$CHANGED_FILES"
-
-            # Use find to get all application since CHANGED_FILES might not work
-            mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u)
-
-            if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "No application directories found."
-              # Try alternative directory structure
-              mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u 2>/dev/null || true)
-            fi
-
-            if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "Still no application found. Using hardcoded list for testing."
-              mapfile -t dirs < <(echo -e "application/adot\napplication/apollo")
-            fi
-
-            echo "Found ${#dirs[@]} application:"
-            printf "  - %s\n" "${dirs[@]}"
-
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            : > "$PLANLIST"
-
-            for d in "${dirs[@]}"; do
-              if [[ -f "$d/main.tf" ]]; then
-                APP_NAME=$(basename "$d")
-                echo "=== Planning $APP_NAME ($ENV) ==="
-                
-                # Set backend config and var-file based on environment
-                case "$ENV" in
-                  "production")
-                    BACKEND_CONFIG="$d/env/production/prod.con"
-                    VAR_FILE="$d/config/production.tfvars"
-                    ;;
-                  "staging")
-                    BACKEND_CONFIG="$d/env/staging/stage.con"
-                    VAR_FILE="$d/config/stage.tfvars"
-                    ;;
-                  *)
-                    echo "Unknown environment: $ENV"
-                    exit 1
-                    ;;
-                esac
-
-                echo "Backend config: $BACKEND_CONFIG"
-                echo "Var file: $VAR_FILE"
-
-                # Initialize with backend config
-                INIT_CMD="terraform -chdir=\"$d\" init -upgrade"
-                if [[ -f "$BACKEND_CONFIG" ]]; then
-                  echo "Using backend config: $BACKEND_CONFIG"
-                  INIT_CMD="$INIT_CMD -backend-config=\"$BACKEND_CONFIG\""
-                else
-                  echo "⚠️  Backend config not found: $BACKEND_CONFIG"
-                fi
-
-                eval $INIT_CMD
-
-                # Workspace management
-                if ! terraform -chdir="$d" workspace select "$ENV" 2>/dev/null; then
-                  echo "Creating new workspace: $ENV"
-                  terraform -chdir="$d" workspace new "$ENV"
-                fi
-
-                PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
-
-                # Plan with var-file
-                PLAN_CMD="terraform -chdir=\"$d\" plan -input=false -lock-timeout=20m -out=\"$PLAN\""
-                if [[ -f "$VAR_FILE" ]]; then
-                  echo "Using var-file: $VAR_FILE"
-                  PLAN_CMD="$PLAN_CMD -var-file=\"$VAR_FILE\""
-                else
-                  echo "⚠️  Var file not found: $VAR_FILE"
-                fi
-
-                eval $PLAN_CMD
-
-                echo "$PLAN" >> "$PLANLIST"
-                echo "✓ Successfully planned $APP_NAME for $ENV"
-              else
-                echo "Skipping $d (main.tf missing)"
-              fi
-            done
-
-            echo "Plan files recorded in $PLANLIST"
-
+            ENV="staging"
+            echo "=== Processing STAGING environment ==="
+            ./process-application.sh "$ENV"
     apply:
       steps:
         - run: |
             set -euo pipefail
-            ENV="$ATLANTIS_WORKSPACE"
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            ENV="staging"
+            echo "=== Applying STAGING environment ==="
+            ./apply-plans.sh "$ENV"
 
-            echo "=== Applying plans for environment: $ENV ==="
-
-            if [[ ! -f "$PLANLIST" ]]; then
-              echo "No plan list found at: $PLANLIST"
-              echo "Available files in /tmp:"
-              ls -la /tmp/atlantis_planfiles_* 2>/dev/null || true
-              exit 0
-            fi
-
-            if [[ ! -s "$PLANLIST" ]]; then
-              echo "Plan list is empty: $PLANLIST"
-              exit 0
-            fi
-
-            echo "Applying plans from: $PLANLIST"
-            cat "$PLANLIST"
-
-            while IFS= read -r PLAN; do
-              if [[ -f "$PLAN" ]]; then
-                echo "=== Applying $PLAN ==="
-                terraform apply -input=false -auto-approve "$PLAN"
-                echo "✓ Successfully applied $PLAN"
-                rm -f "$PLAN"
-              else
-                echo "⚠️  Plan file not found: $PLAN"
-              fi
-            done < "$PLANLIST"
-            
-            rm -f "$PLANLIST"
+  production-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Processing PRODUCTION environment ==="
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Applying PRODUCTION environment ==="
+            ./apply-plans.sh "$ENV"
             
 
 # version: 3
