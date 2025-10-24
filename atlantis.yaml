@@ -1,4 +1,4 @@
-version: 
+version: 3
 projects:
 # # ← projects generated automatically from Terraform directories with S3 backend
 # # Example output from your grep/yq script:
@@ -28,7 +28,7 @@ workflows:
       - run:
           command: echo "This runs before plan/apply"
       - run:
-          command: ./setup-env.sh
+          command: ../setup-env.sh
     plan:
       steps:
         - init:
