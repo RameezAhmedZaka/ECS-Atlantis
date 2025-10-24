@@ -4,6 +4,7 @@ repos:
     allowed_overrides:
       - apply_requirements
       - workflow
+      - plan_requirements
     apply_requirements:
       - approved
     workflow: default

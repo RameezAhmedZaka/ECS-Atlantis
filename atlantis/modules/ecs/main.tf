@@ -210,6 +210,21 @@ resource "aws_iam_policy" "api_gateway_access" {
   policy = data.aws_iam_policy_document.allow_api_gateway_execute.json
 }
 
+resource "aws_iam_role_policy_attachment" "vpc_full_access" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_full_access" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "s3_full_access" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
 resource "aws_iam_role_policy_attachment" "attach_secrets" {
   role       = aws_iam_role.backend_task_role.name
   policy_arn = aws_iam_policy.secrets_manager_access.arn
