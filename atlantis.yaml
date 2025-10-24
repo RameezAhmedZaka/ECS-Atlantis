@@ -1,36 +1,11 @@
 version: 3
-projects:
-# # ← projects generated automatically from Terraform directories with S3 backend
-# # Example output from your grep/yq script:
-# - name: application/adot/prod
-#   dir: application/adot/prod
-#   autoplan:
-#     when_modified:
-#       - "**/*.tf.*"
-# - name: application/adot/dev
-#   dir: application/adot/dev
-#   autoplan:
-#     when_modified:
-#       - "**/*.tf.*"
-# - name: databases/mysql
-#   dir: databases/mysql
-#   autoplan:
-#     when_modified:
-#       - "**/*.tf.*"
-
-# # If you want all projects to use the same workflow, you can add workflow manually:
-# #   workflow: my-custom-workflow
-# # Or modify the script to append it automatically.
-
 workflows:
   my-custom-workflow:
-    pre_workflow_hooks:
-      - run:
-          command: echo "This runs before plan/apply"
-      - run:
-          command: ../setup-env.sh
     plan:
       steps:
+        - run:
+            name: "Setup environment"
+            command: ./setup-env.sh
         - init:
             extra_args: ["-backend-config=env/staging/stage.conf"]
         - plan:
