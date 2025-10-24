@@ -76,7 +76,7 @@ workflows:
     plan:
       steps:
         - run:
-            command: ./setup_env.sh
+            command: ./terraform_env.sh
         - init: {}
         - plan: {}
     apply:
@@ -87,7 +87,7 @@ workflows:
     plan:
       steps:
         - run:
-            command: ls
+            command: ./terraform_env.sh
         - init: {}
         - plan: {}
     apply:
