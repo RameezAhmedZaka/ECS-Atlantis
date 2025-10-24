@@ -2,6 +2,7 @@ version: 3
 automerge: false  # Disable until working
 parallel_plan: false  # Disable until working
 parallel_apply: false  # Disable until working 
+apply_requirements: [] 
 
 projects:
   - name: apps-staging
