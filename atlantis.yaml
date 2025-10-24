@@ -23,6 +23,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: production-workflow
+    apply_requirements: []
 
 workflows:
   staging-workflow:
