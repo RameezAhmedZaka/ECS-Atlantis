@@ -6,10 +6,10 @@ workflows:
         - run:
             command: ./setup-env.sh
         - init:
-            extra_args: ["-backend-config=env/staging/stage.conf"]
+            extra_args: ["-backend-config=${APP_NAME}/env/staging/stage.conf"]
         - plan:
-            extra_args: ["-var-file=config/stage.tfvars"]
+            extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
     apply:
       steps:
         - apply:
-            extra_args: ["-var-file=config/stage.tfvars"]
+            extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
