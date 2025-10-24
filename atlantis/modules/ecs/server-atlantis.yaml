@@ -5,6 +5,5 @@ repos:
       - apply_requirements
       - workflow
       - plan_requirements
-    apply_requirements:
-      - approved
+    apply_requirements: []
     workflow: default
