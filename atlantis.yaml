@@ -36,10 +36,11 @@ workflows:
             ENV="${ATLANTIS_WORKSPACE}"
 
             # Collect unique application dirs that changed (e.g., application/callisto-catalog)
-            mapfile -t dirs < <(echo "${ATLANTIS_PULL_REQUEST_CHANGED_FILES}" \
-            | grep -E "^application/[^/]+/" || true \
-            | awk -F/ "{print \$1\"/\"\$2}" \
-            | sort -u)
+            CHANGED_FILES="${ATLANTIS_PULL_REQUEST_CHANGED_FILES:-}"
+            mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
+              | grep -E "^application/[^/]+/" || true \
+              | awk -F/ "{print \$1\"/\"\$2}" \
+              | sort -u)
 
             if [[ ${#dirs[@]} -eq 0 ]]; then
               echo "No changed application directories."
