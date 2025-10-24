@@ -121,103 +121,103 @@ workflows:
   #     enabled: true
 
 
-version: 3
-automerge: true
-parallel_plan: true
-parallel_apply: true
+# version: 3
+# automerge: true
+# parallel_plan: true
+# parallel_apply: true
 
-projects:
-  - name: apps-staging
-    dir: .
-    workspace: staging
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/**"
-    workflow: matrix-tf
+# projects:
+#   - name: apps-staging
+#     dir: .
+#     workspace: staging
+#     terraform_version: v1.6.6
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "application/**"
+#     workflow: matrix-tf
 
-  - name: apps-production
-    dir: .
-    workspace: production
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/**"
-    workflow: matrix-tf
+#   - name: apps-production
+#     dir: .
+#     workspace: production
+#     terraform_version: v1.6.6
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "application/**"
+#     workflow: matrix-tf
 
-workflows:
-  matrix-tf:
-    plan:
-      steps:
-        - run:
-            shell: bash
-            command: |
-              set -euo pipefail
-              ENV="${ATLANTIS_WORKSPACE}"
+# workflows:
+#   matrix-tf:
+#     plan:
+#       steps:
+#         - run:
+#             shell: bash
+#             command: |
+#               set -euo pipefail
+#               ENV="${ATLANTIS_WORKSPACE}"
 
-              # Collect changed application directories
-              mapfile -t dirs < <(
-                printf "%s\n" $CHANGED_FILES \
-                  | grep -E "^application/[^/]+/" \
-                  | awk -F/ '{print $1"/"$2}' \
-                  | sort -u
-              )
+#               # Collect changed application directories
+#               mapfile -t dirs < <(
+#                 printf "%s\n" $CHANGED_FILES \
+#                   | grep -E "^application/[^/]+/" \
+#                   | awk -F/ '{print $1"/"$2}' \
+#                   | sort -u
+#               )
 
-              if [[ ${#dirs[@]} -eq 0 ]]; then
-                echo "No changed application directories."
-                exit 0
-              fi
+#               if [[ ${#dirs[@]} -eq 0 ]]; then
+#                 echo "No changed application directories."
+#                 exit 0
+#               fi
 
-              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-              : > "$PLANLIST"
+#               PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+#               : > "$PLANLIST"
 
-              for d in "${dirs[@]}"; do
-                if [[ -f "$d/main.tf" ]]; then
-                  echo "=== Initializing $d ($ENV) ==="
+#               for d in "${dirs[@]}"; do
+#                 if [[ -f "$d/main.tf" ]]; then
+#                   echo "=== Initializing $d ($ENV) ==="
 
-                  # Initialize Terraform with backend config
-                  terraform -chdir="$d" init -upgrade -backend-config="env/${ENV}/${ENV}.conf"
+#                   # Initialize Terraform with backend config
+#                   terraform -chdir="$d" init -upgrade -backend-config="env/${ENV}/${ENV}.conf"
 
-                  # Select or create workspace
-                  terraform -chdir="$d" workspace select "$ENV" \
-                    || terraform -chdir="$d" workspace new "$ENV"
+#                   # Select or create workspace
+#                   terraform -chdir="$d" workspace select "$ENV" \
+#                     || terraform -chdir="$d" workspace new "$ENV"
 
-                  TFVARS="$d/config/${ENV}.tfvars"
-                  PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
+#                   TFVARS="$d/config/${ENV}.tfvars"
+#                   PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
-                  echo "=== Planning $d ($ENV) ==="
-                  if [[ -f "$TFVARS" ]]; then
-                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
-                  else
-                    echo "No tfvars for $d — proceeding without -var-file"
-                    terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
-                  fi
+#                   echo "=== Planning $d ($ENV) ==="
+#                   if [[ -f "$TFVARS" ]]; then
+#                     terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
+#                   else
+#                     echo "No tfvars for $d — proceeding without -var-file"
+#                     terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
+#                   fi
 
-                  echo "$PLAN" >> "$PLANLIST"
-                else
-                  echo "Skipping it $d (no main.tf)"
-                fi
-              done
+#                   echo "$PLAN" >> "$PLANLIST"
+#                 else
+#                   echo "Skipping it $d (no main.tf)"
+#                 fi
+#               done
 
-              echo "Plan files recorded in $PLANLIST"
+#               echo "Plan files recorded in $PLANLIST"
 
-    apply:
-      steps:
-        - run:
-            shell: bash
-            command: |
-              set -euo pipefail
-              ENV="${ATLANTIS_WORKSPACE}"
-              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+#     apply:
+#       steps:
+#         - run:
+#             shell: bash
+#             command: |
+#               set -euo pipefail
+#               ENV="${ATLANTIS_WORKSPACE}"
+#               PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 
-              if [[ ! -s "$PLANLIST" ]]; then
-                echo "No plan files to apply."
-                exit 0
-              fi
+#               if [[ ! -s "$PLANLIST" ]]; then
+#                 echo "No plan files to apply."
+#                 exit 0
+#               fi
 
-              while IFS= read -r PLAN; do
-                echo "=== Applying $PLAN ==="
-                terraform apply -input=false "$PLAN"
-              done < "$PLANLIST"
+#               while IFS= read -r PLAN; do
+#                 echo "=== Applying $PLAN ==="
+#                 terraform apply -input=false "$PLAN"
+#               done < "$PLANLIST"
