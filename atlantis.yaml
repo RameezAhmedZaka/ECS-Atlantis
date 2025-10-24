@@ -1,4 +1,3 @@
-
 version: 3
 automerge: true
 parallel_plan: true
@@ -12,7 +11,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/**"
+        - "applications/**"
     workflow: matrix-tf
 
   - name: apps-production
@@ -22,7 +21,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/**"
+        - "applications/**"
     workflow: matrix-tf
 
 workflows:
@@ -31,18 +30,31 @@ workflows:
       steps:
         - run: |
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
+            ENV="$ATLANTIS_WORKSPACE"
+            echo "=== Environment: $ENV ==="
 
-            # Collect unique application dirs that changed
-            mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-              | grep -E "^application/[^/]+/" || true \
-              | awk -F/ "{print \$1\"/\"\$2}" \
-              | sort -u)
+            # Debug: Print all available environment variables
+            echo "=== Available Environment Variables ==="
+            env | grep ATLANTIS || true
+            echo "=== CHANGED_FILES ==="
+            echo "$CHANGED_FILES"
+
+            # Use find to get all applications since CHANGED_FILES might not work
+            mapfile -t dirs < <(find applications -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u)
 
             if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "No changed application directories."
-              exit 0
+              echo "No application directories found."
+              # Try alternative directory structure
+              mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u 2>/dev/null || true)
             fi
+
+            if [[ ${#dirs[@]} -eq 0 ]]; then
+              echo "Still no applications found. Using hardcoded list for testing."
+              mapfile -t dirs < <(echo -e "applications/adot\napplications/apollo")
+            fi
+
+            echo "Found ${#dirs[@]} applications:"
+            printf "  - %s\n" "${dirs[@]}"
 
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             : > "$PLANLIST"
@@ -68,15 +80,19 @@ workflows:
                     ;;
                 esac
 
+                echo "Backend config: $BACKEND_CONFIG"
+                echo "Var file: $VAR_FILE"
+
                 # Initialize with backend config
+                INIT_CMD="terraform -chdir=\"$d\" init -upgrade"
                 if [[ -f "$BACKEND_CONFIG" ]]; then
                   echo "Using backend config: $BACKEND_CONFIG"
-                  terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG"
+                  INIT_CMD="$INIT_CMD -backend-config=\"$BACKEND_CONFIG\""
                 else
                   echo "⚠️  Backend config not found: $BACKEND_CONFIG"
-                  echo "Proceeding with default init"
-                  terraform -chdir="$d" init -upgrade
                 fi
+
+                eval $INIT_CMD
 
                 # Workspace management
                 if ! terraform -chdir="$d" workspace select "$ENV" 2>/dev/null; then
@@ -87,19 +103,20 @@ workflows:
                 PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
                 # Plan with var-file
+                PLAN_CMD="terraform -chdir=\"$d\" plan -input=false -lock-timeout=20m -out=\"$PLAN\""
                 if [[ -f "$VAR_FILE" ]]; then
                   echo "Using var-file: $VAR_FILE"
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out="$PLAN"
+                  PLAN_CMD="$PLAN_CMD -var-file=\"$VAR_FILE\""
                 else
                   echo "⚠️  Var file not found: $VAR_FILE"
-                  echo "Proceeding without -var-file"
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
                 fi
+
+                eval $PLAN_CMD
 
                 echo "$PLAN" >> "$PLANLIST"
                 echo "✓ Successfully planned $APP_NAME for $ENV"
               else
-                echo "Skipping $d (no main.tf)"
+                echo "Skipping $d (main.tf missing)"
               fi
             done
 
@@ -109,36 +126,38 @@ workflows:
       steps:
         - run: |
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
+            ENV="$ATLANTIS_WORKSPACE"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 
+            echo "=== Applying plans for environment: $ENV ==="
+
             if [[ ! -f "$PLANLIST" ]]; then
-              echo "No plan list found - nothing to apply"
+              echo "No plan list found at: $PLANLIST"
+              echo "Available files in /tmp:"
+              ls -la /tmp/atlantis_planfiles_* 2>/dev/null || true
               exit 0
             fi
 
             if [[ ! -s "$PLANLIST" ]]; then
-              echo "No plan files to apply."
+              echo "Plan list is empty: $PLANLIST"
               exit 0
             fi
+
+            echo "Applying plans from: $PLANLIST"
+            cat "$PLANLIST"
 
             while IFS= read -r PLAN; do
               if [[ -f "$PLAN" ]]; then
                 echo "=== Applying $PLAN ==="
                 terraform apply -input=false -auto-approve "$PLAN"
                 echo "✓ Successfully applied $PLAN"
-                
-                # Clean up plan file after successful apply
                 rm -f "$PLAN"
               else
                 echo "⚠️  Plan file not found: $PLAN"
               fi
             done < "$PLANLIST"
             
-            # Clean up plan list after all applies
             rm -f "$PLANLIST"
-
-
             
 
 # version: 3
