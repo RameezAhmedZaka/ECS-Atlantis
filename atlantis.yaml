@@ -1,5 +1,31 @@
-version: 3
-projects:
+workflows:
+  dev-workflow:
+    plan:
+      steps:
+        - run:
+            command: ./terraform_env.sh
+        - init: {}
+        - plan: {}
+    apply:
+      steps:
+        - apply: {}
+
+  prod-workflow:
+    plan:
+      steps:
+        - run:
+            command: ./terraform_env.sh
+        - init: {}
+        - plan: {}
+    apply:
+      steps:
+        - apply: {}
+
+
+
+
+
+
   # - name: application
   #   dir: application
   #   workspace: stage
@@ -68,32 +94,6 @@ projects:
 #                 cd - >/dev/null
 #               fi
 #             done
-
-
-
-workflows:
-  dev-workflow:
-    plan:
-      steps:
-        - run:
-            command: ./terraform_env.sh
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
-
-  prod-workflow:
-    plan:
-      steps:
-        - run:
-            command: ./terraform_env.sh
-        - init: {}
-        - plan: {}
-    apply:
-      steps:
-        - apply: {}
-
 
 ####
 
