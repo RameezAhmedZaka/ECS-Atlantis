@@ -1,49 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
+# Use the Atlantis workspace
 ENV="${ATLANTIS_WORKSPACE:-staging}"
 echo "Running Terraform workflow for environment: $ENV"
 
-# If Atlantis provides changed files
-CHANGED_FILES="${ATLANTIS_PULL_REQUEST_CHANGED_FILES:-}"
+# Always start from the repo root
+BASE_DIR="${BASE_DIR:-.}"  # ensure we can override if needed
 
-# Collect all unique application directories that contain main.tf
+# Scan all applications with main.tf
 APP_DIRS=()
-
-if [[ -n "$CHANGED_FILES" ]]; then
-    while IFS= read -r file; do
-        # Only consider files under application/*
-        if [[ "$file" == application/* ]]; then
-            dir=$(dirname "$file")
-            # Walk up until we find main.tf
-            while [[ "$dir" != "." && "$dir" != "/" ]]; do
-                if [[ -f "$dir/main.tf" ]]; then
-                    APP_DIRS+=("$dir")
-                    break
-                fi
-                dir=$(dirname "$dir")
-            done
-        fi
-    done <<< "$CHANGED_FILES"
-else
-    # Fallback: process all apps if no changed files provided
-    while IFS= read -r dir; do
-        [[ -f "$dir/main.tf" ]] && APP_DIRS+=("$dir")
-    done < <(find application -mindepth 1 -maxdepth 1 -type d | sort)
-fi
-
-# Remove duplicates
-APP_DIRS=($(printf "%s\n" "${APP_DIRS[@]}" | sort -u))
+for d in "$BASE_DIR"/application/*; do
+    [[ -f "$d/main.tf" ]] && APP_DIRS+=("$d")
+done
 
 if [[ ${#APP_DIRS[@]} -eq 0 ]]; then
-    echo "No application directories found with main.tf"
+    echo "No applications found with main.tf under $BASE_DIR/application"
     exit 0
 fi
 
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 
-# Loop through each app directory
 for APP in "${APP_DIRS[@]}"; do
     APP_NAME=$(basename "$APP")
     echo "=== Processing $APP_NAME ($ENV) ==="
@@ -78,9 +56,9 @@ done
 
 # Apply
 if [[ -s "$PLANLIST" ]]; then
-    while IFS= read -r PLAN; do
+    for PLAN in $(cat "$PLANLIST"); do
         terraform apply -input=false "$PLAN"
-    done < "$PLANLIST"
+    done
 else
     echo "No plan files to apply."
 fi
