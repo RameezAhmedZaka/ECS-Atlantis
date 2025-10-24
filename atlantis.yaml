@@ -1,15 +1,15 @@
 version: 3
 workflows:
-  # my-custom-workflow:
-  #   plan:
-  #     steps:
-  #       - run:
-  #           command: ./setup-env.sh
-  #       - init:
-  #           extra_args: ["-backend-config=${APP_NAME}/env/staging/stage.conf"]
-  #       - plan:
-  #           extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
-  #   apply:
-  #     steps:
-  #       - apply:
-  #           extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
+  my-custom-workflow:
+    plan:
+      steps:
+        - run:
+            command: ./generate_atlantis_yaml.sh
+        - init:{}
+            # extra_args: ["-backend-config=${APP_NAME}/env/staging/stage.conf"]
+        - plan:{}
+            # extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
+    apply:
+      steps:
+        - apply:{}
+            # extra_args: ["-var-file=${APP_NAME}/config/stage.tfvars"]
