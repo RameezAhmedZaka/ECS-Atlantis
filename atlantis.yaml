@@ -1,7 +1,7 @@
 version: 3
 projects:
   - name: dev-deploy
-    dir: application/
+    dir: .
     workspace: stage
     workflow: dev-workflow
     apply_requirements: []
@@ -10,7 +10,7 @@ projects:
       enabled: true
 
   - name: prod-deploy
-    dir: application/
+    dir: .
     workspace: production
     workflow: prod-workflow
     apply_requirements: []
