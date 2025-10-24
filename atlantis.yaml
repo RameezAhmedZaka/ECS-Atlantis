@@ -1,15 +1,145 @@
+
 version: 3
-automerge: false
+automerge: true
 parallel_plan: true
 parallel_apply: true
+
 projects:
-  - name: "{{ .DirName }}-{{ .Workspace }}"
-    dir: "application/.*"
-    workspace: "{{ .Workspace }}"
+  - name: apps-staging
+    dir: .
+    workspace: staging
+    terraform_version: v1.6.6
     autoplan:
-      when_modified: ["*.tf", "*.tfvars", "config/{{ .Workspace }}.tfvars", "env/{{ .Workspace }}/**"]
-    terraform_version: v1.5.0
-    apply_requirements: [mergeable]
+      enabled: true
+      when_modified:
+        - "applications/**"
+    workflow: matrix-tf
+
+  - name: apps-production
+    dir: .
+    workspace: production
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "applications/**"
+    workflow: matrix-tf
+
+workflows:
+  matrix-tf:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="${ATLANTIS_WORKSPACE}"
+
+            # Collect unique application dirs that changed
+            mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
+              | grep -E "^applications/[^/]+/" || true \
+              | awk -F/ "{print \$1\"/\"\$2}" \
+              | sort -u)
+
+            if [[ ${#dirs[@]} -eq 0 ]]; then
+              echo "No changed application directories."
+              exit 0
+            fi
+
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            : > "$PLANLIST"
+
+            for d in "${dirs[@]}"; do
+              if [[ -f "$d/main.tf" ]]; then
+                APP_NAME=$(basename "$d")
+                echo "=== Planning $APP_NAME ($ENV) ==="
+                
+                # Set backend config and var-file based on environment
+                case "$ENV" in
+                  "production")
+                    BACKEND_CONFIG="$d/env/production/prod.con"
+                    VAR_FILE="$d/config/production.tfvars"
+                    ;;
+                  "staging")
+                    BACKEND_CONFIG="$d/env/staging/stage.con"
+                    VAR_FILE="$d/config/stage.tfvars"
+                    ;;
+                  *)
+                    echo "Unknown environment: $ENV"
+                    exit 1
+                    ;;
+                esac
+
+                # Initialize with backend config
+                if [[ -f "$BACKEND_CONFIG" ]]; then
+                  echo "Using backend config: $BACKEND_CONFIG"
+                  terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG"
+                else
+                  echo "⚠️  Backend config not found: $BACKEND_CONFIG"
+                  echo "Proceeding with default init"
+                  terraform -chdir="$d" init -upgrade
+                fi
+
+                # Workspace management
+                if ! terraform -chdir="$d" workspace select "$ENV" 2>/dev/null; then
+                  echo "Creating new workspace: $ENV"
+                  terraform -chdir="$d" workspace new "$ENV"
+                fi
+
+                PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
+
+                # Plan with var-file
+                if [[ -f "$VAR_FILE" ]]; then
+                  echo "Using var-file: $VAR_FILE"
+                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out="$PLAN"
+                else
+                  echo "⚠️  Var file not found: $VAR_FILE"
+                  echo "Proceeding without -var-file"
+                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
+                fi
+
+                echo "$PLAN" >> "$PLANLIST"
+                echo "✓ Successfully planned $APP_NAME for $ENV"
+              else
+                echo "Skipping $d (no main.tf)"
+              fi
+            done
+
+            echo "Plan files recorded in $PLANLIST"
+
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="${ATLANTIS_WORKSPACE}"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+
+            if [[ ! -f "$PLANLIST" ]]; then
+              echo "No plan list found - nothing to apply"
+              exit 0
+            fi
+
+            if [[ ! -s "$PLANLIST" ]]; then
+              echo "No plan files to apply."
+              exit 0
+            fi
+
+            while IFS= read -r PLAN; do
+              if [[ -f "$PLAN" ]]; then
+                echo "=== Applying $PLAN ==="
+                terraform apply -input=false -auto-approve "$PLAN"
+                echo "✓ Successfully applied $PLAN"
+                
+                # Clean up plan file after successful apply
+                rm -f "$PLAN"
+              else
+                echo "⚠️  Plan file not found: $PLAN"
+              fi
+            done < "$PLANLIST"
+            
+            # Clean up plan list after all applies
+            rm -f "$PLANLIST"
+
+
+            
 
 # version: 3
 # workflows:
