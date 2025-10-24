@@ -4,6 +4,7 @@ workflows:
       steps:
         - run:
             command: ./terraform_env.sh
+            output: show
         - init: {}
         - plan: {}
     apply:
@@ -15,6 +16,7 @@ workflows:
       steps:
         - run:
             command: ./terraform_env.sh
+            output: show
         - init: {}
         - plan: {}
     apply:
