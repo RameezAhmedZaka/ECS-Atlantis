@@ -1,8 +1,7 @@
 version: 3
 automerge: false  # Disable until working
 parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working
-apply_requirements: []  
+parallel_apply: false  # Disable until working 
 
 projects:
   - name: apps-staging
@@ -14,6 +13,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: staging-workflow
+    apply_requirements: [] 
 
   - name: apps-production
     dir: .
@@ -24,6 +24,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: production-workflow
+    apply_requirements: [] 
 
 workflows:
   staging-workflow:
