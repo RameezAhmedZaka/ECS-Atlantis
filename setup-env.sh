@@ -1,3 +1,13 @@
+# Generate projects and save into a temp file
+# cd application
+# grep -P 'backend[\s]+"s3"' **/*.tf | rev | cut -d'/' -f2- | rev | sort | uniq | while read d; do
+#   echo '[ {"name": "'"$d"'","dir": "'"$d"'", "autoplan": {"when_modified": ["**/*.tf.*"] }} ]' | yq -PM
+#   APP_NAME=$(basename "$d")   # extract the app name
+#   echo "App name: $APP_NAME"
+# done > generated-projects.yaml
+
+
+
 
 !/bin/bash
 
