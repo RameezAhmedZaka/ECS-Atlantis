@@ -4,15 +4,15 @@ ENV="$1"
 
 echo "=== STARTING $ENV at $(date) ==="
 
-# Find applications but limit to 2 for testing
+# Find application but limit to 2 for testing
 mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u | head -2)
 
 if [[ ${#dirs[@]} -eq 0 ]]; then
-  echo "No applications found!"
+  echo "No application found!"
   exit 1
 fi
 
-echo "Found ${#dirs[@]} applications: ${dirs[*]}"
+echo "Found ${#dirs[@]} application: ${dirs[*]}"
 
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
