@@ -1,34 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 
-# Determine the environment from Atlantis workspace
-ENV="${ATLANTIS_WORKSPACE:-staging}"  # default to staging if not set
+ENV="${ATLANTIS_WORKSPACE:-staging}"
 echo "Running Terraform workflow for environment: $ENV"
 
-# Directory where applications are located
-BASE_DIR="application"
+# If Atlantis provides changed files
+CHANGED_FILES="${ATLANTIS_PULL_REQUEST_CHANGED_FILES:-}"
 
-# Collect all apps with a main.tf
+# Collect all unique application directories that contain main.tf
 APP_DIRS=()
-while IFS= read -r dir; do
-    [[ -f "$dir/main.tf" ]] && APP_DIRS+=("$dir")
-done < <(find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+
+if [[ -n "$CHANGED_FILES" ]]; then
+    while IFS= read -r file; do
+        # Only consider files under application/*
+        if [[ "$file" == application/* ]]; then
+            dir=$(dirname "$file")
+            # Walk up until we find main.tf
+            while [[ "$dir" != "." && "$dir" != "/" ]]; do
+                if [[ -f "$dir/main.tf" ]]; then
+                    APP_DIRS+=("$dir")
+                    break
+                fi
+                dir=$(dirname "$dir")
+            done
+        fi
+    done <<< "$CHANGED_FILES"
+else
+    # Fallback: process all apps if no changed files provided
+    while IFS= read -r dir; do
+        [[ -f "$dir/main.tf" ]] && APP_DIRS+=("$dir")
+    done < <(find application -mindepth 1 -maxdepth 1 -type d | sort)
+fi
+
+# Remove duplicates
+APP_DIRS=($(printf "%s\n" "${APP_DIRS[@]}" | sort -u))
 
 if [[ ${#APP_DIRS[@]} -eq 0 ]]; then
-    echo "No applications found with main.tf under $BASE_DIR"
+    echo "No application directories found with main.tf"
     exit 0
 fi
 
-# Prepare plan list
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 
-# Loop over each application
+# Loop through each app directory
 for APP in "${APP_DIRS[@]}"; do
     APP_NAME=$(basename "$APP")
     echo "=== Processing $APP_NAME ($ENV) ==="
 
-    # Backend config and var-file per environment
     if [[ "$ENV" == "staging" ]]; then
         BACKEND="$APP/env/staging/stage.con"
         VAR_FILE="$APP/config/stage.tfvars"
@@ -39,40 +58,31 @@ for APP in "${APP_DIRS[@]}"; do
 
     # Terraform init
     if [[ -f "$BACKEND" ]]; then
-        echo "Initializing Terraform for $APP_NAME with backend $BACKEND"
         terraform -chdir="$APP" init -upgrade -backend-config="$BACKEND"
     else
-        echo "Warning: Backend config $BACKEND not found, initializing without backend"
         terraform -chdir="$APP" init -upgrade
     fi
 
-    # Workspace selection
     terraform -chdir="$APP" workspace select "$ENV" 2>/dev/null || \
         terraform -chdir="$APP" workspace new "$ENV"
 
-    # Terraform plan
     PLAN="/tmp/${APP_NAME}_${ENV}.tfplan"
     if [[ -f "$VAR_FILE" ]]; then
-        echo "Planning $APP_NAME with var-file $VAR_FILE"
         terraform -chdir="$APP" plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out="$PLAN"
     else
-        echo "Warning: Var-file $VAR_FILE not found, planning without it"
         terraform -chdir="$APP" plan -input=false -lock-timeout=20m -out="$PLAN"
     fi
 
-    # Record plan for apply
     echo "$PLAN" >> "$PLANLIST"
 done
 
-# Terraform apply
+# Apply
 if [[ -s "$PLANLIST" ]]; then
-    echo "Applying all plans for environment: $ENV"
     while IFS= read -r PLAN; do
-        echo "=== Applying $PLAN ==="
         terraform apply -input=false "$PLAN"
     done < "$PLANLIST"
 else
-    echo "No plan files found, nothing to apply."
+    echo "No plan files to apply."
 fi
 
-echo "Terraform workflow completed for environment: $ENV"
+echo "Terraform workflow completed for $ENV"
