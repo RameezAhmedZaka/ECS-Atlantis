@@ -12,7 +12,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
   - name: apps-production
@@ -22,7 +22,7 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "applications/**"
+        - "application/**"
     workflow: matrix-tf
 
 workflows:
@@ -35,7 +35,7 @@ workflows:
 
             # Collect unique application dirs that changed
             mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-              | grep -E "^applications/[^/]+/" || true \
+              | grep -E "^application/[^/]+/" || true \
               | awk -F/ "{print \$1\"/\"\$2}" \
               | sort -u)
 
