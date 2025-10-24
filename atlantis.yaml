@@ -3,63 +3,32 @@ automerge: true
 parallel_plan: true
 parallel_apply: true
 
-# Projects dynamically generated per application
 projects:
-{{- $apps := split (exec "find application -mindepth 1 -maxdepth 1 -type d | sort") "\n" }}
-{{- range $i, $app := $apps }}
-  - name: {{ base $app }}-staging
-    dir: {{ $app }}
+  - name: apps-staging
+    dir: application
     workspace: staging
-    terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "{{ $app }}/**/*.tf"
-        - "{{ $app }}/config/*.tfvars"
-    workflow: terraform-env
+        - "application/**/*.tf"
+        - "application/config/*.tfvars"
+    workflow: run-script
 
-  - name: {{ base $app }}-production
-    dir: {{ $app }}
+  - name: apps-production
+    dir: application
     workspace: production
-    terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "{{ $app }}/**/*.tf"
-        - "{{ $app }}/config/*.tfvars"
-    workflow: terraform-env
-{{- end }}
+        - "application/**/*.tf"
+        - "application/config/*.tfvars"
+    workflow: run-script
 
 workflows:
-  terraform-env:
+  run-script:
     plan:
       steps:
-        - run: |
-            set -euo pipefail
-            ENV="$ATLANTIS_WORKSPACE"
-            APP_DIR="$DIR"
-
-            if [[ "$ENV" == "staging" ]]; then
-              BACKEND="$APP_DIR/env/staging/stage.con"
-              VAR_FILE="$APP_DIR/config/stage.tfvars"
-            else
-              BACKEND="$APP_DIR/env/production/prod.con"
-              VAR_FILE="$APP_DIR/config/production.tfvars"
-            fi
-
-            terraform init -upgrade -backend-config="$BACKEND"
-            terraform workspace select "$ENV" || terraform workspace new "$ENV"
-
-            if [[ -f "$VAR_FILE" ]]; then
-              terraform plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out=/tmp/$(basename $APP_DIR)_${ENV}.tfplan
-            else
-              terraform plan -input=false -lock-timeout=20m -out=/tmp/$(basename $APP_DIR)_${ENV}.tfplan
-            fi
-
+        - run: ./terraform_env.sh
     apply:
       steps:
-        - run: |
-            set -euo pipefail
-            ENV="$ATLANTIS_WORKSPACE"
-            PLAN="/tmp/$(basename $DIR)_${ENV}.tfplan"
-            terraform apply -input=false "$PLAN"
+        - run: ./terraform_env.sh
