@@ -1,85 +1,41 @@
-version: 3
-automerge: true
-parallel_plan: true
-parallel_apply: true
-
+version: 
 projects:
-  - name: apps-production
-    dir: .
-    workspace: production
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/**"
-    workflow: matrix-tf
+# # ← projects generated automatically from Terraform directories with S3 backend
+# # Example output from your grep/yq script:
+# - name: application/adot/prod
+#   dir: application/adot/prod
+#   autoplan:
+#     when_modified:
+#       - "**/*.tf.*"
+# - name: application/adot/dev
+#   dir: application/adot/dev
+#   autoplan:
+#     when_modified:
+#       - "**/*.tf.*"
+# - name: databases/mysql
+#   dir: databases/mysql
+#   autoplan:
+#     when_modified:
+#       - "**/*.tf.*"
+
+# # If you want all projects to use the same workflow, you can add workflow manually:
+# #   workflow: my-custom-workflow
+# # Or modify the script to append it automatically.
 
 workflows:
-  matrix-tf:
+  my-custom-workflow:
+    pre_workflow_hooks:
+      - run:
+          command: echo "This runs before plan/apply"
+      - run:
+          command: ./setup-env.sh
     plan:
       steps:
-        - run: |
-            echo "🔍 Detecting changed application subdirectories..."
-            # Find base commit safely
-            BASE_COMMIT=$(git merge-base HEAD $(git rev-parse --abbrev-ref HEAD@{upstream} 2>/dev/null || echo HEAD~1))
-
-            # Fall back if merge-base fails
-            if [ -z "$BASE_COMMIT" ]; then
-              echo "⚠️ Could not determine base commit, using HEAD~1"
-              BASE_COMMIT="HEAD~1"
-            fi
-
-            CHANGED_FILES=$(git diff --name-only $BASE_COMMIT...HEAD || true)
-
-            echo "🧾 Changed files:"
-            echo "$CHANGED_FILES"
-
-            CHANGED_DIRS=$(echo "$CHANGED_FILES" | grep '^application/' | cut -d'/' -f1-2 | sort -u || true)
-
-            if [ -z "$CHANGED_DIRS" ]; then
-              echo "✅ No changes detected in application subdirectories."
-              exit 0
-            fi
-
-            echo "🧩 Changed application directories:"
-            echo "$CHANGED_DIRS"
-
-            for dir in $CHANGED_DIRS; do
-              echo "🚀 Running Terraform init for $dir"
-              cd "$dir"
-              terraform init -input=false -backend-config="./env/production/prod.conf"
-
-              echo "📦 Running Terraform plan for $dir"
-              terraform plan -input=false -no-color -var-file="./config/production.tfvars" -out=tfplan
-              cd - > /dev/null
-            done
-
+        - init:
+            extra_args: ["-backend-config=env/staging/stage.conf"]
+        - plan:
+            extra_args: ["-var-file=config/stage.tfvars"]
     apply:
       steps:
-        - run: |
-            echo "🔍 Detecting changed application subdirectories..."
-            BASE_COMMIT=$(git merge-base HEAD $(git rev-parse --abbrev-ref HEAD@{upstream} 2>/dev/null || echo HEAD~1))
-            if [ -z "$BASE_COMMIT" ]; then
-              BASE_COMMIT="HEAD~1"
-            fi
-
-            CHANGED_FILES=$(git diff --name-only $BASE_COMMIT...HEAD || true)
-            echo "🧾 Changed files:"
-            echo "$CHANGED_FILES"
-
-            CHANGED_DIRS=$(echo "$CHANGED_FILES" | grep '^application/' | cut -d'/' -f1-2 | sort -u || true)
-
-            if [ -z "$CHANGED_DIRS" ]; then
-              echo "✅ No changes detected to apply."
-              exit 0
-            fi
-
-            echo "🧩 Changed application directories:"
-            echo "$CHANGED_DIRS"
-
-            for dir in $CHANGED_DIRS; do
-              echo "🚀 Applying Terraform for $dir"
-              cd "$dir"
-              terraform apply -input=false -auto-approve -var-file="./config/production.tfvars" tfplan || true
-              cd - > /dev/null
-            done
+        - apply:
+            extra_args: ["-var-file=config/stage.tfvars"]
