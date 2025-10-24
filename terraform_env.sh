@@ -3,8 +3,8 @@
 APPS_DIR="application"
 OUTPUT_FILE="atlantis.yaml"
 
-echo "version: 3" > $OUTPUT_FILE
-echo "projects:" >> $OUTPUT_FILE
+# echo "version: 3" > $OUTPUT_FILE
+# echo "projects:" >> $OUTPUT_FILE
 cd application
 for app in "$APPS_DIR"/*; do
     if [ -d "$app" ]; then
@@ -39,3 +39,34 @@ for app in "$APPS_DIR"/*; do
         echo "" >> $OUTPUT_FILE
     fi
 done
+
+# # Workflows section
+# cat >> $OUTPUT_FILE <<EOL
+
+# workflows:
+#   dev-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
+
+#   prod-workflow:
+#     plan:
+#       steps:
+#         - run:
+#             command: ls
+#         - init: {}
+#         - plan: {}
+#     apply:
+#       steps:
+#         - apply: {}
+# EOL
+
+
+
+
