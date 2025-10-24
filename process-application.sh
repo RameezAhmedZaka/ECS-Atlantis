@@ -14,7 +14,7 @@ fi
 
 echo "Found ${#dirs[@]} applications: ${dirs[*]}"
 
-PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+PLANLIST="./atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 
 for d in "${dirs[@]}"; do
@@ -56,15 +56,15 @@ for d in "${dirs[@]}"; do
       continue
     }
 
-    # FIX: Use default workspace instead of environment workspace
+    # Use default workspace
     echo "Step 2: Setting workspace..."
     timeout 30 terraform -chdir="$d" workspace select "default" 2>/dev/null || {
       echo "Using default workspace"
     }
 
-    # FIX: Use consistent plan file naming
-    PLAN_NAME="$(echo "$d" | tr '/' '_')_${ENV}.tfplan"
-    PLAN="/tmp/$PLAN_NAME"
+    # FIX: Create plan file in CURRENT DIRECTORY (Atlantis expects this)
+    PLAN_NAME="${d//\//_}_${ENV}.tfplan"
+    PLAN="./$PLAN_NAME"
     
     echo "Step 3: Planning... Output: $PLAN"
 
@@ -75,8 +75,8 @@ for d in "${dirs[@]}"; do
       continue
     }
 
-    # FIX: Store both the plan path AND the directory it belongs to
-    echo "$d|$PLAN" >> "$PLANLIST"
+    # FIX: Store relative paths that Atlantis can find
+    echo "$PLAN" >> "$PLANLIST"
     echo ":white_check_mark: Successfully planned $APP_NAME"
     
   else
@@ -87,3 +87,7 @@ done
 echo "=== COMPLETED $ENV at $(date) ==="
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
+# Debug: Show what plan files exist
+echo "=== ALL PLAN FILES IN CURRENT DIR ==="
+find . -name "*.tfplan" -type f 2>/dev/null || echo "No plan files found"

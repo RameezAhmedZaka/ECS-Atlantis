@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+PLANLIST="./atlantis_planfiles_${ENV}.lst"
 
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 
 if [[ ! -f "$PLANLIST" ]]; then
   echo ":x: No plan list found: $PLANLIST"
-  echo "Available plan files:"
-  ls -la /tmp/*.tfplan 2>/dev/null || echo "No plan files found"
+  echo "Available plan files in current directory:"
+  find . -name "*.tfplan" -type f 2>/dev/null || echo "No plan files found"
   exit 1
 fi
 
@@ -20,24 +20,21 @@ fi
 echo "Applying plans from: $PLANLIST"
 cat "$PLANLIST"
 
-while IFS='|' read -r d PLAN; do
+while IFS= read -r PLAN; do
   if [[ -f "$PLAN" ]]; then
-    echo "=== Applying $PLAN for directory $d ==="
+    echo "=== Applying $PLAN ==="
     
-    # Change to the correct directory before applying
-    if [[ -d "$d" ]]; then
-      cd "$d" || {
-        echo ":x: Cannot cd to $d"
-        continue
-      }
-      terraform apply -input=false -auto-approve "$PLAN" || {
+    # Extract directory from plan filename
+    DIR_NAME=$(echo "$PLAN" | sed 's/^\.\///' | sed "s/_${ENV}\.tfplan//" | sed 's/_/\//g')
+    
+    if [[ -d "$DIR_NAME" ]]; then
+      echo "Applying from directory: $DIR_NAME"
+      terraform -chdir="$DIR_NAME" apply -input=false -auto-approve "$PLAN" || {
         echo ":x: Apply failed for $PLAN"
-        cd - > /dev/null
         continue
       }
-      cd - > /dev/null
     else
-      echo ":x: Directory not found: $d"
+      echo ":x: Directory not found: $DIR_NAME"
       continue
     fi
     
@@ -45,8 +42,8 @@ while IFS='|' read -r d PLAN; do
     rm -f "$PLAN"
   else
     echo ":warning: Plan file not found: $PLAN"
-    echo "Looking for plan in: $(pwd)"
-    ls -la "/tmp/" | grep "$(basename "$PLAN")" || echo "Plan file not found in /tmp/"
+    echo "Current directory: $(pwd)"
+    ls -la ./*.tfplan 2>/dev/null || echo "No plan files in current directory"
   fi
 done < "$PLANLIST"
 
