@@ -3,98 +3,63 @@ automerge: true
 parallel_plan: true
 parallel_apply: true
 
-# One project per environment. The custom workflow below loops over changed app dirs.
+# Projects dynamically generated per application
 projects:
-  - name: apps-staging
-    dir: .
+{{- $apps := split (exec "find application -mindepth 1 -maxdepth 1 -type d | sort") "\n" }}
+{{- range $i, $app := $apps }}
+  - name: {{ base $app }}-staging
+    dir: {{ $app }}
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "application/**"
-    workflow: matrix-tf
+        - "{{ $app }}/**/*.tf"
+        - "{{ $app }}/config/*.tfvars"
+    workflow: terraform-env
 
-  - name: apps-production
-    dir: .
+  - name: {{ base $app }}-production
+    dir: {{ $app }}
     workspace: production
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "application/**"
-    workflow: matrix-tf
+        - "{{ $app }}/**/*.tf"
+        - "{{ $app }}/config/*.tfvars"
+    workflow: terraform-env
+{{- end }}
 
 workflows:
-  matrix-tf:
+  terraform-env:
     plan:
       steps:
         - run: |
-            export ATLANTIS_WORKSPACE="$ATLANTIS_WORKSPACE"
-            bash -c '
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
+            ENV="$ATLANTIS_WORKSPACE"
+            APP_DIR="$DIR"
 
-            # Collect unique application dirs that changed (e.g., application/callisto-catalog)
-            CHANGED_FILES="${ATLANTIS_PULL_REQUEST_CHANGED_FILES:-}"
-            mapfile -t dirs < <(printf "%s\n" $CHANGED_FILES \
-              | grep -E "^application/[^/]+/" || true \
-              | awk -F/ "{print \$1\"/\"\$2}" \
-              | sort -u)
-
-            if [[ ${#dirs[@]} -eq 0 ]]; then
-              echo "No changed application directories."
-              exit 0
+            if [[ "$ENV" == "staging" ]]; then
+              BACKEND="$APP_DIR/env/staging/stage.con"
+              VAR_FILE="$APP_DIR/config/stage.tfvars"
+            else
+              BACKEND="$APP_DIR/env/production/prod.con"
+              VAR_FILE="$APP_DIR/config/production.tfvars"
             fi
 
-            # Keep a list of plan files to apply later
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            : > "$PLANLIST"
+            terraform init -upgrade -backend-config="$BACKEND"
+            terraform workspace select "$ENV" || terraform workspace new "$ENV"
 
-            for d in "${dirs[@]}"; do
-              if [[ -f "$d/main.tf" ]]; then
-                echo "=== Planning $d ($ENV) ==="
-                terraform -chdir="$d" init -upgrade
-
-                # Use workspaces per env if the module supports it
-                terraform -chdir="$d" workspace select "$ENV" \
-                  || terraform -chdir="$d" workspace new "$ENV"
-
-                TFVARS="$d/config/${ENV}.tfvars"
-                PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
-
-                if [[ -f "$TFVARS" ]]; then
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$TFVARS" -out="$PLAN"
-                else
-                  echo "No tfvars for $d and env $ENV — proceeding without -var-file"
-                  terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
-                fi
-
-                echo "$PLAN" >> "$PLANLIST"
-              else
-                echo "Skipping $d (no main.tf)"
-              fi
-            done
-
-            echo "Plan files recorded in $PLANLIST"
-            '
+            if [[ -f "$VAR_FILE" ]]; then
+              terraform plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out=/tmp/$(basename $APP_DIR)_${ENV}.tfplan
+            else
+              terraform plan -input=false -lock-timeout=20m -out=/tmp/$(basename $APP_DIR)_${ENV}.tfplan
+            fi
 
     apply:
       steps:
         - run: |
-            export ATLANTIS_WORKSPACE="$ATLANTIS_WORKSPACE"
-            bash -c '
             set -euo pipefail
-            ENV="${ATLANTIS_WORKSPACE}"
-            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-
-            if [[ ! -s "$PLANLIST" ]]; then
-              echo "No plan files to apply."
-              exit 0
-            fi
-
-            while IFS= read -r PLAN; do
-              echo "=== Applying $PLAN ==="
-              terraform apply -input=false "$PLAN"
-            done < "$PLANLIST"
-            '
+            ENV="$ATLANTIS_WORKSPACE"
+            PLAN="/tmp/$(basename $DIR)_${ENV}.tfplan"
+            terraform apply -input=false "$PLAN"
