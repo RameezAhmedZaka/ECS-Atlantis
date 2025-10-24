@@ -1,7 +1,7 @@
 version: 3
-automerge: true
-parallel_plan: true
-parallel_apply: true
+automerge: false  # Disable until working
+parallel_plan: false  # Disable until working
+parallel_apply: false  # Disable until working
 
 projects:
   - name: apps-staging
@@ -9,7 +9,7 @@ projects:
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
-      enabled: true
+      enabled: false  # DISABLE FOR TESTING
       when_modified:
         - "application/**"
     workflow: staging-workflow
@@ -19,7 +19,7 @@ projects:
     workspace: production
     terraform_version: v1.6.6
     autoplan:
-      enabled: true
+      enabled: false  # DISABLE FOR TESTING
       when_modified:
         - "application/**"
     workflow: production-workflow
@@ -32,6 +32,7 @@ workflows:
             set -euo pipefail
             ENV="staging"
             echo "=== Processing STAGING environment ==="
+            chmod +x ./process-application.sh
             ./process-application.sh "$ENV"
     apply:
       steps:
@@ -39,6 +40,7 @@ workflows:
             set -euo pipefail
             ENV="staging"
             echo "=== Applying STAGING environment ==="
+            chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
 
   production-workflow:
@@ -48,6 +50,7 @@ workflows:
             set -euo pipefail
             ENV="production"
             echo "=== Processing PRODUCTION environment ==="
+            chmod +x ./process-application.sh
             ./process-application.sh "$ENV"
     apply:
       steps:
@@ -55,9 +58,12 @@ workflows:
             set -euo pipefail
             ENV="production"
             echo "=== Applying PRODUCTION environment ==="
+            chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
-            
 
+
+
+            
 # version: 3
 # workflows:
 #   dev-workflow:
