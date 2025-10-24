@@ -26,9 +26,9 @@ for d in "${dirs[@]}"; do
 
     # Initialize
     if [[ -f "$BACKEND_CONFIG" ]]; then
-      terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG"
+      timeout 300 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG"
     else
-      terraform -chdir="$d" init -upgrade
+      timeout 300 terraform -chdir="$d" init -upgrade
     fi
 
     # Workspace
@@ -38,9 +38,9 @@ for d in "${dirs[@]}"; do
 
     # Plan
     if [[ -f "$VAR_FILE" ]]; then
-      terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out="$PLAN"
+      timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=20m -var-file="$VAR_FILE" -out="$PLAN"
     else
-      terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
+      timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=20m -out="$PLAN"
     fi
 
     echo "$PLAN" >> "$PLANLIST"
