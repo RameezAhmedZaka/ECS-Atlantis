@@ -1,7 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
+shift  # Remove the first argument (ENV), pass the rest
+
+# Check if destroy flag is present
+DESTROY_FLAG=""
+for arg in "$@"; do
+    if [[ "$arg" == "-destroy" ]]; then
+        DESTROY_FLAG="-destroy"
+        break
+    fi
+done
+
 echo "=== STARTING $ENV at $(date) ==="
+echo "Destroy flag: ${DESTROY_FLAG:--none}"
+
 # Find application but limit to 2 for testing
 mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u | head -2)
 if [[ ${#dirs[@]} -eq 0 ]]; then
@@ -53,18 +66,30 @@ for d in "${dirs[@]}"; do
       echo "Workspace setup failed for $d"
       continue
     }
-    # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
-
-    PLAN="${ENV}.tfplan"
+    
+    # Modify plan name for destroy plans
+    if [[ -n "$DESTROY_FLAG" ]]; then
+        PLAN="${ENV}_destroy.tfplan"
+    else
+        PLAN="${ENV}.tfplan"
+    fi
+    
     echo "Step 3: Planning... Output: $PLAN"
-    # Plan with var-file
     echo "Using var-file: $VAR_FILE"
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
-      echo "Plan failed for $d"
-      continue
-    }
-    # echo "$PLAN" >> "$PLANLIST"
-
+    
+    # Add destroy flag to plan command if present
+    if [[ -n "$DESTROY_FLAG" ]]; then
+        timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" $DESTROY_FLAG || {
+          echo "Destroy plan failed for $d"
+          continue
+        }
+    else
+        timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+          echo "Plan failed for $d"
+          continue
+        }
+    fi
+    
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
   else

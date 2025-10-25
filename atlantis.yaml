@@ -1,7 +1,7 @@
 version: 3
-automerge: false  # Disable until working
-parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working 
+automerge: false
+parallel_plan: false
+parallel_apply: false
 
 projects:
   - name: apps-staging
@@ -9,22 +9,22 @@ projects:
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
         - "application/**"
     workflow: staging-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
   - name: apps-production
     dir: .
     workspace: production
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
         - "application/**"
     workflow: production-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
 workflows:
   staging-workflow:
@@ -34,8 +34,9 @@ workflows:
             set -euo pipefail
             ENV="staging"
             echo "=== Processing STAGING environment ==="
+            echo "Extra args received: $@"
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$@"
     apply:
       steps:
         - run: |
@@ -43,7 +44,7 @@ workflows:
             ENV="staging"
             echo "=== Applying STAGING environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
+            ./apply-plans.sh "$ENV"
 
   production-workflow:
     plan:
@@ -52,8 +53,9 @@ workflows:
             set -euo pipefail
             ENV="production"
             echo "=== Processing PRODUCTION environment ==="
+            echo "Extra args received: $@"
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$@"
     apply:
       steps:
         - run: |
@@ -63,8 +65,7 @@ workflows:
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
 
-
-
+            
 
 # version: 3
 # workflows:
