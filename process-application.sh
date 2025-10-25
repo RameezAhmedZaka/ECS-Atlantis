@@ -30,12 +30,12 @@ for d in "${dirs[@]}"; do
     echo "Var file: $VAR_FILE"
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
-      echo ":x: Backend config not found: $d/$BACKEND_CONFIG"
+      echo "Backend config not found: $d/$BACKEND_CONFIG"
       ls -la "$d/env/" 2>/dev/null || echo "env directory not found"
       continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
-      echo ":x: Var file not found: $d/$VAR_FILE"
+      echo "Var file not found: $d/$VAR_FILE"
       ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
@@ -43,14 +43,14 @@ for d in "${dirs[@]}"; do
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
-      echo ":x: Init failed for $d"
+      echo "Init failed for $d"
       continue
     }
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
-    timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null || \
-    timeout 30 terraform -chdir="$d" workspace new "$ENV" || {
-      echo ":x: Workspace setup failed for $d"
+    timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
+    timeout 30 terraform -chdir="$d" workspace new default || {
+      echo "Workspace setup failed for $d"
       continue
     }
     # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
@@ -60,15 +60,15 @@ for d in "${dirs[@]}"; do
     # Plan with var-file
     echo "Using var-file: $VAR_FILE"
     timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
-      echo ":x: Plan failed for $d"
+      echo "Plan failed for $d"
       continue
     }
     # echo "$PLAN" >> "$PLANLIST"
 
     echo "$d|$PLAN" >> "$PLANLIST"
-    echo ":white_check_mark: Successfully planned $APP_NAME"
+    echo "Successfully planned $APP_NAME"
   else
-    echo ":warning: Skipping $d (main.tf missing)"
+    echo "Skipping $d (main.tf missing)"
   fi
 done
 echo "=== COMPLETED $ENV at $(date) ==="
