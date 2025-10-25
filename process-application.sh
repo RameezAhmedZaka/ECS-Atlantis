@@ -42,10 +42,12 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
+    rm -rf "$d/.terraform"
     timeout 120 terraform -chdir="$d" init -reconfigure -upgrade -backend-config="$BACKEND_CONFIG" -input=false  || {
       echo "Init failed for $d"
       continue
     }
+    cat "$d/.terraform/terraform.tfstate" | jq -r '.backend.config.key'
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
     timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null || \
