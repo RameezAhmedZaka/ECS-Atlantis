@@ -53,7 +53,9 @@ for d in "${dirs[@]}"; do
       echo ":x: Workspace setup failed for $d"
       continue
     }
-    PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
+    # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
+
+    PLAN="$d/${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
     # Plan with var-file
     echo "Using var-file: $VAR_FILE"
@@ -61,7 +63,9 @@ for d in "${dirs[@]}"; do
       echo ":x: Plan failed for $d"
       continue
     }
-    echo "$PLAN" >> "$PLANLIST"
+    # echo "$PLAN" >> "$PLANLIST"
+    
+    echo "$d|$PLAN" >> "$PLANLIST"
     echo ":white_check_mark: Successfully planned $APP_NAME"
   else
     echo ":warning: Skipping $d (main.tf missing)"
