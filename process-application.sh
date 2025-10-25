@@ -48,8 +48,8 @@ for d in "${dirs[@]}"; do
     }
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
-    timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
-    timeout 30 terraform -chdir="$d" workspace new default || {
+    timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null || \
+    timeout 30 terraform -chdir="$d" workspace new "$ENV" || {
       echo "Workspace setup failed for $d"
       continue
     }
