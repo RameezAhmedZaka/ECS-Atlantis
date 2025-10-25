@@ -6,12 +6,12 @@ PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 
 if [[ ! -f "$PLANLIST" ]]; then
-  echo ":x: No plan list found: $PLANLIST"
+  echo "No plan list found: $PLANLIST"
   exit 1
 fi
 
 if [[ ! -s "$PLANLIST" ]]; then
-  echo ":x: Plan list is empty: $PLANLIST"
+  echo "Plan list is empty: $PLANLIST"
   exit 1
 fi
 
@@ -25,13 +25,13 @@ while IFS='|' read -r d PLAN; do
     
     # FIX: Use -chdir to switch to the correct directory before apply
     timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
-      echo ":x: Apply failed for $PLAN"
+      echo "Apply failed for $PLAN"
       continue
     }
     echo ":white_check_mark: Successfully applied $PLAN"
     rm -f "$PLAN"
   else
-    echo ":warning: Plan file not found: $PLAN"
+    echo "Plan file not found: $PLAN"
     echo "Current directory: $(pwd)"
     echo "Looking in /tmp/:"
     ls -la /tmp/*.tfplan 2>/dev/null || echo "No plan files in /tmp/"

@@ -44,6 +44,14 @@ workflows:
             echo "=== Applying STAGING environment ==="
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
+    destroy:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "=== Applying STAGING environment ==="
+            chmod +x ./destroy-plans.sh
+            ./destroy.sh "$ENV"
 
   production-workflow:
     plan:
@@ -62,6 +70,15 @@ workflows:
             echo "=== Applying PRODUCTION environment ==="
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
+    destroy:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "=== Applying STAGING environment ==="
+            chmod +x ./destroy-plans.sh
+            ./destroy.sh "$ENV        
+
 
 
 
