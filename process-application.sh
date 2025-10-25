@@ -55,7 +55,7 @@ for d in "${dirs[@]}"; do
     }
     # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
-    PLAN="$d/${ENV}.tfplan"
+    PLAN="${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
     # Plan with var-file
     echo "Using var-file: $VAR_FILE"
@@ -64,7 +64,7 @@ for d in "${dirs[@]}"; do
       continue
     }
     # echo "$PLAN" >> "$PLANLIST"
-    
+
     echo "$d|$PLAN" >> "$PLANLIST"
     echo ":white_check_mark: Successfully planned $APP_NAME"
   else
