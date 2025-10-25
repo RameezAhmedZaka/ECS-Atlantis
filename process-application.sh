@@ -62,6 +62,10 @@ for d in "${dirs[@]}"; do
       echo "Init failed for $d"
       continue
     }
+
+    # Add this after the init step:
+    echo "Step 3: Checking actual backend key..."
+    grep '"key"' "$d/.terraform/terraform.tfstate" | head -1
     
     # VERIFY the backend was configured correctly
     echo "Step 3: Verifying backend configuration..."
