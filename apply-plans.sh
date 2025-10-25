@@ -28,7 +28,7 @@ while IFS='|' read -r d PLAN; do
       echo "Apply failed for $PLAN"
       continue
     }
-    echo ":white_check_mark: Successfully applied $PLAN"
+    echo "Successfully applied $PLAN"
     rm -f "$PLAN"
   else
     echo "Plan file not found: $PLAN"
