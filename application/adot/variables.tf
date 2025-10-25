@@ -27,3 +27,23 @@ variable "region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "ami_id" {
+  type        = string
+  description = "AMI ID for EC2 instances"
+}
+
+variable "key_name" {
+  type        = string
+  description = "Key pair name for SSH access"
+}
+
+variable "public_instance_type" {
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "private_instance_type" {
+  type        = string
+  default     = "t3.micro"
+}

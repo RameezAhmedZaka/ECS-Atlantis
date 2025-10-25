@@ -64,3 +64,18 @@ resource "aws_route" "internet_access" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.igw.id
 }
+
+resource "aws_instance" "private" {
+  count         = length(var.private_subnet_cidrs)
+  ami           = var.ami_id
+  instance_type = var.private_instance_type
+  subnet_id     = aws_subnet.private[count.index].id
+  key_name      = var.key_name
+
+  vpc_security_group_ids = [aws_security_group.private_ec2_sg.id]
+
+  tags = {
+    Name = "${var.vpc_name}-private-${count.index + 1}"
+  }
+}
+
