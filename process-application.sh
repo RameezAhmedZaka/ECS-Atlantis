@@ -42,7 +42,7 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
-    timeout 120 terraform -chdir="$d" init -reconfigure -upgrade -backend-config="$BACKEND_CONFIG" -input=false -migrate-state || {
+    timeout 120 terraform -chdir="$d" init -reconfigure -upgrade -backend-config="$BACKEND_CONFIG" -input=false  || {
       echo "Init failed for $d"
       continue
     }
