@@ -18,19 +18,23 @@ fi
 echo "Applying plans from: $PLANLIST"
 cat "$PLANLIST"
 
-while IFS='|' read -r APP_DIR PLAN; do
-  if [[ -f "$APP_DIR/$PLAN" ]]; then
-    APP_NAME=$(basename "$APP_DIR")
-    echo "=== Applying $PLAN for $APP_NAME ==="
+# FIX: Use pipe separator to read both directory and plan path
+while IFS='|' read -r d PLAN; do
+  if [[ -f "$PLAN" ]]; then
+    echo "=== Applying $PLAN for directory $d ==="
     
-    timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLAN" || {
+    # FIX: Use -chdir to switch to the correct directory before apply
+    timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
       echo "Apply failed for $PLAN"
       continue
     }
-    echo ":white_check_mark: Successfully applied $PLAN for $APP_NAME"
-    rm -f "$APP_DIR/$PLAN"
+    echo ":white_check_mark: Successfully applied $PLAN"
+    rm -f "$PLAN"
   else
-    echo "Plan file not found: $APP_DIR/$PLAN"
+    echo "Plan file not found: $PLAN"
+    echo "Current directory: $(pwd)"
+    echo "Looking in /tmp/:"
+    ls -la /tmp/*.tfplan 2>/dev/null || echo "No plan files in /tmp/"
   fi
 done < "$PLANLIST"
 
