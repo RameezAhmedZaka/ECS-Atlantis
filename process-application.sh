@@ -19,12 +19,12 @@ for d in "${dirs[@]}"; do
       "production")
         BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
         VAR_FILE="config/production.tfvars"
-        key="application/${APP_NAME}/${terraform.workspace}/terraform1.tfstate"        # Relative to app directory
+        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "staging")
         BACKEND_CONFIG="env/staging/stage.conf"    # Relative to app directory
         VAR_FILE="config/stage.tfvars"             # Relative to app directory
-        key="application/${APP_NAME}/${terraform.workspace}/terraform1.tfstate"        # Relative to app directory
+        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
     esac
     echo "Directory: $d"
