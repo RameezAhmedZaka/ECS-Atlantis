@@ -45,9 +45,12 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
-    timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -key="$key" -input=false || {
-      echo "Init failed for $d"
-      continue
+    timeout 120 terraform -chdir="$d" init -upgrade \
+      -backend-config="$d/$BACKEND_CONFIG" \
+      -backend-config="key=$key" \
+      -input=false || {
+    echo "Init failed for $d"
+    continue
     }
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
