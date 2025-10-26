@@ -2,24 +2,19 @@
 set -euo pipefail
 ENV="$1"
 echo "=== STARTING $ENV at $(date) ==="
-
-# Find application directories with environment suffix
-mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | grep "${ENV}" | sed 's|/main.tf||' | sort -u | head -2)
-
+# Find application but limit to 2 for testing
+mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u | head -2)
 if [[ ${#dirs[@]} -eq 0 ]]; then
-  echo "No application found for environment $ENV!"
+  echo "No application found!"
   exit 1
 fi
-
-echo "Found ${#dirs[@]} application(s) for $ENV: ${dirs[*]}"
+echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
-
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
-    APP_NAME=$(basename "$d" | sed "s/-${ENV}//")  # Remove env suffix for app name
+    APP_NAME=$(basename "$d")
     echo "=== Planning $APP_NAME ($ENV) ==="
-    
     case "$ENV" in
       "production")
         BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
@@ -30,24 +25,20 @@ for d in "${dirs[@]}"; do
         VAR_FILE="config/stage.tfvars"             # Relative to app directory
         ;;
     esac
-    
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
-    
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
       ls -la "$d/env/" 2>/dev/null || echo "env directory not found"
       continue
     fi
-    
     if [[ ! -f "$d/$VAR_FILE" ]]; then
       echo "Var file not found: $d/$VAR_FILE"
       ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
-    
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
@@ -55,7 +46,6 @@ for d in "${dirs[@]}"; do
       echo "Init failed for $d"
       continue
     }
-    
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
     timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
@@ -63,7 +53,7 @@ for d in "${dirs[@]}"; do
       echo "Workspace setup failed for $d"
       continue
     }
-    
+    # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
     PLAN="${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
     # Plan with var-file
@@ -72,14 +62,14 @@ for d in "${dirs[@]}"; do
       echo "Plan failed for $d"
       continue
     }
-    
+    # echo "$PLAN" >> "$PLANLIST"
+
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
   else
     echo "Skipping $d (main.tf missing)"
   fi
 done
-
 echo "=== COMPLETED $ENV at $(date) ==="
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
