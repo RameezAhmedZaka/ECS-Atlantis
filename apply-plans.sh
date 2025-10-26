@@ -18,33 +18,23 @@ fi
 echo "Applying plans from: $PLANLIST"
 cat "$PLANLIST"
 
+# FIX: Use pipe separator to read both directory and plan path
 while IFS='|' read -r d PLAN; do
-  if [[ -f "$PLAN" ]]; then
+  if [[ -f "$d/$PLAN" ]]; then
     echo "=== Applying $PLAN for directory $d ==="
     
-    # Check if this is a destroy plan
-    if [[ "$PLAN" == *"_destroy.tfplan" ]]; then
-        echo "This is a DESTROY plan - will remove resources"
-    fi
-    
+    # FIX: Use -chdir to switch to the correct directory before apply
     timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
       echo "Apply failed for $PLAN"
       continue
     }
-    
-    if [[ "$PLAN" == *"_destroy.tfplan" ]]; then
-        echo ":wastebasket: Successfully destroyed resources with $PLAN"
-    else
-        echo ":white_check_mark: Successfully applied $PLAN"
-    fi
-    
-    rm -f "$PLAN"
+    echo ":white_check_mark: Successfully applied $PLAN"
+    rm -f "$d/$PLAN"
   else
-    echo "Plan file not found: $PLAN"
+    echo "Plan file not found: $d/$PLAN"
     echo "Current directory: $(pwd)"
-    echo "Looking for plan files:"
-    ls -la ./*.tfplan 2>/dev/null || echo "No plan files in current directory"
-    ls -la /tmp/*.tfplan 2>/dev/null || echo "No plan files in /tmp/"
+    echo "Looking in application directories:"
+    find application -name "*.tfplan" 2>/dev/null || echo "No plan files found"
   fi
 done < "$PLANLIST"
 

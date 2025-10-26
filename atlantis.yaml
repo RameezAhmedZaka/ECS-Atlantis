@@ -11,7 +11,7 @@ projects:
     autoplan:
       enabled: true  # DISABLE FOR TESTING
       when_modified:
-        - "application/**"
+        - "application/**-staging/**"
     workflow: staging-workflow
     apply_requirements: [] 
 
@@ -22,7 +22,7 @@ projects:
     autoplan:
       enabled: true  # DISABLE FOR TESTING
       when_modified:
-        - "application/**"
+        - "application/**-production/**"
     workflow: production-workflow
     apply_requirements: [] 
 
@@ -63,8 +63,7 @@ workflows:
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
 
-
-
+            
 
 # version: 3
 # workflows:
