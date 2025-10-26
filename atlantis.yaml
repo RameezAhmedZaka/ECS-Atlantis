@@ -1,7 +1,7 @@
 version: 3
-automerge: false  # Disable until working
-parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working 
+automerge: false
+parallel_plan: false
+parallel_apply: false 
 
 projects:
   - name: apps-staging
@@ -9,9 +9,9 @@ projects:
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
-        - "application/**-staging/**"
+        - "application/*-staging/**"
     workflow: staging-workflow
     apply_requirements: [] 
 
@@ -20,9 +20,9 @@ projects:
     workspace: production
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
-        - "application/**-production/**"
+        - "application/*-production/**"
     workflow: production-workflow
     apply_requirements: [] 
 
@@ -63,7 +63,6 @@ workflows:
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
 
-            
 
 # version: 3
 # workflows:

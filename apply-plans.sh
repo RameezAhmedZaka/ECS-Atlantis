@@ -1,52 +1,98 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
+echo "=== STARTING $ENV at $(date) ==="
+
+# Find ALL application directories and filter by environment pattern
+mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u)
+
+# Filter directories that match the environment pattern
+ENV_DIRS=()
+for dir in "${dirs[@]}"; do
+  if [[ "$dir" == *"-${ENV}" ]]; then
+    ENV_DIRS+=("$dir")
+  fi
+done
+
+# Limit to 2 for testing
+ENV_DIRS=("${ENV_DIRS[@]:0:2}")
+
+if [[ ${#ENV_DIRS[@]} -eq 0 ]]; then
+  echo "No application found for environment $ENV!"
+  echo "Available directories:"
+  find application -type d -name "main.tf" -exec dirname {} \; 2>/dev/null | sort -u || echo "No directories found"
+  exit 1
+fi
+
+echo "Found ${#ENV_DIRS[@]} application(s) for $ENV: ${ENV_DIRS[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+: > "$PLANLIST"
 
-echo "=== STARTING APPLY for $ENV at $(date) ==="
-
-if [[ ! -f "$PLANLIST" ]]; then
-  echo "No plan list found: $PLANLIST"
-  exit 1
-fi
-
-if [[ ! -s "$PLANLIST" ]]; then
-  echo "Plan list is empty: $PLANLIST"
-  exit 1
-fi
-
-echo "Applying plans from: $PLANLIST"
-cat "$PLANLIST"
-
-while IFS='|' read -r d PLAN; do
-  if [[ -f "$PLAN" ]]; then
-    echo "=== Applying $PLAN for directory $d ==="
+for d in "${ENV_DIRS[@]}"; do
+  # Rest of the script remains the same...
+  if [[ -f "$d/main.tf" ]]; then
+    APP_NAME=$(basename "$d")
+    echo "=== Planning $APP_NAME ($ENV) ==="
     
-    # Check if this is a destroy plan
-    if [[ "$PLAN" == *"_destroy.tfplan" ]]; then
-        echo "This is a DESTROY plan - will remove resources"
+    case "$ENV" in
+      "production")
+        BACKEND_CONFIG="env/production/prod.conf"
+        VAR_FILE="config/production.tfvars"
+        ;;
+      "staging")
+        BACKEND_CONFIG="env/staging/stage.conf"
+        VAR_FILE="config/stage.tfvars"
+        ;;
+    esac
+    
+    echo "Directory: $d"
+    echo "Backend config: $BACKEND_CONFIG"
+    echo "Var file: $VAR_FILE"
+    
+    # Check if files exist
+    if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
+      echo "Backend config not found: $d/$BACKEND_CONFIG"
+      ls -la "$d/env/" 2>/dev/null || echo "env directory not found"
+      continue
     fi
     
-    timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
-      echo "Apply failed for $PLAN"
+    if [[ ! -f "$d/$VAR_FILE" ]]; then
+      echo "Var file not found: $d/$VAR_FILE"
+      ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
+      continue
+    fi
+    
+    # Initialize with backend config
+    echo "Step 1: Initializing..."
+    echo "Using backend config: $BACKEND_CONFIG"
+    timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
+      echo "Init failed for $d"
       continue
     }
     
-    if [[ "$PLAN" == *"_destroy.tfplan" ]]; then
-        echo ":wastebasket: Successfully destroyed resources with $PLAN"
-    else
-        echo ":white_check_mark: Successfully applied $PLAN"
-    fi
+    # Workspace with timeout
+    echo "Step 2: Setting workspace..."
+    timeout 30 terraform -chdir="$d" workspace select "$ENV" 2>/dev/null || \
+    timeout 30 terraform -chdir="$d" workspace new "$ENV" || {
+      echo "Workspace setup failed for $d"
+      continue
+    }
     
-    rm -f "$PLAN"
+    PLAN="${ENV}.tfplan"
+    echo "Step 3: Planning... Output: $PLAN"
+    echo "Using var-file: $VAR_FILE"
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+      echo "Plan failed for $d"
+      continue
+    }
+    
+    echo "$d|$PLAN" >> "$PLANLIST"
+    echo "Successfully planned $APP_NAME"
   else
-    echo "Plan file not found: $PLAN"
-    echo "Current directory: $(pwd)"
-    echo "Looking for plan files:"
-    ls -la ./*.tfplan 2>/dev/null || echo "No plan files in current directory"
-    ls -la /tmp/*.tfplan 2>/dev/null || echo "No plan files in /tmp/"
+    echo "Skipping $d (main.tf missing)"
   fi
-done < "$PLANLIST"
+done
 
-rm -f "$PLANLIST"
-echo "=== APPLY COMPLETED for $ENV at $(date) ==="
+echo "=== COMPLETED $ENV at $(date) ==="
+echo "Plan files created:"
+cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
