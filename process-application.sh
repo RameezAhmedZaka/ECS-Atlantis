@@ -27,7 +27,7 @@ for d in "${dirs[@]}"; do
         key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "helia")
-        BACKEND_CONFIG="env/helia/helica.conf"    # Relative to app directory
+        BACKEND_CONFIG="env/helia/helia.conf"    # Fixed: changed helica.conf to helia.conf
         VAR_FILE="config/helia.tfvars"             # Relative to app directory
         key="application/${APP_NAME}/${ENV}/terraform1.tfstate"          
     esac
@@ -37,7 +37,9 @@ for d in "${dirs[@]}"; do
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
-      ls -la "$d/env/" 2>/dev/null || echo "env directory not found"
+      # List available backend configs for this environment
+      echo "Available backend configs for $ENV:"
+      find "$d/env" -name "*.conf" 2>/dev/null | grep "$ENV" || echo "No backend configs found for $ENV"
       continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
