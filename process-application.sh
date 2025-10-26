@@ -41,12 +41,14 @@ for d in "${dirs[@]}"; do
       ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
+    rm -rf "$d/.terraform"
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -backend-config="key=$key" \
+      -reconfigure \
       -input=false || {
     echo "Init failed for $d"
     continue
