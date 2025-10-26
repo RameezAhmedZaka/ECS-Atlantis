@@ -1,123 +1,87 @@
-APPS_DIR="./application"
-OUTPUT_FILE="atlanti.yaml"
-# echo "version: 3" > $OUTPUT_FILE
-# echo "projects:" >> $OUTPUT_FILE
+#!/bin/bash
+set -euo pipefail
 
-for app in "$APPS_DIR"/*; do
-    if [ -d "$app" ]; then
-        APP_NAME=$(basename "$app")
+# Find all application directories
+mapfile -t apps < <(find application -maxdepth 1 -type d ! -name "application" | sed 's|application/||' | sort)
 
-        # Development project
-        echo "  - name: ${APP_NAME}-dev-deploy" >> $OUTPUT_FILE
-        echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
-        echo "    workspace: development" >> $OUTPUT_FILE
-        echo "    workflow: dev-workflow" >> $OUTPUT_FILE
-        echo "    apply_requiremversion: 3
-automerge: true
-parallel_plan: true
-parallel_apply: true
+# Generate atlantis.yaml dynamically
+cat > atlantis.generated.yaml << EOF
+version: 3
+automerge: false
+parallel_plan: false
+parallel_apply: false 
 
 projects:
-# Dynamically generated projects
-# Each app will have two workspaces: production and staging
-# backend-config and var-file are set per workspace
+EOF
 
-{{- $apps := (exec "bash" "-c" "grep -Pl 'backend[\\s]+\"s3\"' applications/*/*.tf | rev | cut -d'/' -f2- | rev | sort | uniq") }}
-{{- range $apps.Split "\n" }}
-  - name: {{ . }}-production
-    dir: {{ . }}
-    workspace: production
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "**/*.tf"
-        - "config/production.tfvars"
-    workflow: default
-    apply_requirements: []
-    workspace_hooks:
-      init:
-        steps:
-          - run: terraform init -backend-config={{ . }}/env/production/prod.conf
-      plan:
-        steps:
-          - run: terraform plan -var-file={{ . }}/config/production.tfvars
-      apply:
-        steps:
-          - run: terraform apply -var-file={{ . }}/config/production.tfvars
-
-  - name: {{ . }}-staging
-    dir: {{ . }}
+# Add projects for each app
+for app in "${apps[@]}"; do
+  cat >> atlantis.generated.yaml << EOF
+  - name: application-${app}-staging
+    dir: application/${app}
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "**/*.tf"
-        - "config/stage.tfvars"
-    workflow: default
+        - "application/${app}/**"
+    workflow: staging-workflow
     apply_requirements: []
-    workspace_hooks:
-      init:
-        steps:
-          - run: terraform init -backend-config={{ . }}/env/staging/stage.conf
-      plan:
-        steps:
-          - run: terraform plan -var-file={{ . }}/config/stage.tfvars
-      apply:
-        steps:
-          - run: terraform apply -var-file={{ . }}/config/stage.tfvars
 
-{{- end }}
-ents: []" >> $OUTPUT_FILE
-        echo "    autoplan:" >> $OUTPUT_FILE
-        echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
-        echo "      enabled: true" >> $OUTPUT_FILE
-        echo "    plan_extra_args:" >> $OUTPUT_FILE
-        echo "      - \"-backend-config=/$APP_NAME/env/staging/stage.conf\"" >> $OUTPUT_FILE
-        echo "      - \"-var-file=/$APP_NAME/config/stage.tfvars\"" >> $OUTPUT_FILE
-        echo "" >> $OUTPUT_FILE
+  - name: application-${app}-production
+    dir: application/${app}
+    workspace: production
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/${app}/**"
+    workflow: production-workflow
+    apply_requirements: []
 
-        # Production project
-        echo "  - name: ${APP_NAME}-prod-deploy" >> $OUTPUT_FILE
-        echo "    dir: application/$APP_NAME" >> $OUTPUT_FILE
-        echo "    workspace: production" >> $OUTPUT_FILE
-        echo "    workflow: prod-workflow" >> $OUTPUT_FILE
-        echo "    apply_requirements: []" >> $OUTPUT_FILE
-        echo "    autoplan:" >> $OUTPUT_FILE
-        echo "      when_modified: [\"*.tf\", \"config/*.tfvars\", \"modules/**/*.tf\", \"**/*.tf\"]" >> $OUTPUT_FILE
-        echo "      enabled: true" >> $OUTPUT_FILE
-        echo "    plan_extra_args:" >> $OUTPUT_FILE
-        echo "      - \"-backend-config=/$APP_NAME/env/production/prod.conf\"" >> $OUTPUT_FILE
-        echo "      - \"-var-file=/$APP_NAME/config/production.tfvars\"" >> $OUTPUT_FILE
-        echo "" >> $OUTPUT_FILE
-    fi
+EOF
 done
 
-# Workflows section
-cat >> $OUTPUT_FILE <<EOL
-
+# Add workflows
+cat >> atlantis.generated.yaml << EOF
 workflows:
-  dev-workflow:
+  staging-workflow:
     plan:
       steps:
-        - run:
-            command: ls
-        - init: {}
-        - plan: {}
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            APP_NAME=\$(echo "\$ATLANTIS_PROJECT_NAME" | sed 's/application-\\(.*\\)-staging/\\1/')
+            echo "=== Processing \$APP_NAME STAGING environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "\$ENV" "\$APP_NAME"
     apply:
       steps:
-        - apply: {}
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "=== Applying STAGING environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "\$ENV"
 
-  prod-workflow:
+  production-workflow:
     plan:
       steps:
-        - run:
-            command: ls
-        - init: {}
-        - plan: {}
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            APP_NAME=\$(echo "\$ATLANTIS_PROJECT_NAME" | sed 's/application-\\(.*\\)-production/\\1/')
+            echo "=== Processing \$APP_NAME PRODUCTION environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "\$ENV" "\$APP_NAME"
     apply:
       steps:
-        - apply: {}
-EOL
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Applying PRODUCTION environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "\$ENV"
+EOF
 
+echo "Generated atlantis.generated.yaml with ${#apps[@]} application"
