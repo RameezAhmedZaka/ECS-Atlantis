@@ -16,6 +16,7 @@ echo "Found ${#dirs[@]} total application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 VALID_APPS=0
+ENV_STATUS="FAIL"  # Default status is FAIL
 
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
@@ -66,36 +67,39 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config
     echo "Step 1: Initializing..."
     
-    timeout 120 terraform -chdir="$d" init -upgrade \
+    if ! timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -backend-config="key=$key" \
       -reconfigure \
-      -input=false || {
+      -input=false; then
       echo "Init failed for $d"
       continue
-    }
+    fi
     
     echo "State key: $key"
     
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
-    timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
-    timeout 30 terraform -chdir="$d" workspace new default || {
+    if ! (timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
+          timeout 30 terraform -chdir="$d" workspace new default); then
       echo "Workspace setup failed for $d"
       continue
-    }
+    fi
     
     PLAN="${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
     
     # Plan with var-file
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+    if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN"; then
       echo "Plan failed for $d"
       continue
-    }
+    fi
     
     echo "$d|$PLAN" >> "$PLANLIST"
     ((VALID_APPS++))
+    
+    # If we reach here, at least one plan was successful - mark environment as PASS
+    ENV_STATUS="PASS"
     echo "Successfully planned $APP_NAME for $ENV"
   else
     echo "Skipping $d (main.tf missing)"
@@ -106,3 +110,15 @@ echo "=== COMPLETED $ENV at $(date) ==="
 echo "Successfully processed $VALID_APPS application for $ENV environment"
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
+# Final environment status
+echo "=== ENVIRONMENT STATUS: $ENV_STATUS ==="
+
+# Exit with appropriate code
+if [[ "$ENV_STATUS" == "PASS" ]]; then
+  echo "✅ ENVIRONMENT $ENV PASSED - At least one application plan succeeded"
+  exit 0
+else
+  echo "❌ ENVIRONMENT $ENV FAILED - No application plans succeeded"
+  exit 1
+fi
