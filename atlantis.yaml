@@ -5,7 +5,7 @@ parallel_apply: false
 
 # Dynamic project discovery using regex
 projects:
-  - name: application-(\w+)-staging
+  - name: application-([a-zA-Z0-9_-]+)-staging
     dir: application/{\1}
     workspace: staging
     terraform_version: v1.6.6
@@ -16,7 +16,7 @@ projects:
     workflow: staging-workflow
     apply_requirements: []
 
-  - name: application-(\w+)-production
+  - name: application-([a-zA-Z0-9_-]+)-production
     dir: application/{\1}
     workspace: production
     terraform_version: v1.6.6
