@@ -6,7 +6,7 @@ parallel_apply: false  # Disable until working
 projects:
   - name: apps-staging
     dir: .
-    workspace: staging
+    workspace: default
     terraform_version: v1.6.6
     autoplan:
       enabled: true  # DISABLE FOR TESTING
@@ -17,7 +17,7 @@ projects:
 
   - name: apps-production
     dir: .
-    workspace: production
+    workspace: default
     terraform_version: v1.6.6
     autoplan:
       enabled: true  # DISABLE FOR TESTING
