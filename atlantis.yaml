@@ -26,6 +26,17 @@ projects:
     workflow: production-workflow
     apply_requirements: [] 
 
+  - name: apps-helia
+    dir: .
+    workspace: default
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  # DISABLE FOR TESTING
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
+    apply_requirements: []     
+
 workflows:
   staging-workflow:
     plan:
@@ -62,3 +73,21 @@ workflows:
             echo "=== Applying PRODUCTION environment ==="
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
+
+  helia-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "=== Processing HELIA environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "=== Applying HELIA environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"            

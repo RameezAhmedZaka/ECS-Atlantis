@@ -26,6 +26,10 @@ for d in "${dirs[@]}"; do
         VAR_FILE="config/stage.tfvars"             # Relative to app directory
         key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
+      "helia")
+        BACKEND_CONFIG="env/helia/helia.conf"    # Relative to app directory
+        VAR_FILE="config/helia.tfvars"             # Relative to app directory
+        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"          
     esac
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
