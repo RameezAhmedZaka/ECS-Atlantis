@@ -3,26 +3,25 @@ set -euo pipefail
 ENV="$1"
 echo "=== STARTING $ENV at $(date) ==="
 
-# Find application that ACTUALLY have this environment configuration
+# Find applications that ACTUALLY have this environment configuration
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 
 if [[ ${#dirs[@]} -eq 0 ]]; then
-  echo "No application found!"
+  echo "No applications found!"
   exit 1
 fi
 
-echo "Found ${#dirs[@]} total application: ${dirs[*]}"
+echo "Found ${#dirs[@]} total applications: ${dirs[*]}"
 
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 VALID_APPS=0
-ENV_STATUS="FAIL"  # Default status is FAIL
 
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
     
-    # DYNAMIC CONFIG PATHS - Check if environment config exists for this app
+    # HARDCONFIG CONFIG PATHS
     case "$ENV" in
       "production")
         BACKEND_CONFIG="env/production/prod.conf"
@@ -44,6 +43,20 @@ for d in "${dirs[@]}"; do
         exit 1
         ;;
     esac
+    
+    # DEBUG: Show what files actually exist
+    echo "=== DEBUG for $APP_NAME ==="
+    echo "Looking for backend config: $d/$BACKEND_CONFIG"
+    echo "Looking for var file: $d/$VAR_FILE"
+    echo "Backend config exists: $([[ -f "$d/$BACKEND_CONFIG" ]] && echo "YES" || echo "NO")"
+    echo "Var file exists: $([[ -f "$d/$VAR_FILE" ]] && echo "YES" || echo "NO")"
+    
+    # List all available files
+    echo "Available backend configs:"
+    find "$d/env" -type f -name "*.conf" 2>/dev/null | sed 's|.*/||' || echo "No env directory"
+    echo "Available var files:"
+    find "$d/config" -type f -name "*.tfvars" 2>/dev/null | sed 's|.*/||' || echo "No config directory"
+    echo "=== END DEBUG ==="
     
     # Check if this app has configuration for the requested environment
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
@@ -67,39 +80,36 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config
     echo "Step 1: Initializing..."
     
-    if ! timeout 120 terraform -chdir="$d" init -upgrade \
+    timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -backend-config="key=$key" \
       -reconfigure \
-      -input=false; then
+      -input=false || {
       echo "Init failed for $d"
       continue
-    fi
+    }
     
     echo "State key: $key"
     
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
-    if ! (timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
-          timeout 30 terraform -chdir="$d" workspace new default); then
+    timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
+    timeout 30 terraform -chdir="$d" workspace new default || {
       echo "Workspace setup failed for $d"
       continue
-    fi
+    }
     
     PLAN="${ENV}.tfplan"
     echo "Step 3: Planning... Output: $PLAN"
     
     # Plan with var-file
-    if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN"; then
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
       echo "Plan failed for $d"
       continue
-    fi
+    }
     
     echo "$d|$PLAN" >> "$PLANLIST"
     ((VALID_APPS++))
-    
-    # If we reach here, at least one plan was successful - mark environment as PASS
-    ENV_STATUS="PASS"
     echo "Successfully planned $APP_NAME for $ENV"
   else
     echo "Skipping $d (main.tf missing)"
@@ -107,18 +117,15 @@ for d in "${dirs[@]}"; do
 done
 
 echo "=== COMPLETED $ENV at $(date) ==="
-echo "Successfully processed $VALID_APPS application for $ENV environment"
+echo "Successfully processed $VALID_APPS applications for $ENV environment"
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
 
-# Final environment status
-echo "=== ENVIRONMENT STATUS: $ENV_STATUS ==="
-
-# Exit with appropriate code
-if [[ "$ENV_STATUS" == "PASS" ]]; then
-  echo "✅ ENVIRONMENT $ENV PASSED - At least one application plan succeeded"
-  exit 0
-else
-  echo "❌ ENVIRONMENT $ENV FAILED - No application plans succeeded"
+# Exit with error if no valid applications were found
+if [[ $VALID_APPS -eq 0 ]]; then
+  echo "ERROR: No applications have configuration for environment: $ENV"
+  echo "Available environments across all apps:"
+  find application -type d -path "*/env/*" -mindepth 2 -maxdepth 2 | \
+    sed 's|.*/env/||' | sort -u
   exit 1
 fi
