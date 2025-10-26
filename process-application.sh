@@ -3,7 +3,7 @@ set -euo pipefail
 ENV="$1"
 echo "=== STARTING $ENV at $(date) ==="
 # Find application but limit to 2 for testing
-mapfile -t dirs < <(find application -maxdepth 3 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u | head -2)
+mapfile -t dirs < <(find application -maxdepth 2 -name "main.tf" -type f | sed 's|/main.tf||' | sort -u )
 if [[ ${#dirs[@]} -eq 0 ]]; then
   echo "No application found!"
   exit 1
