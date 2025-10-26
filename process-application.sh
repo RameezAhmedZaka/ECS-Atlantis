@@ -18,11 +18,14 @@ for d in "${dirs[@]}"; do
     case "$ENV" in
       "production")
         BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
-        VAR_FILE="config/production.tfvars"        # Relative to app directory
+        VAR_FILE="config/production.tfvars"
+        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "staging")
         BACKEND_CONFIG="env/staging/stage.conf"    # Relative to app directory
         VAR_FILE="config/stage.tfvars"             # Relative to app directory
+        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
+
         ;;
     esac
     echo "Directory: $d"
@@ -42,7 +45,7 @@ for d in "${dirs[@]}"; do
     # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
     echo "Using backend config: $BACKEND_CONFIG"
-    timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -input=false || {
+    timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -key="$key" -input=false || {
       echo "Init failed for $d"
       continue
     }
