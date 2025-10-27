@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-
 ENV="$1"
-RAW_FILTER="${2:-}"
+RAW_FILTER="${2:-}"  # Raw filter that might include flags
 
 echo "=== STARTING $ENV at $(date) ==="
 
@@ -32,177 +31,108 @@ done
 echo "Destroy flag: $DESTROY_FLAG"
 echo "App filter: $APP_FILTER"
 
-# Validate environment
-case "$ENV" in
-    "production"|"staging"|"helia")
-        # Valid environment
-        ;;
-    *)
-        echo "❌ ERROR: Invalid environment '$ENV'. Must be one of: production, staging, helia"
-        exit 1
-        ;;
-esac
+if [[ -n "$APP_FILTER" ]]; then
+  echo "Filtering for app: $APP_FILTER"
+fi
 
 # Find application directories
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [[ ${#dirs[@]} -eq 0 ]]; then
-    echo "❌ No applications found!"
-    exit 1
+  echo "No application found!"
+  exit 1
 fi
 
-echo "Found ${#dirs[@]} applications"
-
-# Show available apps if filter is provided but no apps match
-if [[ -n "$APP_FILTER" ]]; then
-    echo "Filtering for app: $APP_FILTER"
-    
-    # Check if any apps match the filter
-    matching_apps=()
-    for d in "${dirs[@]}"; do
-        APP_NAME=$(basename "$d")
-        if [[ "$APP_NAME" == "$APP_FILTER" ]]; then
-            matching_apps+=("$d")
-        fi
-    done
-    
-    if [[ ${#matching_apps[@]} -eq 0 ]]; then
-        echo "❌ No applications matched filter: $APP_FILTER"
-        echo "Available applications:"
-        for d in "${dirs[@]}"; do
-            if [[ -f "$d/main.tf" ]]; then
-                echo "  - $(basename "$d")"
-            fi
-        done
-        exit 1
-    fi
-fi
-
+echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
-failed_count=0
 
 for d in "${dirs[@]}"; do
-    if [[ ! -f "$d/main.tf" ]]; then
-        echo "⚠️  Skipping $d (main.tf missing)"
-        continue
-    fi
-
+  if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
 
-    # Apply filter if specified
     if [[ -n "$APP_FILTER" && "$APP_NAME" != "$APP_FILTER" ]]; then
-        continue
+      echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
+      continue
     fi
 
-    echo ""
-    echo "=== PROCESSING $APP_NAME ($ENV) ==="
-    
-    # Set environment-specific files
+    echo "=== Planning $APP_NAME ($ENV) ==="
     case "$ENV" in
-        "production")
-            BACKEND_CONFIG="env/production/prod.conf"
-            VAR_FILE="config/production.tfvars"
-            ;;
-        "staging")
-            BACKEND_CONFIG="env/staging/stage.conf"   
-            VAR_FILE="config/stage.tfvars"            
-            ;;
-        "helia")
-            BACKEND_CONFIG="env/helia/helia.conf"
-            VAR_FILE="config/helia.tfvars"                   
-            ;;
+      "production")
+        BACKEND_CONFIG="env/production/prod.conf"
+        VAR_FILE="config/production.tfvars"
+        ;;
+      "staging")
+        BACKEND_CONFIG="env/staging/stage.conf"   
+        VAR_FILE="config/stage.tfvars"            
+        ;;
+      "helia")
+        BACKEND_CONFIG="env/helia/helia.conf"
+        VAR_FILE="config/helia.tfvars"                   
     esac
     
-    echo "📁 Directory: $d"
-    echo "⚙️  Backend config: $BACKEND_CONFIG"
-    echo "📄 Var file: $VAR_FILE"
+    echo "Directory: $d"
+    echo "Backend config: $BACKEND_CONFIG"
+    echo "Var file: $VAR_FILE"
     
-    # Check if required files exist
+    # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
-        echo "❌ Backend config not found: $d/$BACKEND_CONFIG"
-        ((failed_count++))
-        continue
+      echo "Backend config not found: $d/$BACKEND_CONFIG"
+      continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
-        echo "❌ Var file not found: $d/$VAR_FILE"
-        ((failed_count++))
-        continue
+      echo "Var file not found: $d/$VAR_FILE"
+      continue
     fi
     
-    # Clean up and initialize
-    echo "🔄 Step 1: Cleaning previous state..."
-    rm -rf "$d/.terraform" || true
+    rm -rf "$d/.terraform"
     
-    echo "🚀 Step 2: Initializing Terraform..."
-    if ! timeout 120 terraform -chdir="$d" init -upgrade \
-        -backend-config="$BACKEND_CONFIG" \
-        -reconfigure \
-        -input=false; then
-        echo "❌ Init failed for $APP_NAME"
-        ((failed_count++))
-        continue
-    fi
+    # Initialize with backend config
+    echo "Step 1: Initializing..."
+    timeout 120 terraform -chdir="$d" init -upgrade \
+      -backend-config="$BACKEND_CONFIG" \
+      -reconfigure \
+      -input=false || {
+      echo "Init failed for $d"
+      continue
+    }
 
     # Create unique plan file name
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
     PLAN="/tmp/${PLAN_NAME}"
+    echo "Step 3: Planning... Output: $PLAN"
     
     # Add destroy flag if needed
     DESTROY_ARG=""
-    DESTROY_MODE=""
     if [[ "$DESTROY_FLAG" == "true" ]]; then
-        DESTROY_ARG="-destroy"
-        DESTROY_MODE="🗑️  DESTROY MODE - "
-        echo "⚠️  DESTROY MODE ENABLED - This will destroy resources!"
+      DESTROY_ARG="-destroy"
+      echo "DESTROY MODE ENABLED"
     fi
-    
-    echo "📋 Step 3: ${DESTROY_MODE}Generating plan..."
-    echo "📄 Plan output: $PLAN"
     
     # Plan with var-file and optional destroy flag
-    if ! timeout 300 terraform -chdir="$d" plan \
-        -input=false \
-        -lock-timeout=5m \
-        -var-file="$VAR_FILE" \
-        $DESTROY_ARG \
-        -out="$PLAN"; then
-        echo "❌ Plan failed for $APP_NAME"
-        ((failed_count++))
-        continue
-    fi
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" || {
+      echo "Plan failed for $d"
+      continue
+    }
 
     echo "$d|$PLAN" >> "$PLANLIST"
-    echo "✅ Successfully planned $APP_NAME"
+    echo "Successfully planned $APP_NAME"
     ((processed_count++))
+  else
+    echo "Skipping $d (main.tf missing)"
+  fi
 done
 
-echo ""
-echo "=== SUMMARY ==="
-echo "✅ Successfully processed: $processed_count application(s)"
-if [[ $failed_count -gt 0 ]]; then
-    echo "❌ Failed: $failed_count application(s)"
-fi
-
-if [[ $processed_count -gt 0 ]]; then
-    echo ""
-    echo "📋 Plan files created:"
-    cat "$PLANLIST"
-    
-    echo ""
-    echo "💡 To apply all plans:"
-    echo "   atlantis apply -p $ENV"
-    
-    if [[ -n "$APP_FILTER" ]]; then
-        echo ""
-        echo "💡 To apply specific app:"
-        echo "   atlantis apply -p $ENV -- $APP_FILTER"
+if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
+  echo "⚠️  No applications matched filter: $APP_FILTER"
+  echo "Available applications:"
+  for d in "${dirs[@]}"; do
+    if [[ -f "$d/main.tf" ]]; then
+      echo "  - $(basename "$d")"
     fi
-else
-    echo "❌ No plans were successfully created"
-    if [[ -n "$APP_FILTER" ]]; then
-        echo "   Filter: $APP_FILTER"
-    fi
+  done
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
+echo "Plan files created:"
+cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
