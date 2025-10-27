@@ -40,7 +40,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'  # Remove all backslashes
+            command: echo "$COMMENT_ARGS"  # Remove all backslashes
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -53,7 +53,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
+            command: echo "$COMMENT_ARGS" 
         - run: |
             set -euo pipefail
             ENV="staging"
