@@ -41,8 +41,16 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${@:1}"  # Capture everything after --
-            echo "APP_FILTER: $APP_FILTER"
+
+            # Atlantis passes everything after `--` into $@ automatically
+            if [[ "$#" -gt 0 ]]; then
+              APP_FILTER="$1"
+              echo "Filtering Atlantis plan for app: $APP_FILTER"
+            else
+              APP_FILTER=""
+              echo "No app filter passed. Running for all apps."
+            fi
+
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -50,9 +58,18 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${@:1}"
+
+            if [[ "$#" -gt 0 ]]; then
+              APP_FILTER="$1"
+              echo "Applying Atlantis plan for app: $APP_FILTER"
+            else
+              APP_FILTER=""
+              echo "No app filter passed. Applying all plans."
+            fi
+
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
+
 
   production-workflow:
     plan:
