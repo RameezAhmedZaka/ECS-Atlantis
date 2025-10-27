@@ -4,120 +4,27 @@ parallel_plan: true
 parallel_apply: true
 
 projects:
-  - name: adot-staging
+  - name: apps
     dir: .
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "application/adot/main.tf"
-        - "application/adot/providers.tf"
-        - "application/adot/variables.tf"
-        - "application/adot/backend.tf"
-        - "application/adot/config/stage.tfvars"
-        - "application/adot/env/staging/**"
-    workflow: staging-workflow
-
-  - name: adot-production
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/adot/main.tf"
-        - "application/adot/providers.tf"
-        - "application/adot/variables.tf"
-        - "application/adot/backend.tf"
-        - "application/adot/config/production.tfvars"
-        - "application/adot/env/production/**"
-    workflow: production-workflow
-
-  - name: apollo-staging
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/apollo/main.tf"
-        - "application/apollo/providers.tf"
-        - "application/apollo/variables.tf"
-        - "application/apollo/backend.tf"
-        - "application/apollo/config/stage.tfvars"
-        - "application/apollo/env/staging/**"
-    workflow: staging-workflow
-
-  - name: apollo-production
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/apollo/main.tf"
-        - "application/apollo/providers.tf"
-        - "application/apollo/variables.tf"
-        - "application/apollo/backend.tf"
-        - "application/apollo/config/production.tfvars"
-        - "application/apollo/env/production/**"
-    workflow: production-workflow
-
-  - name: network-staging
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/network/main.tf"
-        - "application/network/providers.tf"
-        - "application/network/variables.tf"
-        - "application/network/backend.tf"
-        - "application/network/config/stage.tfvars"
-        - "application/network/env/staging/**"
-    workflow: staging-workflow
-
-  - name: network-production
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true
-      when_modified:
-        - "application/network/main.tf"
-        - "application/network/providers.tf"
-        - "application/network/variables.tf"
-        - "application/network/backend.tf"
-        - "application/network/config/production.tfvars"
-        - "application/network/env/production/**"
-    workflow: production-workflow
+        - "application/**"
+    workflow: dynamic-app-workflow
+    apply_requirements: []
 
 workflows:
-  staging-workflow:
+  dynamic-app-workflow:
     plan:
       steps:
-        - init:
-            extra_args:
-              - "-backend-config=application/${app_name}/env/staging/stage.conf"
-              - "-reconfigure"
-        - plan:
-            extra_args:
-              - "-var-file=application/${app_name}/config/stage.tfvars"
-              - "-out=staging.tfplan"
+        - run: |
+            set -euo pipefail
+            chmod +x ./process-application.sh
+            ./process-application.sh plan
     apply:
       steps:
-        - apply:
-            extra_args: ["staging.tfplan"]
-
-  production-workflow:
-    plan:
-      steps:
-        - init:
-            extra_args:
-              - "-backend-config=application/${app_name}/env/production/prod.conf"
-              - "-reconfigure"
-        - plan:
-            extra_args:
-              - "-var-file=application/${app_name}/config/production.tfvars"
-              - "-out=production.tfplan"
-    apply:
-      steps:
-        - apply:
-            extra_args: ["production.tfplan"]
-
+        - run: |
+            set -euo pipefail
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh
