@@ -1,42 +1,62 @@
 version: 3
 automerge: false
-parallel_plan: false
-parallel_apply: false
+parallel_plan: true
+parallel_apply: true
 
+# Dynamic project generation for each app and environment
 projects:
-  - autodiscover:
-    path: application
-    config_file: main.tf
+  # Auto-generate projects for each app in staging environment
+  - name: regex:^(.+)-staging$
+    dir: application/${1}
+    terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-          # Any change inside that app folder triggers plan for that app/env
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/**/*.conf"
-      # Define environment-specific configurations
-    workflow: custom-workflow    
+        - "application/${1}/main.tf"
+        - "application/${1}/**/stage.tfvars"
+        - "application/${1}/**/staging/**"
+        - "application/${1}/**/env/staging/**"
+        - "application/${1}/config/stage.tfvars"
+    workflow: staging-workflow
 
-    
+  # Auto-generate projects for each app in production environment  
+  - name: regex:^(.+)-production$
+    dir: application/${1}
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/${1}/main.tf"
+        - "application/${1}/**/production.tfvars"
+        - "application/${1}/**/production/**"
+        - "application/${1}/**/env/production/**"
+        - "application/${1}/config/production.tfvars"
+    workflow: production-workflow
+
 workflows:
-  custom-workflow:
+  staging-workflow:
     plan:
       steps:
-        - run: |
-            set -euo pipefail
-            ENV="staging"
-            echo "=== Processing STAGING environment ==="
-            chmod +x ./process-application.sh
-            # Pass the project directory from Atlantis environment variable
-            ./process-application.sh "$ENV" "$ATLANTIS_PROJECT_DIR"
+        - init:
+            extra_args: [-backend-config="env/staging/stage.conf"]
+        - plan:
+            extra_args: [-var-file="config/stage.tfvars", -out, "staging.tfplan"]
     apply:
       steps:
-        - run: |
-            set -euo pipefail
-            ENV="staging"
-            echo "=== Applying STAGING environment ==="
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"
+        - apply:
+            extra_args: ["staging.tfplan"]
+
+  production-workflow:
+    plan:
+      steps:
+        - init:
+            extra_args: [-backend-config="env/production/prod.conf"]
+        - plan:
+            extra_args: [-var-file="config/production.tfvars", -out, "production.tfplan"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["production.tfplan"]
 
   # production-workflow:
   #   plan:
