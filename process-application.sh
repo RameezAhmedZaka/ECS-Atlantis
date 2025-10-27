@@ -19,17 +19,14 @@ for d in "${dirs[@]}"; do
       "production")
         BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
         VAR_FILE="config/production.tfvars"
-        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "staging")
         BACKEND_CONFIG="env/staging/stage.conf"   
         VAR_FILE="config/stage.tfvars"            
-        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"    # Fixed: changed helica.conf to helia.conf
-        VAR_FILE="config/helia.tfvars"             # Relative to app directory
-        key="application/${APP_NAME}/${ENV}/terraform1.tfstate"          
+        VAR_FILE="config/helia.tfvars"             # Relative to app directory         
     esac
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
@@ -53,7 +50,6 @@ for d in "${dirs[@]}"; do
     echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
-      -backend-config="key=$key" \
       -reconfigure \
       -input=false || {
     echo "Init failed for $d"
