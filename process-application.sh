@@ -1,11 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-RAW_FILTER="${2:-}"  # Raw filter that might include flags
+RAW_FILTER="${2:-}" # Optional app filter
+
+echo "=== STARTING $ENV at $(date) ==="
+if [[ -n "$APP_FILTER" ]]; then
+  echo "Filtering for app: $APP_FILTER"
+fi
 
 echo "=== STARTING $ENV at $(date) ==="
 
-# Parse arguments to extract app name and detect destroy flag
 DESTROY_FLAG=false
 APP_FILTER=""
 
@@ -31,40 +35,29 @@ done
 echo "Destroy flag: $DESTROY_FLAG"
 echo "App filter: $APP_FILTER"
 
-if [[ -n "$APP_FILTER" ]]; then
-  echo "Filtering for app: $APP_FILTER"
-fi
-
-# Find application directories
+# Find application but limit to 2 for testing
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [[ ${#dirs[@]} -eq 0 ]]; then
   echo "No application found!"
   exit 1
 fi
-
 echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
-success_count=0
-fail_count=0
-skipped_count=0
-
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
 
     if [[ -n "$APP_FILTER" && "$APP_NAME" != "$APP_FILTER" ]]; then
       echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
-      ((skipped_count++))
       continue
     fi
 
-    echo "=== Processing $APP_NAME ($ENV) ==="
-    
+    echo "=== Planning $APP_NAME ($ENV) ==="
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="env/production/prod.conf"
+        BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
         VAR_FILE="config/production.tfvars"
         ;;
       "staging")
@@ -73,82 +66,62 @@ for d in "${dirs[@]}"; do
         ;;
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
-        VAR_FILE="config/helia.tfvars"                   
-        ;;
-      *)
-        echo "❌ Unknown environment: $ENV"
-        exit 1
-        ;;
+        VAR_FILE="config/helia.tfvars"             # Relative to app directory         
     esac
-    
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
-    
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
-      echo "❌ Backend config not found: $d/$BACKEND_CONFIG"
-      ((fail_count++))
+      echo "Backend config not found: $d/$BACKEND_CONFIG"
+      # List available backend configs for this environment
+      echo "Available backend configs for $ENV:"
+      find "$d/env" -name "*.conf" 2>/dev/null | grep "$ENV" || echo "No backend configs found for $ENV"
       continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
-      echo "❌ Var file not found: $d/$VAR_FILE"
-      ((fail_count++))
+      echo "Var file not found: $d/$VAR_FILE"
+      ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
-    
     rm -rf "$d/.terraform"
-    
-    # Initialize with backend config
-    echo "Step 1: Initializing $APP_NAME..."
-    if ! timeout 120 terraform -chdir="$d" init -upgrade \
+    # Initialize with backend config (ALWAYS use -chdir for consistency)
+    echo "Step 1: Initializing..."
+    echo "Using backend config: $BACKEND_CONFIG"
+    timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -reconfigure \
-      -input=false; then
-      echo "❌ Init failed for $APP_NAME"
-      ((fail_count++))
-      continue
-    fi
+      -input=false || {
+    echo "Init failed for $d"
+    continue
+    }
 
-    # Create unique plan file name
+    # FIX: Create unique plan file name with app name and environment
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
     PLAN="/tmp/${PLAN_NAME}"
-    echo "Step 2: Planning $APP_NAME... Output: $PLAN"
-    
-    # Add destroy flag if needed
+    echo "Step 3: Planning... Output: $PLAN"
+
     DESTROY_ARG=""
     if [[ "$DESTROY_FLAG" == "true" ]]; then
       DESTROY_ARG="-destroy"
-      echo "DESTROY MODE ENABLED for $APP_NAME"
+      echo "DESTROY MODE ENABLED"
     fi
     
-    # Plan with var-file and optional destroy flag
-    if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN"; then
-      echo "❌ Plan failed for $APP_NAME"
-      ((fail_count++))
+    # Plan with var-file
+    echo "Using var-file: $VAR_FILE"
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+      echo "Plan failed for $d"
       continue
-    fi
+    }
 
     echo "$d|$PLAN" >> "$PLANLIST"
-    echo "✅ Successfully planned $APP_NAME"
-    ((success_count++))
-    ((processed_count++))
+    echo "Successfully planned $APP_NAME"
   else
-    echo "⚠️  Skipping $d (main.tf missing)"
-    ((skipped_count++))
+    echo "Skipping $d (main.tf missing)"
   fi
 done
 
-echo ""
-echo "=== SUMMARY ==="
-echo "✅ Successful: $success_count"
-echo "❌ Failed: $fail_count" 
-echo "Skipped: $skipped_count"
-echo "Total processed: $processed_count"
-
-# Show available apps if filter was used but nothing matched
 if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
-  echo ""
   echo "⚠️  No applications matched filter: $APP_FILTER"
   echo "Available applications:"
   for d in "${dirs[@]}"; do
@@ -158,26 +131,6 @@ if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
   done
 fi
 
-# Only fail completely if ALL apps failed or no apps were processed
-if [[ $success_count -eq 0 && $processed_count -gt 0 ]]; then
-  echo ""
-  echo "❌ CRITICAL: All applications failed!"
-  echo "=== COMPLETED $ENV with FAILURES at $(date) ==="
-  exit 1
-elif [[ $success_count -eq 0 && $processed_count -eq 0 ]]; then
-  echo ""
-  echo "⚠️  No applications were processed"
-  echo "=== COMPLETED $ENV with NO PROCESSED APPLICATIONS at $(date) ==="
-  exit 1
-else
-  echo ""
-  echo "=== COMPLETED $ENV at $(date) ==="
-  if [[ -f "$PLANLIST" && $success_count -gt 0 ]]; then
-    echo "Plan files created ($success_count total):"
-    cat "$PLANLIST"
-  else
-    echo "No plan files created"
-  fi
-  # Exit with success if at least one app succeeded
-  exit 0
-fi
+echo "=== COMPLETED $ENV at $(date) ==="
+echo "Plan files created:"
+cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
