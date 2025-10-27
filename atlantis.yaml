@@ -1,38 +1,35 @@
 version: 3
-automerge: false  # Disable until working
-parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working 
+automerge: false
+parallel_plan: false
+parallel_apply: false
 
 projects:
-  - name: apps-staging
-    dir: .
+  - name: app-staging
+    dir: application/{{ .ProjectName }}
+    workspace: staging
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
-      when_modified:
-        - "application/**"
+      enabled: false  # Disable autoplan for manual control
     workflow: staging-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
-  - name: apps-production
-    dir: .
+  - name: app-production  
+    dir: application/{{ .ProjectName }}
+    workspace: production
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
-      when_modified:
-        - "application/**"
+      enabled: false
     workflow: production-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
-  - name: apps-helia
-    dir: .
+  - name: app-helia
+    dir: application/{{ .ProjectName }}
+    workspace: helia
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
-      when_modified:
-        - "application/**"
+      enabled: false
     workflow: helia-workflow
-    apply_requirements: []     
+    apply_requirements: []
 
 workflows:
   staging-workflow:
@@ -41,17 +38,15 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            echo "=== Processing STAGING environment ==="
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            echo "=== Planning $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./process-application.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="staging"
-            echo "=== Applying STAGING environment ==="
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
+            echo "=== Applying $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./apply-plans.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"
 
   production-workflow:
     plan:
@@ -59,17 +54,15 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            echo "=== Processing PRODUCTION environment ==="
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            echo "=== Planning $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./process-application.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="production"
-            echo "=== Applying PRODUCTION environment ==="
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"
+            echo "=== Applying $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./apply-plans.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"
 
   helia-workflow:
     plan:
@@ -77,14 +70,12 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            echo "=== Processing HELIA environment ==="
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            echo "=== Planning $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./process-application.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="helia"
-            echo "=== Applying HELIA environment ==="
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
+            echo "=== Applying $ENV for ${ATLANTIS_PROJECT_NAME} ==="
+            ./apply-plans.sh "$ENV" "${ATLANTIS_PROJECT_NAME}"

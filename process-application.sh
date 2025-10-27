@@ -55,13 +55,13 @@ for d in "${dirs[@]}"; do
     echo "Init failed for $d"
     continue
     }
-    # Workspace with timeout
-    echo "Step 2: Setting workspace..."
-    timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
-    timeout 30 terraform -chdir="$d" workspace new default || {
-      echo "Workspace setup failed for $d"
-      continue
-    }
+    # # Workspace with timeout
+    # echo "Step 2: Setting workspace..."
+    # timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
+    # timeout 30 terraform -chdir="$d" workspace new default || {
+    #   echo "Workspace setup failed for $d"
+    #   continue
+    # }
     # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
     PLAN="${ENV}.tfplan"
