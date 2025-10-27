@@ -25,7 +25,7 @@ for d in "${dirs[@]}"; do
         VAR_FILE="config/stage.tfvars"            
         ;;
       "helia")
-        BACKEND_CONFIG="env/helia/helia.conf"    # Fixed: changed helica.conf to helia.conf
+        BACKEND_CONFIG="env/helia/helia.conf"
         VAR_FILE="config/helia.tfvars"             # Relative to app directory         
     esac
     echo "Directory: $d"
@@ -55,16 +55,10 @@ for d in "${dirs[@]}"; do
     echo "Init failed for $d"
     continue
     }
-    # # Workspace with timeout
-    # echo "Step 2: Setting workspace..."
-    # timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
-    # timeout 30 terraform -chdir="$d" workspace new default || {
-    #   echo "Workspace setup failed for $d"
-    #   continue
-    # }
-    # PLAN="/tmp/$(echo "$d" | tr "/" "_")_${ENV}.tfplan"
 
-    PLAN="${ENV}.tfplan"
+    # FIX: Create unique plan file name with app name and environment
+    PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
+    PLAN="/tmp/${PLAN_NAME}"
     echo "Step 3: Planning... Output: $PLAN"
     # Plan with var-file
     echo "Using var-file: $VAR_FILE"
@@ -72,7 +66,6 @@ for d in "${dirs[@]}"; do
       echo "Plan failed for $d"
       continue
     }
-    # echo "$PLAN" >> "$PLANLIST"
 
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
