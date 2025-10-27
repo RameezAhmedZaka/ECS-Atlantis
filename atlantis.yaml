@@ -100,6 +100,7 @@ workflows:
             extra_args:
               - "-var-file=application/${app_name}/config/stage.tfvars"
               - "-out=staging.tfplan"
+    apply:
       steps:
         - apply:
             extra_args: ["staging.tfplan"]
@@ -108,10 +109,15 @@ workflows:
     plan:
       steps:
         - init:
-            extra_args: [-backend-config="env/production/prod.conf", -reconfigure]
+            extra_args:
+              - "-backend-config=application/${app_name}/env/production/prod.conf"
+              - "-reconfigure"
         - plan:
-            extra_args: [-var-file="config/production.tfvars", -out, "production.tfplan"]
+            extra_args:
+              - "-var-file=application/${app_name}/config/production.tfvars"
+              - "-out=production.tfplan"
     apply:
       steps:
         - apply:
             extra_args: ["production.tfplan"]
+
