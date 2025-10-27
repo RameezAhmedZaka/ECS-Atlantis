@@ -45,7 +45,9 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
-          extra_args: ["$ARGS"]
+          extra_args:
+            - "$ARGS"
+
     apply:
       steps:
         - run: |
@@ -55,7 +57,9 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
-          extra_args: ["$ARGS"]
+          extra_args:
+            - "$ARGS"
+
 
 
   production-workflow:
