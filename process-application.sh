@@ -55,7 +55,6 @@ for d in "${dirs[@]}"; do
     echo "Init failed for $d"
     continue
     }
-    echo $key
     # Workspace with timeout
     echo "Step 2: Setting workspace..."
     timeout 30 terraform -chdir="$d" workspace select default 2>/dev/null || \
