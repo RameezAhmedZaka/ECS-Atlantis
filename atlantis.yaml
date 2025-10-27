@@ -41,11 +41,17 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            # Arguments after -- are passed as additional arguments to the script
-            APP_FILTER="${1:-}"
-            echo "Debug: Number of args: $#"
-            echo "Debug: All args: $@"
-            echo "Debug: APP_FILTER: '$APP_FILTER'"
+            # Parse the app name from the comment
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              # Extract app name after -- in the comment
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              elif [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+--[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -53,7 +59,16 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${1:-}"
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              # Extract app name after -- in the comment
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              elif [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+--[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -63,7 +78,13 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${1:-}"
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-production[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -71,7 +92,13 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${1:-}"
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-production[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -81,7 +108,13 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${1:-}"
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-helia[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -89,6 +122,12 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${1:-}"
+            APP_FILTER=""
+            if [[ -n "$COMMENT" ]]; then
+              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-helia[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
+                APP_FILTER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
