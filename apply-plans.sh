@@ -1,60 +1,51 @@
 #!/bin/bash
 set -euo pipefail
 
-MODE="${1:-plan}"  # plan or apply
-PLANLIST="/tmp/atlantis_planfiles.lst"
-: > "$PLANLIST"
-
-# Detect changed files using Atlantis env vars
-CHANGED_FILES="${ATLANTIS_CHANGED_FILES:-$(git diff --name-only HEAD~1 HEAD)}"
-echo "Changed files:"
-echo "$CHANGED_FILES"
-
-# Detect if main.tf changed anywhere
-MAIN_CHANGED=false
-if echo "$CHANGED_FILES" | grep -q "main.tf"; then
-  MAIN_CHANGED=true
+# Usage: ./apply-plans.sh <environment>
+ENV="${1:-}"
+if [[ -z "$ENV" ]]; then
+  echo "Usage: $0 <environment>"
+  exit 2
 fi
 
-# Iterate all apps
-for APP_DIR in application/*; do
-  [[ -d "$APP_DIR" ]] || continue
-  APP_NAME=$(basename "$APP_DIR")
+PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 
-  # Determine environments to plan
-  ENVS=()
-  if $MAIN_CHANGED; then
-    ENVS=("staging" "production")
-  else
-    # Check which env has changes
-    for ENV in staging production; do
-      if echo "$CHANGED_FILES" | grep -q "^$APP_DIR/config/$ENV"; then
-        ENVS+=("$ENV")
-      fi
-    done
+echo "=== STARTING APPLY for $ENV at $(date) ==="
+
+if [[ ! -f "$PLANLIST" ]]; then
+  echo "No plan list found: $PLANLIST"
+  exit 0
+fi
+
+if [[ ! -s "$PLANLIST" ]]; then
+  echo "Plan list is empty: $PLANLIST"
+  rm -f "$PLANLIST"
+  exit 0
+fi
+
+echo "Applying plans from: $PLANLIST"
+cat "$PLANLIST"
+
+while IFS='|' read -r DIR PLAN; do
+  if [[ -z "$DIR" || -z "$PLAN" ]]; then
+    echo "Skipping malformed line in $PLANLIST"
+    continue
   fi
 
-  # Skip if nothing changed for this app
-  [[ ${#ENVS[@]} -gt 0 ]] || continue
+  if [[ ! -f "$PLAN" ]]; then
+    echo "Plan file not found: $PLAN (for dir $DIR), skipping."
+    continue
+  fi
 
-  for ENV in "${ENVS[@]}"; do
-    BACKEND_CONFIG="$APP_DIR/env/$ENV/${ENV:0:4}.conf" # prod.conf or stag.conf
-    VAR_FILE="$APP_DIR/config/${ENV}.tfvars"
+  echo "=== Applying plan $PLAN for directory $DIR ==="
+  if ! timeout 600 terraform -chdir="$DIR" apply -input=false -auto-approve "$PLAN"; then
+    echo "Apply failed for $PLAN (dir $DIR). Leaving plan file for inspection: $PLAN"
+    continue
+  fi
 
-    [[ -f "$APP_DIR/main.tf" ]] || { echo "Skipping $APP_NAME (main.tf missing)"; continue; }
-    [[ -f "$BACKEND_CONFIG" ]] || { echo "Backend config missing for $APP_NAME $ENV"; continue; }
-    [[ -f "$VAR_FILE" ]] || { echo "Var file missing for $APP_NAME $ENV"; continue; }
+  echo "Successfully applied $PLAN for $DIR"
+  rm -f "$PLAN"
+done < "$PLANLIST"
 
-    rm -rf "$APP_DIR/.terraform"
-    echo "=== Planning $APP_NAME ($ENV) ==="
-    PLAN_FILE="/tmp/${APP_NAME}_${ENV}.tfplan"
-
-    terraform -chdir="$APP_DIR" init -upgrade -reconfigure -backend-config="$BACKEND_CONFIG" -input=false
-    terraform -chdir="$APP_DIR" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN_FILE"
-
-    echo "$APP_DIR|$PLAN_FILE" >> "$PLANLIST"
-  done
-done
-
-echo "Plans ready:"
-cat "$PLANLIST"
+rm -f "$PLANLIST"
+echo "=== APPLY COMPLETED for $ENV at $(date) ==="

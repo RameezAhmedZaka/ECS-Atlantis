@@ -1,164 +1,66 @@
 version: 3
 automerge: false
-parallel_plan: true
-parallel_apply: true
-delete_source_branch_on_merge: false
+parallel_plan: false
+parallel_apply: false
 
-# Auto-generate projects for each app
-autodiscover:
-  mode: enabled
-  projects:
-    - id: regex:application/(?P<app>.+)
-      name: "${app}-${env}"
-      dir: "application/${app}"
-      workspace: "${env}"
-      terraform_version: v1.6.6
-      autoplan:
-        enabled: true
-        when_modified:
-          - "application/${app}/**"
-          - "!**/*.tfvars"
-          - "!**/*.conf"
-      workflow: "${env}-workflow"
-      apply_requirements: []
-      
-      # Environment-specific configuration
-      terraform_extra_arguments:
-        - command_name: init
-          arguments:
-            - "-backend-config=env/${env}/${env}.conf"
-        - command_name: plan
-          arguments:
-            - "-var-file=config/${env}.tfvars"
-        - command_name: apply
-          arguments:
-            - "-var-file=config/${env}.tfvars"
-
-# Workflows for each environment
-workflows:
-  staging-workflow:
-    plan:
-      steps:
-        - init
-        - plan:
-            extra_args: ["-var-file=config/stage.tfvars"]
-    apply:
-      steps:
-        - apply:
-            extra_args: ["-var-file=config/stage.tfvars"]
-
-  production-workflow:
-    plan:
-      steps:
-        - init
-        - plan:
-            extra_args: ["-var-file=config/production.tfvars"]
-    apply:
-      steps:
-        - apply:
-            extra_args: ["-var-file=config/production.tfvars"]
-
-  helia-workflow:
-    plan:
-      steps:
-        - init
-        - plan:
-            extra_args: ["-var-file=config/helia.tfvars"]
-    apply:
-      steps:
-        - apply:
-            extra_args: ["-var-file=config/helia.tfvars"]
-
-# Global project configuration for shared changes
 projects:
-  - name: shared-infrastructure
+  - name: apps-staging
     dir: .
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
-        - "**/main.tf"
-        - "!application/**/env/**"
-        - "!application/**/config/**"
-    workflow: all-environments-workflow
+        - "application/**/env/staging/**"
+        - "application/**/config/stage.tfvars"
+        - "application/**/main.tf"
+    workflow: staging-workflow
     apply_requirements: []
 
-# Workflow for shared changes that affect all environments
-all-environments-workflow:
-  plan:
-    steps:
-      - run: |
-          set -euo pipefail
-          echo "=== Processing shared changes across all environments ==="
-          
-          # Find all modified main.tf files
-          mapfile -t modified_files < <(git diff --name-only HEAD~1 HEAD | grep "main.tf" || true)
-          
-          if [[ ${#modified_files[@]} -eq 0 ]]; then
-            echo "No shared main.tf files modified"
-            exit 0
-          fi
-          
-          # Process each environment for shared changes
-          for env in staging production helia; do
-            echo "=== Planning shared changes for $env environment ==="
-            
-            # Find all apps that have the modified main.tf
-            for file in "${modified_files[@]}"; do
-              app_dir=$(dirname "$file")
-              app_name=$(basename "$app_dir")
-              
-              if [[ -f "application/$app_name/main.tf" ]]; then
-                echo "Processing $app_name for $env"
-                
-                # Initialize with environment-specific backend
-                terraform -chdir="application/$app_name" init \
-                  -backend-config="env/$env/$env.conf" \
-                  -reconfigure \
-                  -input=false
-                
-                # Plan with environment-specific variables
-                terraform -chdir="application/$app_name" plan \
-                  -input=false \
-                  -lock-timeout=5m \
-                  -var-file="config/${env}.tfvars" \
-                  -out="${env}-shared.tfplan"
-                
-                echo "application/$app_name|${env}-shared.tfplan" >> "/tmp/shared_plans_${env}.lst"
-              fi
-            done
-          done
-          
-          echo "=== Shared changes planning completed ==="
-    
-  apply:
-    steps:
-      - run: |
-          set -euo pipefail
-          echo "=== Applying shared changes across all environments ==="
-          
-          for env in staging production helia; do
-            PLANLIST="/tmp/shared_plans_${env}.lst"
-            
-            if [[ -f "$PLANLIST" ]] && [[ -s "$PLANLIST" ]]; then
-              echo "Applying shared plans for $env"
-              
-              while IFS='|' read -r d PLAN; do
-                if [[ -f "$PLAN" ]]; then
-                  echo "=== Applying $PLAN for directory $d ==="
-                  terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
-                    echo "Apply failed for $PLAN"
-                    continue
-                  }
-                  echo ":white_check_mark: Successfully applied $PLAN"
-                  rm -f "$PLAN"
-                fi
-              done < "$PLANLIST"
-              
-              rm -f "$PLANLIST"
-            else
-              echo "No shared plans for $env"
-            fi
-          done
-          
-          echo "=== Shared changes application completed ==="
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/**/env/production/**"
+        - "application/**/config/production.tfvars"
+        - "application/**/main.tf"
+    workflow: production-workflow
+    apply_requirements: []
+
+workflows:
+  staging-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "=== Atlantis: staging plan step starting ($ENV) at $(date) ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "=== Atlantis: staging apply step starting ($ENV) at $(date) ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"
+
+  production-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Atlantis: production plan step starting ($ENV) at $(date) ==="
+            chmod +x ./scripts/process-application.sh
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Atlantis: production apply step starting ($ENV) at $(date) ==="
+            chmod +x ./scripts/apply-plans.sh
+            ./apply-plans.sh "$ENV"

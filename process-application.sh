@@ -1,66 +1,85 @@
 #!/bin/bash
 set -euo pipefail
 
-MODE="${1:-plan}"  # plan or apply
-PLANLIST="/tmp/atlantis_planfiles.lst"
+# Usage: ./process-application.sh <environment>
+ENV="${1:-}"
+if [[ -z "$ENV" ]]; then
+  echo "Usage: $0 <environment>"
+  exit 2
+fi
+
+echo "=== STARTING PLANNING for $ENV at $(date) ==="
+
+# Find application directories that contain main.tf
+mapfile -t dirs < <(find application -type f -name "main.tf" -print0 | xargs -0 -n1 dirname | sort -u)
+if [[ ${#dirs[@]} -eq 0 ]]; then
+  echo "No application main.tf files found under application/ - nothing to plan."
+  exit 0
+fi
+
+PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 
-# Use ATLANTIS_CHANGED_FILES if set, otherwise list all files in the PR
-if [[ -n "${ATLANTIS_CHANGED_FILES:-}" ]]; then
-    CHANGED_FILES="$ATLANTIS_CHANGED_FILES"
-else
-    # Safe git fetch to get main branch for comparison
-    git fetch origin +refs/heads/*:refs/remotes/origin/*
-    BASE_BRANCH="${ATLANTIS_BASE_BRANCH:-main}" # default to main
-    CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
-fi
-
-echo "Changed files:"
-echo "$CHANGED_FILES"
-
-# Detect if main.tf changed anywhere
-MAIN_CHANGED=false
-if echo "$CHANGED_FILES" | grep -q "main.tf"; then
-  MAIN_CHANGED=true
-fi
-
-# Iterate all apps
-for APP_DIR in application/*; do
-  [[ -d "$APP_DIR" ]] || continue
-  APP_NAME=$(basename "$APP_DIR")
-
-  # Determine environments to plan
-  ENVS=()
-  if $MAIN_CHANGED; then
-    ENVS=("staging" "production")
-  else
-    for ENV in staging production; do
-      if echo "$CHANGED_FILES" | grep -q "^$APP_DIR/config/$ENV"; then
-        ENVS+=("$ENV")
-      fi
-    done
+for d in "${dirs[@]}"; do
+  if [[ ! -f "$d/main.tf" ]]; then
+    echo "Skipping $d: main.tf not present"
+    continue
   fi
 
-  [[ ${#ENVS[@]} -gt 0 ]] || continue
+  APP_NAME=$(basename "$d")
+  echo "=== Preparing plan for app: $APP_NAME (dir: $d) for env: $ENV ==="
 
-  for ENV in "${ENVS[@]}"; do
-    BACKEND_CONFIG="$APP_DIR/env/$ENV/${ENV:0:4}.conf" # prod.conf or stag.conf
-    VAR_FILE="$APP_DIR/config/${ENV}.tfvars"
+  case "$ENV" in
+    production)
+      BACKEND_CONFIG="env/production/prod.conf"
+      VAR_FILE="config/production.tfvars"
+      ;;
+    staging)
+      BACKEND_CONFIG="env/staging/stage.conf"
+      VAR_FILE="config/stage.tfvars"
+      ;;
+    *)
+      echo "Unknown environment: $ENV"
+      continue
+      ;;
+  esac
 
-    [[ -f "$APP_DIR/main.tf" ]] || { echo "Skipping $APP_NAME (main.tf missing)"; continue; }
-    [[ -f "$BACKEND_CONFIG" ]] || { echo "Backend config missing for $APP_NAME $ENV"; continue; }
-    [[ -f "$VAR_FILE" ]] || { echo "Var file missing for $APP_NAME $ENV"; continue; }
+  # Verify backend config and var file exist
+  if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
+    echo "  -> Skipping $APP_NAME: backend config not found at $d/$BACKEND_CONFIG"
+    continue
+  fi
+  if [[ ! -f "$d/$VAR_FILE" ]]; then
+    echo "  -> Skipping $APP_NAME: var file not found at $d/$VAR_FILE"
+    continue
+  fi
 
-    rm -rf "$APP_DIR/.terraform"
-    echo "=== Planning $APP_NAME ($ENV) ==="
-    PLAN_FILE="/tmp/${APP_NAME}_${ENV}.tfplan"
+  # Remove previous terraform state dir to avoid mismatches (optional)
+  rm -rf "$d/.terraform" 2>/dev/null || true
 
-    terraform -chdir="$APP_DIR" init -upgrade -reconfigure -backend-config="$BACKEND_CONFIG" -input=false
-    terraform -chdir="$APP_DIR" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN_FILE"
+  # Initialize with backend config. Using -chdir ensures paths resolve inside app dir.
+  echo "  -> Initializing Terraform for $APP_NAME"
+  if ! timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG" -reconfigure -input=false; then
+    echo "  -> Init failed for $APP_NAME, skipping."
+    continue
+  fi
 
-    echo "$APP_DIR|$PLAN_FILE" >> "$PLANLIST"
-  done
+  # Create a unique plan filename in /tmp using sanitized directory path
+  SANITIZED_DIR=$(echo "$d" | sed 's|/|_|g' | sed 's|^_||')
+  PLAN="/tmp/${SANITIZED_DIR}_${ENV}.tfplan"
+
+  echo "  -> Planning $APP_NAME -> plan: $PLAN (var-file: $VAR_FILE)"
+  if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN"; then
+    echo "  -> Plan failed for $APP_NAME, skipping."
+    rm -f "$PLAN" 2>/dev/null || true
+    continue
+  fi
+
+  # Record directory + plan for later apply
+  echo "${d}|${PLAN}" >> "$PLANLIST"
+  echo "  -> Plan successful for $APP_NAME"
 done
 
-echo "Plans ready:"
-cat "$PLANLIST"
+echo "=== COMPLETED PLANNING for $ENV at $(date) ==="
+echo "Plan list file: $PLANLIST"
+cat "$PLANLIST" || echo "(empty)"
