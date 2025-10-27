@@ -1,61 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-RAW_FILTER="${2:-}"  # Raw filter that might include flags
+APP_FILTER="${2:-}"  # Optional app filter
 
 echo "=== STARTING $ENV at $(date) ==="
+if [[ -n "$APP_FILTER" ]]; then
+  echo "Filtering for app: $APP_FILTER"
+fi
 
-# Parse arguments to extract app name and detect destroy flag
-DESTROY_FLAG=false
-APP_FILTER=""
-
-# Split the raw filter by commas
-IFS=',' read -ra ARGS <<< "$RAW_FILTER"
-for arg in "${ARGS[@]}"; do
-    arg_clean=$(echo "$arg" | xargs)  # Trim whitespace
-    case "$arg_clean" in
-        -destroy|--destroy)
-            DESTROY_FLAG=true
-            ;;
-        --)
-            # Skip separator
-            ;;
-        *)
-            if [[ -n "$arg_clean" && "$arg_clean" != "-destroy" && "$arg_clean" != "--destroy" ]]; then
-                APP_FILTER="$arg_clean"
-            fi
-            ;;
-    esac
-done
-
-echo "Destroy flag: $DESTROY_FLAG"
-echo "App filter: $APP_FILTER"
-
-# Find application directories
+echo "=== STARTING $ENV at $(date) ==="
+# Find application but limit to 2 for testing
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [[ ${#dirs[@]} -eq 0 ]]; then
   echo "No application found!"
   exit 1
 fi
-
-echo "Found ${#dirs[@]} applications: ${dirs[*]}"
+echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
-
-# Always show all apps first
-echo "Available applications:"
-for d in "${dirs[@]}"; do
-    if [[ -f "$d/main.tf" ]]; then
-        echo "  - $(basename "$d")"
-    fi
-done
-
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
 
-    # Skip planning if filter is set and app does not match
     if [[ -n "$APP_FILTER" && "$APP_NAME" != "$APP_FILTER" ]]; then
       echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
       continue
@@ -64,7 +31,7 @@ for d in "${dirs[@]}"; do
     echo "=== Planning $APP_NAME ($ENV) ==="
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="env/production/prod.conf"
+        BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
         VAR_FILE="config/production.tfvars"
         ;;
       "staging")
@@ -73,63 +40,62 @@ for d in "${dirs[@]}"; do
         ;;
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
-        VAR_FILE="config/helia.tfvars"                   
+        VAR_FILE="config/helia.tfvars"             # Relative to app directory         
     esac
-    
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
-    
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
+      # List available backend configs for this environment
+      echo "Available backend configs for $ENV:"
+      find "$d/env" -name "*.conf" 2>/dev/null | grep "$ENV" || echo "No backend configs found for $ENV"
       continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
       echo "Var file not found: $d/$VAR_FILE"
+      ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
-    
     rm -rf "$d/.terraform"
-    
-    # Initialize with backend config
+    # Initialize with backend config (ALWAYS use -chdir for consistency)
     echo "Step 1: Initializing..."
+    echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -reconfigure \
       -input=false || {
-      echo "Init failed for $d"
-      continue
+    echo "Init failed for $d"
+    continue
     }
 
-    # Create unique plan file name
+    # FIX: Create unique plan file name with app name and environment
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
     PLAN="/tmp/${PLAN_NAME}"
-    echo "Step 2: Planning... Output: $PLAN"
-    
-    # Add destroy flag if needed
-    DESTROY_ARG=""
-    if [[ "$DESTROY_FLAG" == "true" ]]; then
-      DESTROY_ARG="-destroy"
-      echo "DESTROY MODE ENABLED"
-    fi
-    
-    # Plan with var-file and optional destroy flag
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" || {
-      echo "Plan failed for $d, but continuing..."
+    echo "Step 3: Planning... Output: $PLAN"
+    # Plan with var-file
+    echo "Using var-file: $VAR_FILE"
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+      echo "Plan failed for $d"
       continue
     }
 
     echo "$d|$PLAN" >> "$PLANLIST"
-    echo "✅ Successfully planned $APP_NAME"
-    ((processed_count++))
+    echo "Successfully planned $APP_NAME"
   else
     echo "Skipping $d (main.tf missing)"
   fi
 done
 
-if [[ $processed_count -eq 0 ]]; then
+if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
   echo "⚠️  No applications matched filter: $APP_FILTER"
+  echo "Available applications:"
+  for d in "${dirs[@]}"; do
+    if [[ -f "$d/main.tf" ]]; then
+      echo "  - $(basename "$d")"
+    fi
+  done
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
