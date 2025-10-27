@@ -22,8 +22,8 @@ for d in "${dirs[@]}"; do
         key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "staging")
-        BACKEND_CONFIG="env/staging/stage.conf"    # Relative to app directory
-        VAR_FILE="config/stage.tfvars"             # Relative to app directory
+        BACKEND_CONFIG="env/staging/stage.conf"   
+        VAR_FILE="config/stage.tfvars"            
         key="application/${APP_NAME}/${ENV}/terraform1.tfstate"        # Relative to app directory
         ;;
       "helia")
