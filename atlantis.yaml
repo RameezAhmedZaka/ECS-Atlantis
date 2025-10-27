@@ -41,15 +41,11 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            # Parse the app name from the comment
+            # Simple text processing - no complex regex
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              # Extract app name after -- in the comment
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              elif [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+--[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              # Remove everything before -- and take the first word after it
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
@@ -61,12 +57,7 @@ workflows:
             ENV="staging"
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              # Extract app name after -- in the comment
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              elif [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+--[[:space:]]+-p[[:space:]]+apps-staging[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
@@ -80,9 +71,7 @@ workflows:
             ENV="production"
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-production[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
@@ -94,9 +83,7 @@ workflows:
             ENV="production"
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-production[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
@@ -110,9 +97,7 @@ workflows:
             ENV="helia"
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+plan[[:space:]]+-p[[:space:]]+apps-helia[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
@@ -124,9 +109,7 @@ workflows:
             ENV="helia"
             APP_FILTER=""
             if [[ -n "$COMMENT" ]]; then
-              if [[ "$COMMENT" =~ atlantis[[:space:]]+apply[[:space:]]+-p[[:space:]]+apps-helia[[:space:]]*--[[:space:]]*([^[:space:]]+) ]]; then
-                APP_FILTER="${BASH_REMATCH[1]}"
-              fi
+              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
             fi
             echo "APP_FILTER: '$APP_FILTER'"
             chmod +x ./apply-plans.sh
