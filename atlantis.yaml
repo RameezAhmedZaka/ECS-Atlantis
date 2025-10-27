@@ -20,17 +20,18 @@ workflows:
       steps:
         - run: |
             set -euo pipefail
-            chmod +x ./process-application.sh
-            # Run plan for all envs. If Atlantis was invoked with -d the ATLANTIS_DIR env var
-            # will be present and will be forwarded to the script to limit planning to a single app.
-            ./../process-application.sh staging ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ./../process-application.sh production ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ./../process-application.sh helia ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            # We're running inside the 'application' directory (project dir), but the scripts live in the repo root.
+            # Call the scripts in the parent directory (../). The scripts are repo-root-aware.
+            chmod +x ../process-application.sh
+            # Pass ATLANTIS_DIR only when non-empty (the pattern ${ATLANTIS_DIR:+...} expands to nothing if empty)
+            ../process-application.sh staging ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ../process-application.sh production ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ../process-application.sh helia ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
     apply:
       steps:
         - run: |
             set -euo pipefail
-            chmod +x ./apply-plans.sh
-            ./../apply-plans.sh staging || true
-            ./../apply-plans.sh production || true
-            ./../apply-plans.sh helia || true
+            chmod +x ../apply-plans.sh
+            ../apply-plans.sh staging || true
+            ../apply-plans.sh production || true
+            ../apply-plans.sh helia || true
