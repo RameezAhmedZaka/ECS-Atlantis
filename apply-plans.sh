@@ -2,6 +2,7 @@
 set -euo pipefail
 ENV="$1"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+APP_FILTER="${2:-}"
 
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 

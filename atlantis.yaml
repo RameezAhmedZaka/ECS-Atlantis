@@ -41,17 +41,20 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Processing STAGING environment ==="
+            echo "App filter: ${APP_FILTER:-all apps}"
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="staging"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Applying STAGING environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
 
   production-workflow:
     plan:
@@ -59,17 +62,19 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Processing PRODUCTION environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="production"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Applying PRODUCTION environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
 
   helia-workflow:
     plan:
@@ -77,14 +82,16 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Processing HELIA environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
         - run: |
             set -euo pipefail
             ENV="helia"
+            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
             echo "=== Applying HELIA environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"      
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
