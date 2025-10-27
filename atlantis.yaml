@@ -23,14 +23,14 @@ workflows:
             chmod +x ./process-application.sh
             # Run plan for all envs. If Atlantis was invoked with -d the ATLANTIS_DIR env var
             # will be present and will be forwarded to the script to limit planning to a single app.
-            ./process-application.sh staging ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ./process-application.sh production ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ./process-application.sh helia ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ./../process-application.sh staging ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ./../process-application.sh production ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ./../process-application.sh helia ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
     apply:
       steps:
         - run: |
             set -euo pipefail
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh staging || true
-            ./apply-plans.sh production || true
-            ./apply-plans.sh helia || true
+            ./../apply-plans.sh staging || true
+            ./../apply-plans.sh production || true
+            ./../apply-plans.sh helia || true
