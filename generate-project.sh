@@ -18,7 +18,7 @@ for app_dir in application/*/; do
         # Staging project
         cat >> atlantis.yaml << EOF
   - name: ${app_name}-staging
-    dir: application/${app_name}
+    dir: .
     terraform_version: v1.6.6
     autoplan:
       enabled: true
@@ -32,7 +32,7 @@ for app_dir in application/*/; do
     workflow: staging-workflow
 
   - name: ${app_name}-production
-    dir: application/${app_name}
+    dir: .
     terraform_version: v1.6.6
     autoplan:
       enabled: true

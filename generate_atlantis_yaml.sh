@@ -18,7 +18,7 @@ EOF
 for app in "${apps[@]}"; do
   cat >> atlantis.generated.yaml << EOF
   - name: application-${app}-staging
-    dir: application/${app}
+    dir: .
     workspace: staging
     terraform_version: v1.6.6
     autoplan:
@@ -29,7 +29,7 @@ for app in "${apps[@]}"; do
     apply_requirements: []
 
   - name: application-${app}-production
-    dir: application/${app}
+    dir: .
     workspace: production
     terraform_version: v1.6.6
     autoplan:
