@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-RAW_FILTER="${2:-}"  # Raw filter that might include flags
+RAW_FILTER="${2:-}"
 
 echo "=== STARTING $ENV at $(date) ==="
 
@@ -46,6 +46,7 @@ echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
+success_count=0
 
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
@@ -89,13 +90,13 @@ for d in "${dirs[@]}"; do
     
     # Initialize with backend config
     echo "Step 1: Initializing..."
-    timeout 120 terraform -chdir="$d" init -upgrade \
+    if ! timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -reconfigure \
-      -input=false || {
+      -input=false; then
       echo "Init failed for $d"
       continue
-    }
+    fi
 
     # Create unique plan file name
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
@@ -110,13 +111,14 @@ for d in "${dirs[@]}"; do
     fi
     
     # Plan with var-file and optional destroy flag
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" || {
-      echo "Plan failed for $d"
+    if timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN"; then
+      echo "$d|$PLAN" >> "$PLANLIST"
+      echo "✅ Successfully planned $APP_NAME"
+      ((success_count++))
+    else
+      echo "❌ Plan failed for $d"
       continue
-    }
-
-    echo "$d|$PLAN" >> "$PLANLIST"
-    echo "Successfully planned $APP_NAME"
+    fi
     ((processed_count++))
   else
     echo "Skipping $d (main.tf missing)"
@@ -131,8 +133,21 @@ if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
       echo "  - $(basename "$d")"
     fi
   done
+  exit 1  # Fail if filter was provided but no apps matched
+fi
+
+if [[ $success_count -eq 0 ]]; then
+  echo "❌ No successful plans generated"
+  exit 1
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
+echo "✅ Successfully planned $success_count application(s)"
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
+# Create success marker for Atlantis
+mkdir -p .atlantis-tmp
+touch ".atlantis-tmp/${ENV}_plan_success"
+
+exit 0
