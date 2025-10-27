@@ -1,14 +1,14 @@
 version: 3
-automerge: false  # Disable until working
-parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working 
+automerge: false 
+parallel_plan: false  
+parallel_apply: false  
 
 projects:
   - name: apps-staging
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true  
       when_modified:
         - "application/**"
     workflow: staging-workflow
@@ -18,17 +18,17 @@ projects:
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true  
       when_modified:
         - "application/**"
     workflow: production-workflow
-    apply_requirements: [] 
+    apply_requirements: [approved, mergeable] 
 
   - name: apps-helia
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true 
       when_modified:
         - "application/**"
     workflow: helia-workflow
