@@ -10,7 +10,9 @@ projects:
     autoplan:
       enabled: true  # DISABLE FOR TESTING
       when_modified:
-        - "application/**"
+        - "application/**/env/staging/**"
+        - "application/**/config/stage.tfvars"
+        - "application/**/main.tf"
     workflow: staging-workflow
     apply_requirements: [] 
 
@@ -20,7 +22,9 @@ projects:
     autoplan:
       enabled: true  # DISABLE FOR TESTING
       when_modified:
-        - "application/**"
+        - "application/**/env/production/**"
+        - "application/**/config/production.tfvars"
+        - "application/**/main.tf"
     workflow: production-workflow
     apply_requirements: [] 
 
