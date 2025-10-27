@@ -18,7 +18,7 @@ fi
 echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
-
+processed_count=0
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
@@ -27,7 +27,7 @@ for d in "${dirs[@]}"; do
       echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
       continue
     fi
-        
+
     echo "=== Planning $APP_NAME ($ENV) ==="
     case "$ENV" in
       "production")
@@ -87,6 +87,17 @@ for d in "${dirs[@]}"; do
     echo "Skipping $d (main.tf missing)"
   fi
 done
+
+if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
+  echo "⚠️  No applications matched filter: $APP_FILTER"
+  echo "Available applications:"
+  for d in "${dirs[@]}"; do
+    if [[ -f "$d/main.tf" ]]; then
+      echo "  - $(basename "$d")"
+    fi
+  done
+fi
+
 echo "=== COMPLETED $ENV at $(date) ==="
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
