@@ -55,9 +55,9 @@ workflows:
     plan:
       steps:
         - init:
-            extra_args: [-backend-config="env/staging/stage.conf", -reconfigure]
+            extra_args: [-backend-config="application/${app_name}/env/staging/stage.conf", -reconfigure]
         - plan:
-            extra_args: [-var-file="config/stage.tfvars", -out, "staging.tfplan"]
+            extra_args: [-var-file="application/${app_name}/config/stage.tfvars", -out, "staging.tfplan"]
     apply:
       steps:
         - apply:
