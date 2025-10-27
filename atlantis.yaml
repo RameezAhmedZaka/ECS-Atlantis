@@ -41,9 +41,14 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Processing STAGING environment ==="
-            echo "App filter: ${APP_FILTER:-all apps}"
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis plan -p apps-staging -- app-name"
+            fi
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -51,8 +56,14 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Applying STAGING environment ==="
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis apply -p apps-staging -- app-name"
+            fi
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -62,8 +73,14 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Processing PRODUCTION environment ==="
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis plan -p apps-production -- app-name"
+            fi
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -71,8 +88,14 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Applying PRODUCTION environment ==="
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis apply -p apps-production -- app-name"
+            fi
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -82,8 +105,14 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Processing HELIA environment ==="
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis plan -p apps-helia -- app-name"
+            fi
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -91,7 +120,13 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${ATLANTIS_COMMENT_ARGS:-}"
-            echo "=== Applying HELIA environment ==="
+            # Extract app name from comment if provided
+            APP_FILTER=""
+            if [[ "$COMMENT_ARGS" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]*$ ]]; then
+              APP_FILTER="${BASH_REMATCH[1]}"
+              echo "Filtering for app: $APP_FILTER"
+            elif [[ -n "$COMMENT_ARGS" ]]; then
+              echo "Invalid app filter format: '$COMMENT_ARGS'. Use: atlantis apply -p apps-helia -- app-name"
+            fi
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
