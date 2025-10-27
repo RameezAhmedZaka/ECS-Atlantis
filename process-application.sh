@@ -9,8 +9,8 @@ echo "=== STARTING $ENV at $(date) ==="
 DESTROY_FLAG=false
 APP_FILTER=""
 
-# Split the raw filter by commas
-IFS=',' read -ra ARGS <<< "$RAW_FILTER"
+# Split the raw filter by commas and spaces to handle different input formats
+IFS=$' \t\n,' read -ra ARGS <<< "$RAW_FILTER"
 for arg in "${ARGS[@]}"; do
     arg_clean=$(echo "$arg" | xargs)  # Trim whitespace
     case "$arg_clean" in
@@ -18,10 +18,14 @@ for arg in "${ARGS[@]}"; do
             DESTROY_FLAG=true
             ;;
         --)
-            # Skip separator
+            # Skip separator - do nothing
+            ;;
+        "")
+            # Skip empty arguments
             ;;
         *)
-            if [[ -n "$arg_clean" && "$arg_clean" != "-destroy" && "$arg_clean" != "--destroy" ]]; then
+            if [[ "$arg_clean" != "-destroy" && "$arg_clean" != "--destroy" ]]; then
+                # Only set APP_FILTER if it's not a destroy flag and not empty
                 APP_FILTER="$arg_clean"
             fi
             ;;
@@ -29,7 +33,7 @@ for arg in "${ARGS[@]}"; do
 done
 
 echo "Destroy flag: $DESTROY_FLAG"
-echo "App filter: $APP_FILTER"
+echo "App filter: '$APP_FILTER'"
 
 if [[ -n "$APP_FILTER" ]]; then
   echo "Filtering for app: $APP_FILTER"
@@ -69,6 +73,11 @@ for d in "${dirs[@]}"; do
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
         VAR_FILE="config/helia.tfvars"                   
+        ;;
+      *)
+        echo "Unknown environment: $ENV"
+        continue
+        ;;
     esac
     
     echo "Directory: $d"
