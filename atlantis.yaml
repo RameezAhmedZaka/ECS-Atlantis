@@ -40,10 +40,12 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"  # Extract args after --
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'  # Remove all backslashes
         - run: |
             set -euo pipefail
             ENV="staging"
+            echo "DEBUG: Raw COMMENT_ARGS='$COMMENT_ARGS'"
+            echo "DEBUG: Cleaned APP_FILTER='$APP_FILTER'"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
@@ -51,7 +53,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -64,7 +66,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
         - run: |
             set -euo pipefail
             ENV="production"
@@ -75,7 +77,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
         - run: |
             set -euo pipefail
             ENV="production"
@@ -88,7 +90,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
         - run: |
             set -euo pipefail
             ENV="helia"
@@ -99,7 +101,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
+            command: echo "$COMMENT_ARGS" | sed 's/\\\\//g'
         - run: |
             set -euo pipefail
             ENV="helia"
