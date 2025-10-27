@@ -41,12 +41,11 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            # Simple approach - get the first argument after --
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            # Arguments after -- are passed as additional arguments to the script
+            APP_FILTER="${1:-}"
+            echo "Debug: Number of args: $#"
+            echo "Debug: All args: $@"
+            echo "Debug: APP_FILTER: '$APP_FILTER'"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -54,11 +53,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            APP_FILTER="${1:-}"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -68,11 +63,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            APP_FILTER="${1:-}"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -80,11 +71,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            APP_FILTER="${1:-}"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -94,11 +81,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            APP_FILTER="${1:-}"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -106,10 +89,6 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER=""
-            if [ $# -gt 0 ]; then
-              APP_FILTER="$1"
-              echo "Filtering for app: $APP_FILTER"
-            fi
+            APP_FILTER="${1:-}"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
