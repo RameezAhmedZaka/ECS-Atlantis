@@ -1,42 +1,38 @@
 version: 3
-automerge: false  # Disable until working
-parallel_plan: false  # Disable until working
-parallel_apply: false  # Disable until working 
+automerge: false
+parallel_plan: false
+parallel_apply: false
 
 projects:
   - name: apps-staging
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
-        - "application/**/env/staging/**"
-        - "application/**/config/stage.tfvars"
-        - "application/**/main.tf"
+        - "application/**"
     workflow: staging-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
   - name: apps-production
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
-        - "application/**/env/production/**"
-        - "application/**/config/production.tfvars"
-        - "application/**/main.tf"
+        - "application/**"
     workflow: production-workflow
-    apply_requirements: [] 
+    apply_requirements: []
 
   - name: apps-helia
     dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true  # DISABLE FOR TESTING
+      enabled: true
       when_modified:
         - "application/**"
     workflow: helia-workflow
-    apply_requirements: []     
+    apply_requirements: []
 
 workflows:
   staging-workflow:
@@ -47,7 +43,7 @@ workflows:
             ENV="staging"
             echo "=== Processing STAGING environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
     apply:
       steps:
         - run: |
@@ -55,7 +51,7 @@ workflows:
             ENV="staging"
             echo "=== Applying STAGING environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
+            ./apply-plans.sh "$ENV"
 
   production-workflow:
     plan:
@@ -65,7 +61,7 @@ workflows:
             ENV="production"
             echo "=== Processing PRODUCTION environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
     apply:
       steps:
         - run: |
@@ -83,7 +79,7 @@ workflows:
             ENV="helia"
             echo "=== Processing HELIA environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
     apply:
       steps:
         - run: |
@@ -91,5 +87,4 @@ workflows:
             ENV="helia"
             echo "=== Applying HELIA environment ==="
             chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV"            
-
+            ./apply-plans.sh "$ENV"
