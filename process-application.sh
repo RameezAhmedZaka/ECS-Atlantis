@@ -1,150 +1,128 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# repo-root-aware process script. Works no matter where it's invoked from.
 
 usage() {
   cat <<EOF
-Usage: $0 <env> [app_dir]
-  env: staging | production | helia
-  app_dir (optional): path to a single app directory (can be relative to repo root or absolute).
-If app_dir is omitted, the script will scan the repository's application/ directory for main.tf files.
+Usage: $0 <staging|production|helia|all> [app-path]
+  If run from inside an app directory containing main.tf, you can omit app-path.
+  If app-path is provided it can be a single app dir (e.g. application/apollo) or omitted to process all apps.
 EOF
   exit 1
 }
 
-if [[ $# -lt 1 ]]; then
+if [[ $# -lt 1 || $# -gt 2 ]]; then
   usage
 fi
 
 ENV="$1"
-TARGET_ARG="${2:-}"
+TARGET_DIR="${2:-}"
 
-# Determine the directory where this script lives (script_dir) and treat that as repo root if it contains the application/ folder.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# If SCRIPT_DIR contains application directory, assume SCRIPT_DIR is repo root. Otherwise assume repo root is parent of script dir.
-if [[ -d "${SCRIPT_DIR}/application" ]]; then
-  REPO_ROOT="${SCRIPT_DIR}"
-elif [[ -d "${SCRIPT_DIR}/../application" ]]; then
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Which envs to process
+declare -a ALL_ENVS=("staging" "production" "helia")
+
+if [[ "$ENV" == "all" ]]; then
+  ENVS=("${ALL_ENVS[@]}")
 else
-  # fallback to current working directory if nothing else
-  REPO_ROOT="$(pwd)"
+  ENVS=("$ENV")
 fi
 
-# Resolve target app dir (if provided). Accept absolute or repo-root-relative paths.
-TARGET_APP=""
-if [[ -n "${TARGET_ARG:-}" ]]; then
-  if [[ "${TARGET_ARG}" = /* ]]; then
-    TARGET_APP="${TARGET_ARG}"
+# Determine list of app directories to process:
+# If a path arg is provided, use that.
+# If current dir contains main.tf, treat it as a single app.
+# Otherwise find all apps under application/* that contain main.tf.
+mapfile -t DIRS < <(
+  if [[ -n "$TARGET_DIR" ]]; then
+    if [[ -f "$TARGET_DIR/main.tf" ]]; then
+      printf '%s\n' "$TARGET_DIR"
+    else
+      echo "Given app path does not contain main.tf: $TARGET_DIR" >&2
+      exit 1
+    fi
+  elif [[ -f "main.tf" ]]; then
+    printf '%s\n' "$(pwd)"
   else
-    TARGET_APP="${REPO_ROOT}/${TARGET_ARG#./}"
+    find application -maxdepth 2 -type f -name "main.tf" -printf '%h\n' 2>/dev/null | sort -u
   fi
-elif [[ -n "${ATLANTIS_DIR:-}" ]]; then
-  # ATLANTIS_DIR provided by Atlantis is repo-relative from the project dir; make it absolute relative to REPO_ROOT.
-  if [[ "${ATLANTIS_DIR}" = /* ]]; then
-    TARGET_APP="${ATLANTIS_DIR}"
-  else
-    TARGET_APP="${REPO_ROOT}/${ATLANTIS_DIR#./}"
-  fi
-fi
+)
 
-echo "=== STARTING processing for env='${ENV}' target='${TARGET_APP:-<all>}' repo_root='${REPO_ROOT}' at $(date) ==="
-
-# collect app directories (absolute paths)
-dirs=()
-if [[ -n "$TARGET_APP" ]]; then
-  if [[ -d "$TARGET_APP" ]]; then
-    dirs+=("$(cd "$TARGET_APP" && pwd)")
-  else
-    echo "Target app directory not found: $TARGET_APP"
-    exit 1
-  fi
-else
-  # Portable find: search under REPO_ROOT/application for main.tf and get unique directories
-  while IFS= read -r -d $'\0' f; do
-    dirs+=("$(dirname "$f")")
-  done < <(find "$REPO_ROOT/application" -type f -name "main.tf" -print0 2>/dev/null)
-  # Deduplicate (sort -u)
-  if [[ ${#dirs[@]} -gt 0 ]]; then
-    mapfile -t dirs < <(printf '%s\n' "${dirs[@]}" | sort -u)
-  fi
-fi
-
-if [[ ${#dirs[@]} -eq 0 ]]; then
-  echo "No application directories found!"
+if [[ ${#DIRS[@]} -eq 0 ]]; then
+  echo "No application directories found to plan."
   exit 1
 fi
-
-echo "Found ${#dirs[@]} application(s):"
-for dd in "${dirs[@]}"; do echo " - $dd"; done
 
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 
-for d in "${dirs[@]}"; do
-  if [[ ! -f "$d/main.tf" ]]; then
-    echo "Skipping $d (main.tf missing)"
+echo "=== STARTING PLANNING (ENV=$ENV) at $(date) ==="
+echo "Planning ${#DIRS[@]} app(s): ${DIRS[*]}"
+
+for d in "${DIRS[@]}"; do
+  if [[ ! -d "$d" ]]; then
+    echo "Skipping invalid directory: $d"
     continue
   fi
 
-  APP_NAME="$(basename "$d")"
-  echo "=== Planning $APP_NAME ($ENV) in $d ==="
+  APP_NAME=$(basename "$d")
 
-  # Resolve backend config: pick first .conf under env/<ENV> inside the app dir
-  BACKEND_CONFIG_PATH=""
-  if [[ -d "$d/env/$ENV" ]]; then
-    for conf in "$d/env/$ENV"/*.conf; do
-      if [[ -f "$conf" ]]; then
-        # Make absolute
-        BACKEND_CONFIG_PATH="$(cd "$(dirname "$conf")" && pwd)/$(basename "$conf")"
-        break
-      fi
-    done
-  fi
+  for e in "${ENVS[@]}"; do
+    echo "---- App: $APP_NAME  Env: $e ----"
 
-  if [[ -z "$BACKEND_CONFIG_PATH" ]]; then
-    echo "Backend config not found under $d/env/$ENV"
-    echo "Available backend configs for $d (if any):"
-    find "$d/env" -type f -name "*.conf" 2>/dev/null || echo "No backend configs found at all for $d"
-    continue
-  fi
+    # Map env to backend config and var file names (relative to app dir)
+    case "$e" in
+      production)
+        BACKEND_CONFIG="env/production/prod.conf"
+        VAR_FILE="config/production.tfvars"
+        ;;
+      staging)
+        BACKEND_CONFIG="env/staging/stage.conf"
+        VAR_FILE="config/stage.tfvars"
+        ;;
+      helia)
+        BACKEND_CONFIG="env/helia/helia.conf"
+        VAR_FILE="config/helia.tfvars"
+        ;;
+      *)
+        echo "Unknown environment: $e" >&2
+        continue
+        ;;
+    esac
 
-  # Resolve var-file name relative to each app dir
-  if [[ "$ENV" == "staging" ]]; then
-    VAR_FILE_REL="config/stage.tfvars"
-  else
-    VAR_FILE_REL="config/${ENV}.tfvars"
-  fi
+    # Validate files
+    if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
+      echo "Backend config not found: $d/$BACKEND_CONFIG -- skipping"
+      continue
+    fi
+    if [[ ! -f "$d/$VAR_FILE" ]]; then
+      echo "Var file not found: $d/$VAR_FILE -- skipping"
+      continue
+    fi
 
-  if [[ ! -f "$d/$VAR_FILE_REL" ]]; then
-    echo "Var file not found: $d/$VAR_FILE_REL"
-    ls -la "$d/config" 2>/dev/null || echo "config directory not found for $d"
-    continue
-  fi
+    # Clean local .terraform to avoid state issues
+    rm -rf "$d/.terraform" || true
 
-  # Clean previous init artifacts to be safe
-  rm -rf "$d/.terraform" || true
+    echo "Initializing terraform in $d for env $e (backend: $BACKEND_CONFIG)"
+    # Use -chdir so backend-config path should be passed relative to repo root or absolute.
+    # We'll pass the absolute backend config path for clarity.
+    ABS_BACKEND_CONF="$(realpath "$d/$BACKEND_CONFIG")"
+    if ! timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$ABS_BACKEND_CONF" -reconfigure -input=false; then
+      echo "Init failed for $d (env $e), skipping"
+      continue
+    fi
 
-  echo "Step 1: Initializing $d using backend config: $BACKEND_CONFIG_PATH"
-  if ! timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG_PATH" -reconfigure -input=false; then
-    echo "Init failed for $d"
-    continue
-  fi
+    PLAN_FILE="/tmp/${APP_NAME}_${e}.tfplan"
+    echo "Planning (output -> $PLAN_FILE) with var-file: $VAR_FILE"
+    if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$d/$VAR_FILE" -out="$PLAN_FILE"; then
+      echo "Plan FAILED for $d (env $e), skipping"
+      continue
+    fi
 
-  # Unique plan file in /tmp (absolute)
-  SAFE_DIR_NAME="$(echo "$d" | sed 's|/|_|g' | sed 's/[^A-Za-z0-9_.-]/_/g')"
-  PLAN="/tmp/${SAFE_DIR_NAME}_${ENV}.tfplan"
-  echo "Step 2: Planning $d -> $PLAN (var-file: $VAR_FILE_REL)"
-  if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE_REL" -out="$PLAN"; then
-    echo "Plan failed for $d"
-    continue
-  fi
-
-  # record absolute directory + absolute plan path
-  echo "${d}|${PLAN}" >> "$PLANLIST"
-  echo "Successfully planned $APP_NAME ($ENV) -> $PLAN"
+    # Use absolute path for plan in the plan list so apply can find it regardless of PWD
+    ABS_PLAN="$(realpath "$PLAN_FILE")"
+    echo "${d}|${ABS_PLAN}" >> "$PLANLIST"
+    echo "Planned $APP_NAME ($e): $ABS_PLAN"
+  done
 done
 
-echo "=== COMPLETED processing for env='${ENV}' at $(date) ==="
-echo "Plan list created: $PLANLIST"
-cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+echo "=== COMPLETED PLANNING (ENV=$ENV) at $(date) ==="
+echo "Plan list: $PLANLIST"
+cat "$PLANLIST" 2>/dev/null || echo "No plans recorded"
