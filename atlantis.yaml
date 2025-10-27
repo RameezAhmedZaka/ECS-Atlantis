@@ -4,32 +4,84 @@ parallel_plan: false
 parallel_apply: false
 
 projects:
-  - name: apps
+  - name: apps-staging
     dir: .
     terraform_version: v1.6.6
     autoplan:
       enabled: true
       when_modified:
         - "application/**"
-    workflow: multi-env-workflow
+    workflow: staging-workflow
+    apply_requirements: []
+
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: []
+
+  - name: apps-helia
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
     apply_requirements: []
 
 workflows:
-  multi-env-workflow:
+  staging-workflow:
     plan:
       steps:
         - run: |
             set -euo pipefail
-            # Run planning for all environments
-            ENV="all"
-            echo "=== Processing ALL environments ==="
+            ENV="staging"
+            APP_NAME="${ATLANTIS_TARGET##*/}"  # extract app folder from -d
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV"
+            ./process-application.sh "$ENV" "$APP_NAME"
     apply:
       steps:
         - run: |
             set -euo pipefail
-            ENV="all"
-            echo "=== Applying ALL environments ==="
+            ENV="staging"
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"
+
+  production-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            APP_NAME="${ATLANTIS_TARGET##*/}"
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV" "$APP_NAME"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"
+
+  helia-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            APP_NAME="${ATLANTIS_TARGET##*/}"
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV" "$APP_NAME"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV"
