@@ -41,13 +41,8 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            # Simple text processing - no complex regex
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              # Remove everything before -- and take the first word after it
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}"  # Capture everything after --
+            echo "APP_FILTER: $APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -55,11 +50,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -69,11 +60,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}" 
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -81,11 +68,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}" 
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -95,11 +78,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}" 
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
@@ -107,10 +86,6 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER=""
-            if [[ -n "$COMMENT" ]]; then
-              APP_FILTER=$(echo "$COMMENT" | sed 's/.*--//' | awk '{print $1}')
-            fi
-            echo "APP_FILTER: '$APP_FILTER'"
+            APP_FILTER="${@:1}" 
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
