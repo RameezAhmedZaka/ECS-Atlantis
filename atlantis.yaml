@@ -1,37 +1,90 @@
 version: 3
-automerge: false
-parallel_plan: false
-parallel_apply: false
+automerge: false  # Disable until working
+parallel_plan: false  # Disable until working
+parallel_apply: false  # Disable until working 
 
 projects:
-  - name: apps
-    dir: application
+  - name: apps-staging
+    dir: .
     terraform_version: v1.6.6
     autoplan:
-      enabled: true
+      enabled: true  # DISABLE FOR TESTING
       when_modified:
-        - "**/*.tf"
-    workflow: multi-env
-    apply_requirements: []
+        - "application/**"
+    workflow: staging-workflow
+    apply_requirements: [] 
+
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  # DISABLE FOR TESTING
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: [] 
+
+  - name: apps-helia
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  # DISABLE FOR TESTING
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
+    apply_requirements: []     
 
 workflows:
-  multi-env:
+  staging-workflow:
     plan:
       steps:
         - run: |
             set -euo pipefail
-            # We're running inside the 'application' directory (project dir), but the scripts live in the repo root.
-            # Call the scripts in the parent directory (../). The scripts are repo-root-aware.
-            chmod +x ../process-application.sh
-            # Pass ATLANTIS_DIR only when non-empty (the pattern ${ATLANTIS_DIR:+...} expands to nothing if empty)
-            ../process-application.sh staging ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ../process-application.sh production ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
-            ../process-application.sh helia ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
+            ENV="staging"
+            echo "=== Processing STAGING environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV"
     apply:
       steps:
         - run: |
             set -euo pipefail
-            chmod +x ../apply-plans.sh
-            ../apply-plans.sh staging || true
-            ../apply-plans.sh production || true
-            ../apply-plans.sh helia || true
+            ENV="staging"
+            echo "=== Applying STAGING environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"            
+
+  production-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Processing PRODUCTION environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "=== Applying PRODUCTION environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"
+
+  helia-workflow:
+    plan:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "=== Processing HELIA environment ==="
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV"
+    apply:
+      steps:
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "=== Applying HELIA environment ==="
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV"      
