@@ -5,8 +5,16 @@ MODE="${1:-plan}"  # plan or apply
 PLANLIST="/tmp/atlantis_planfiles.lst"
 : > "$PLANLIST"
 
-# Detect changed files using Atlantis env vars
-CHANGED_FILES="${ATLANTIS_CHANGED_FILES:-$(git diff --name-only HEAD~1 HEAD)}"
+# Use ATLANTIS_CHANGED_FILES if set, otherwise list all files in the PR
+if [[ -n "${ATLANTIS_CHANGED_FILES:-}" ]]; then
+    CHANGED_FILES="$ATLANTIS_CHANGED_FILES"
+else
+    # Safe git fetch to get main branch for comparison
+    git fetch origin +refs/heads/*:refs/remotes/origin/*
+    BASE_BRANCH="${ATLANTIS_BASE_BRANCH:-main}" # default to main
+    CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
+fi
+
 echo "Changed files:"
 echo "$CHANGED_FILES"
 
@@ -26,7 +34,6 @@ for APP_DIR in application/*; do
   if $MAIN_CHANGED; then
     ENVS=("staging" "production")
   else
-    # Check which env has changes
     for ENV in staging production; do
       if echo "$CHANGED_FILES" | grep -q "^$APP_DIR/config/$ENV"; then
         ENVS+=("$ENV")
@@ -34,7 +41,6 @@ for APP_DIR in application/*; do
     done
   fi
 
-  # Skip if nothing changed for this app
   [[ ${#ENVS[@]} -gt 0 ]] || continue
 
   for ENV in "${ENVS[@]}"; do
