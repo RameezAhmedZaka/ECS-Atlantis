@@ -1,15 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-RAW_FILTER="${2:-}" # Optional app filter
-
-echo "=== STARTING $ENV at $(date) ==="
-if [[ -n "$APP_FILTER" ]]; then
-  echo "Filtering for app: $APP_FILTER"
-fi
+RAW_FILTER="${2:-}"  # Raw filter that might include flags
 
 echo "=== STARTING $ENV at $(date) ==="
 
+# Parse arguments to extract app name and detect destroy flag
 DESTROY_FLAG=false
 APP_FILTER=""
 
@@ -35,16 +31,22 @@ done
 echo "Destroy flag: $DESTROY_FLAG"
 echo "App filter: $APP_FILTER"
 
-# Find application but limit to 2 for testing
+if [[ -n "$APP_FILTER" ]]; then
+  echo "Filtering for app: $APP_FILTER"
+fi
+
+# Find application directories
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [[ ${#dirs[@]} -eq 0 ]]; then
   echo "No application found!"
   exit 1
 fi
+
 echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
+
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
@@ -57,7 +59,7 @@ for d in "${dirs[@]}"; do
     echo "=== Planning $APP_NAME ($ENV) ==="
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
+        BACKEND_CONFIG="env/production/prod.conf"
         VAR_FILE="config/production.tfvars"
         ;;
       "staging")
@@ -66,56 +68,56 @@ for d in "${dirs[@]}"; do
         ;;
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
-        VAR_FILE="config/helia.tfvars"             # Relative to app directory         
+        VAR_FILE="config/helia.tfvars"                   
     esac
+    
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
+    
     # Check if files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
-      # List available backend configs for this environment
-      echo "Available backend configs for $ENV:"
-      find "$d/env" -name "*.conf" 2>/dev/null | grep "$ENV" || echo "No backend configs found for $ENV"
       continue
     fi
     if [[ ! -f "$d/$VAR_FILE" ]]; then
       echo "Var file not found: $d/$VAR_FILE"
-      ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
+    
     rm -rf "$d/.terraform"
-    # Initialize with backend config (ALWAYS use -chdir for consistency)
+    
+    # Initialize with backend config
     echo "Step 1: Initializing..."
-    echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -reconfigure \
       -input=false || {
-    echo "Init failed for $d"
-    continue
+      echo "Init failed for $d"
+      continue
     }
 
-    # FIX: Create unique plan file name with app name and environment
+    # Create unique plan file name
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
     PLAN="/tmp/${PLAN_NAME}"
     echo "Step 3: Planning... Output: $PLAN"
-
+    
+    # Add destroy flag if needed
     DESTROY_ARG=""
     if [[ "$DESTROY_FLAG" == "true" ]]; then
       DESTROY_ARG="-destroy"
       echo "DESTROY MODE ENABLED"
     fi
     
-    # Plan with var-file
-    echo "Using var-file: $VAR_FILE"
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
+    # Plan with var-file and optional destroy flag
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" || {
       echo "Plan failed for $d"
       continue
     }
 
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
+    ((processed_count++))
   else
     echo "Skipping $d (main.tf missing)"
   fi
