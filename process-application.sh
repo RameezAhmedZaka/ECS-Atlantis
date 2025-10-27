@@ -66,7 +66,13 @@ for d in "${dirs[@]}"; do
   if [[ -d "$d/env/$ENV" ]]; then
     for conf in "$d/env/$ENV"/*.conf; do
       if [[ -f "$conf" ]]; then
-        BACKEND_CONFIG_PATH="$conf"
+        # conf is repo-root-relative (e.g. application/network/env/helia/helia.conf)
+        # Make it absolute so terraform -chdir will be able to read it.
+        if [[ "$conf" = /* ]]; then
+          BACKEND_CONFIG_PATH="$conf"
+        else
+          BACKEND_CONFIG_PATH="$(pwd)/$conf"
+        fi
         break
       fi
     done
@@ -86,6 +92,7 @@ for d in "${dirs[@]}"; do
     VAR_FILE_REL="config/${ENV}.tfvars"
   fi
 
+  # Ensure var-file exists (relative to repo root)
   if [[ ! -f "$d/$VAR_FILE_REL" ]]; then
     echo "Var file not found: $d/$VAR_FILE_REL"
     ls -la "$d/config" 2>/dev/null || echo "config directory not found for $d"
@@ -96,6 +103,7 @@ for d in "${dirs[@]}"; do
   rm -rf "$d/.terraform" || true
 
   echo "Step 1: Initializing $d using backend config: $BACKEND_CONFIG_PATH"
+  # Use absolute backend-config path so -chdir doesn't confuse relative locations
   if ! timeout 120 terraform -chdir="$d" init -upgrade -backend-config="$BACKEND_CONFIG_PATH" -reconfigure -input=false; then
     echo "Init failed for $d"
     continue
@@ -105,7 +113,8 @@ for d in "${dirs[@]}"; do
   SAFE_DIR_NAME=$(echo "$d" | sed 's|/|_|g' | sed 's/[^A-Za-z0-9_.-]/_/g')
   PLAN="/tmp/${SAFE_DIR_NAME}_${ENV}.tfplan"
   echo "Step 2: Planning $d -> $PLAN (var-file: $VAR_FILE_REL)"
-  if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$d/$VAR_FILE_REL" -out="$PLAN"; then
+  # Pass var-file relative to the chdir (so -chdir and var-file paths align)
+  if ! timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE_REL" -out="$PLAN"; then
     echo "Plan failed for $d"
     continue
   fi
