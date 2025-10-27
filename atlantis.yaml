@@ -48,7 +48,7 @@ workflows:
               echo "Filtering Atlantis plan for app: $APP_FILTER"
             else
               APP_FILTER=""
-              echo "No app filter passed. Running for all apps."
+              echo "No apps filter passed. Running for all apps."
             fi
 
             chmod +x ./process-application.sh
