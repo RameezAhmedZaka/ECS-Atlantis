@@ -4,56 +4,111 @@ parallel_plan: true
 parallel_apply: true
 
 projects:
-  - name: dynamic-discovery
-    dir: .
+  - name: adot-staging
+    dir: application/adot
     terraform_version: v1.6.6
     autoplan:
-      enabled: false  # Disable autoplan, we'll handle it manually
-    workflow: dynamic-workflow
+      enabled: true
+      when_modified:
+        - "application/adot/main.tf"
+        - "application/adot/providers.tf"
+        - "application/adot/variables.tf"
+        - "application/adot/backend.tf"
+        - "application/adot/config/stage.tfvars"
+        - "application/adot/env/staging/**"
+    workflow: staging-workflow
+
+  - name: adot-production
+    dir: application/adot
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/adot/main.tf"
+        - "application/adot/providers.tf"
+        - "application/adot/variables.tf"
+        - "application/adot/backend.tf"
+        - "application/adot/config/production.tfvars"
+        - "application/adot/env/production/**"
+    workflow: production-workflow
+
+  - name: apollo-staging
+    dir: application/apollo
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/apollo/main.tf"
+        - "application/apollo/providers.tf"
+        - "application/apollo/variables.tf"
+        - "application/apollo/backend.tf"
+        - "application/apollo/config/stage.tfvars"
+        - "application/apollo/env/staging/**"
+    workflow: staging-workflow
+
+  - name: apollo-production
+    dir: application/apollo
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/apollo/main.tf"
+        - "application/apollo/providers.tf"
+        - "application/apollo/variables.tf"
+        - "application/apollo/backend.tf"
+        - "application/apollo/config/production.tfvars"
+        - "application/apollo/env/production/**"
+    workflow: production-workflow
+
+  - name: network-staging
+    dir: application/network
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/network/main.tf"
+        - "application/network/providers.tf"
+        - "application/network/variables.tf"
+        - "application/network/backend.tf"
+        - "application/network/config/stage.tfvars"
+        - "application/network/env/staging/**"
+    workflow: staging-workflow
+
+  - name: network-production
+    dir: application/network
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/network/main.tf"
+        - "application/network/providers.tf"
+        - "application/network/variables.tf"
+        - "application/network/backend.tf"
+        - "application/network/config/production.tfvars"
+        - "application/network/env/production/**"
+    workflow: production-workflow
 
 workflows:
-  dynamic-workflow:
+  staging-workflow:
     plan:
       steps:
-        - run: 
-            command: ./discover-and-plan.sh
+        - init:
+            extra_args: [-backend-config="env/staging/stage.conf", -reconfigure]
+        - plan:
+            extra_args: [-var-file="config/stage.tfvars", -out, "staging.tfplan"]
     apply:
       steps:
-        - run:
-            command: ./discover-and-apply.sh
+        - apply:
+            extra_args: ["staging.tfplan"]
 
-  # production-workflow:
-  #   plan:
-  #     steps:
-  #       - run: |
-  #           set -euo pipefix
-  #           ENV="production"
-  #           echo "=== Processing PRODUCTION environment ==="
-  #           chmod +x ./process-application.sh
-  #           ./process-application.sh "$ENV" "$ATLANTIS_PROJECT_DIR"
-  #   apply:
-  #     steps:
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           echo "=== Applying PRODUCTION environment ==="
-  #           chmod +x ./apply-plans.sh
-  #           ./apply-plans.sh "$ENV"
-
-  # helia-workflow:
-  #   plan:
-  #     steps:
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="helia"
-  #           echo "=== Processing HELIA environment ==="
-  #           chmod +x ./process-application.sh
-  #           ./process-application.sh "$ENV" "$ATLANTIS_PROJECT_DIR"
-  #   apply:
-  #     steps:
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="helia"
-  #           echo "=== Applying HELIA environment ==="
-  #           chmod +x ./apply-plans.sh
-  #           ./apply-plans.sh "$ENV"
+  production-workflow:
+    plan:
+      steps:
+        - init:
+            extra_args: [-backend-config="env/production/prod.conf", -reconfigure]
+        - plan:
+            extra_args: [-var-file="config/production.tfvars", -out, "production.tfplan"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["production.tfplan"]
