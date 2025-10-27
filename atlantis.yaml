@@ -40,19 +40,18 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$ARGS"
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"  # Extract args after --
         - run: |
             set -euo pipefail
             ENV="staging"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
-
     apply:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$ARGS"
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -60,40 +59,50 @@ workflows:
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
-
-
   production-workflow:
     plan:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${@:1}" 
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
         - run: |
             set -euo pipefail
             ENV="production"
-            APP_FILTER="${@:1}" 
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
 
   helia-workflow:
     plan:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${@:1}" 
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$(echo $COMMENT_ARGS | sed 's/-- //')"
         - run: |
             set -euo pipefail
             ENV="helia"
-            APP_FILTER="${@:1}" 
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"

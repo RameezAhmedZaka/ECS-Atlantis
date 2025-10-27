@@ -8,30 +8,34 @@ if [[ -n "$APP_FILTER" ]]; then
   echo "Filtering for app: $APP_FILTER"
 fi
 
-echo "=== STARTING $ENV at $(date) ==="
-# Find application but limit to 2 for testing
+# Find application directories
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [[ ${#dirs[@]} -eq 0 ]]; then
-  echo "No application found!"
+  echo "No applications found!"
   exit 1
 fi
-echo "Found ${#dirs[@]} application: ${dirs[*]}"
+
+echo "Found ${#dirs[@]} applications"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 : > "$PLANLIST"
 processed_count=0
+
 for d in "${dirs[@]}"; do
   if [[ -f "$d/main.tf" ]]; then
     APP_NAME=$(basename "$d")
 
+    # Apply filter if provided
     if [[ -n "$APP_FILTER" && "$APP_NAME" != "$APP_FILTER" ]]; then
       echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
       continue
     fi
 
     echo "=== Planning $APP_NAME ($ENV) ==="
+    
+    # Set environment-specific files
     case "$ENV" in
       "production")
-        BACKEND_CONFIG="env/production/prod.conf"  # Relative to app directory
+        BACKEND_CONFIG="env/production/prod.conf"
         VAR_FILE="config/production.tfvars"
         ;;
       "staging")
@@ -40,75 +44,73 @@ for d in "${dirs[@]}"; do
         ;;
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
-        VAR_FILE="config/helia.tfvars"             # Relative to app directory         
+        VAR_FILE="config/helia.tfvars"            
+        ;;
     esac
+    
     echo "Directory: $d"
     echo "Backend config: $BACKEND_CONFIG"
     echo "Var file: $VAR_FILE"
-    # Check if files exist
+    
+    # Check if required files exist
     if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
-      # List available backend configs for this environment
-      echo "Available backend configs for $ENV:"
-      find "$d/env" -name "*.conf" 2>/dev/null | grep "$ENV" || echo "No backend configs found for $ENV"
       continue
     fi
+    
     if [[ ! -f "$d/$VAR_FILE" ]]; then
       echo "Var file not found: $d/$VAR_FILE"
-      ls -la "$d/config/" 2>/dev/null || echo "config directory not found"
       continue
     fi
+    
+    # Clean up and initialize
     rm -rf "$d/.terraform"
-    # Initialize with backend config (ALWAYS use -chdir for consistency)
+    
     echo "Step 1: Initializing..."
-    echo "Using backend config: $BACKEND_CONFIG"
     timeout 120 terraform -chdir="$d" init -upgrade \
       -backend-config="$BACKEND_CONFIG" \
       -reconfigure \
       -input=false || {
-    echo "Init failed for $d"
-    continue
+      echo "Init failed for $d"
+      continue
     }
 
-    # FIX: Create unique plan file name with app name and environment
+    # Create unique plan file
     PLAN_NAME="application_${APP_NAME}_${ENV}.tfplan"
     PLAN="/tmp/${PLAN_NAME}"
-    echo "Step 3: Planning... Output: $PLAN"
-    # Plan with var-file
-    echo "Using var-file: $VAR_FILE"
+    
+    echo "Step 2: Planning... Output: $PLAN"
     timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" || {
       echo "Plan failed for $d"
       continue
     }
 
     echo "$d|$PLAN" >> "$PLANLIST"
+    ((processed_count++))
     echo "Successfully planned $APP_NAME"
   else
     echo "Skipping $d (main.tf missing)"
   fi
 done
 
+# Summary
 if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
   echo "⚠️  No applications matched filter: $APP_FILTER"
   echo "Available applications:"
   for d in "${dirs[@]}"; do
     if [[ -f "$d/main.tf" ]]; then
-      echo "  - $(basename "$d")"
+      APP_NAME=$(basename "$d")
+      echo "  - $APP_NAME"
     fi
   done
+else
+  echo "Successfully processed $processed_count application(s) for $ENV"
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
-echo "Plan files created:"
-cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
-
-
-
-
-
-
-
-
-
-
-
+if [[ -f "$PLANLIST" ]]; then
+  echo "Plan files created:"
+  cat "$PLANLIST"
+else
+  echo "No plan files created"
+fi
