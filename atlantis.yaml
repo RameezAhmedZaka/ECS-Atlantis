@@ -43,7 +43,8 @@ workflows:
             ENV="staging"
             echo "=== Processing STAGING environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
+            # Pass ATLANTIS_DIR only when non-empty to avoid an empty second positional argument
+            ./process-application.sh "$ENV" ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
     apply:
       steps:
         - run: |
@@ -61,7 +62,7 @@ workflows:
             ENV="production"
             echo "=== Processing PRODUCTION environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
+            ./process-application.sh "$ENV" ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
     apply:
       steps:
         - run: |
@@ -79,7 +80,7 @@ workflows:
             ENV="helia"
             echo "=== Processing HELIA environment ==="
             chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "${ATLANTIS_DIR:-}"
+            ./process-application.sh "$ENV" ${ATLANTIS_DIR:+${ATLANTIS_DIR}}
     apply:
       steps:
         - run: |

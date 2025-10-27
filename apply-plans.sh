@@ -25,7 +25,7 @@ echo "Applying plans from: $PLANLIST"
 cat "$PLANLIST"
 
 # Each line: <directory>|<absolute-plan-path>
-while IFS='|' read -r d PLAN; do
+while IFS='|' read -r d PLAN || [[ -n "$d" ]]; do
   if [[ -z "$d" || -z "$PLAN" ]]; then
     echo "Invalid entry in plan list (missing dir or plan): '$d|$PLAN'"
     continue
@@ -33,7 +33,6 @@ while IFS='|' read -r d PLAN; do
 
   if [[ -f "$PLAN" ]]; then
     echo "=== Applying $PLAN for directory $d ==="
-    # Use -chdir to run terraform inside the app directory. Tell terraform the absolute plan file.
     if ! timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN"; then
       echo "Apply failed for $PLAN (directory $d)"
       continue
