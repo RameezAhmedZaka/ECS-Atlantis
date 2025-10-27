@@ -38,27 +38,27 @@ workflows:
   staging-workflow:
     plan:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$ARGS"
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${1:-}"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
-          extra_args:
-            - "$ARGS"
 
     apply:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$ARGS"
         - run: |
             set -euo pipefail
             ENV="staging"
-            APP_FILTER="${1:-}"
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./apply-plans.sh
             ./apply-plans.sh "$ENV" "$APP_FILTER"
-          extra_args:
-            - "$ARGS"
 
 
 
