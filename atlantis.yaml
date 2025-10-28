@@ -49,67 +49,90 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-        # Generate custom output that Atlantis will display in the main comment
+        # Generate custom output in Atlantis format
         - run: |
             set -euo pipefail
             ENV="staging"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
+            # Print concise, copyable commands first (so they remain visible)
+            echo "### Apply Commands:"
+            echo ''
+            
             if [[ -f "$PLANLIST" ]]; then
-              # Count apps and collect names
-              APP_COUNT=0
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
               APP_NAMES=""
               
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
-                  APP_COUNT=$((APP_COUNT + 1))
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                   APP_NAMES="${APP_NAMES} $APP_NAME"
                 fi
               done < "$PLANLIST"
               
-              # Generate Atlantis custom output format
-              cat << EOF
-
-              **Changed Applications ($APP_COUNT):**
-              $(for app in $APP_NAMES; do echo "- $app"; done)
-
-              ---
-
-              **Apply Commands:**
-
-              EOF
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
               
-              if [[ $APP_COUNT -eq 1 ]]; then
+              if [[ $APP_COUNT -eq 0 ]]; then
+                echo '```bash'
+                echo "atlantis apply -p apps-staging"
+                echo '```'
+              elif [[ $APP_COUNT -eq 1 ]]; then
                 APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
                 echo "▶️ To apply **$APP_NAME**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-staging -- $APP_NAME\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-staging -- $APP_NAME"
+                echo '```'
               else
                 echo "▶️ To apply individual applications, comment:"
+                echo '```bash'
                 for app in $APP_NAMES; do
-                  echo "   - \`\`\`atlantis apply -p apps-staging -- $app\`\`\`"
+                  echo "atlantis apply -p apps-staging -- $app"
                 done
+                echo '```'
                 echo ""
                 echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-staging\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-staging"
+                echo '```'
               fi
-              
-              cat << EOF
 
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-staging\`\`\`
-              EOF
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-staging"
+              echo '```'
+
+              # Show the detailed plan output collapsed so the commands remain visible
+              echo ""
+              echo '<details><summary>Full plan output (click to expand)</summary>'
+              echo ''
+              if [[ -f "$PLANLIST" ]]; then
+                # Print each plan file content if present (best-effort)
+                while IFS='|' read -r d PLAN; do
+                  if [[ -f "$PLAN" ]]; then
+                    echo "----- Plan for $(basename "$d") -----"
+                    sed -n '1,10000p' "$PLAN" || true
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+              fi
+              echo ''
+              echo '</details>'
             else
-              # Fallback output
-              cat << EOF
-
-              ▶️ To apply this plan, comment:
-                 \`\`\`atlantis apply -p apps-staging\`\`\`
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-staging\`\`\`
-              EOF
+              # Fallback to default output if no planlist
+              echo '```bash'
+              echo "atlantis apply -p apps-staging"
+              echo '```'
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-staging"
+              echo '```'
             fi
 
     apply:
@@ -136,67 +159,87 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-        # Generate custom output that Atlantis will display in the main comment
+        # Generate custom output in Atlantis format
         - run: |
             set -euo pipefail
             ENV="production"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            
+
+            # Print concise, copyable commands first
+            echo "### Apply Commands:"
+            echo ''
+
             if [[ -f "$PLANLIST" ]]; then
-              # Count apps and collect names
-              APP_COUNT=0
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
               APP_NAMES=""
               
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
-                  APP_COUNT=$((APP_COUNT + 1))
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                   APP_NAMES="${APP_NAMES} $APP_NAME"
                 fi
               done < "$PLANLIST"
               
-              # Generate Atlantis custom output format
-              cat << EOF
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
 
-              **Changed Applications ($APP_COUNT):**
-              $(for app in $APP_NAMES; do echo "- $app"; done)
-
-              ---
-
-              **Apply Commands:**
-
-              EOF
-              
-              if [[ $APP_COUNT -eq 1 ]]; then
+              if [[ $APP_COUNT -eq 0 ]]; then
+                echo '```bash'
+                echo "atlantis apply -p apps-production"
+                echo '```'
+              elif [[ $APP_COUNT -eq 1 ]]; then
                 APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
                 echo "▶️ To apply **$APP_NAME**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-production -- $APP_NAME\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-production -- $APP_NAME"
+                echo '```'
               else
                 echo "▶️ To apply individual applications, comment:"
+                echo '```bash'
                 for app in $APP_NAMES; do
-                  echo "   - \`\`\`atlantis apply -p apps-production -- $app\`\`\`"
+                  echo "atlantis apply -p apps-production -- $app"
                 done
+                echo '```'
                 echo ""
                 echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-production\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-production"
+                echo '```'
               fi
-              
-              cat << EOF
 
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-production\`\`\`
-              EOF
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-production"
+              echo '```'
+
+              echo ""
+              echo '<details><summary>Full plan output (click to expand)</summary>'
+              echo ''
+              if [[ -f "$PLANLIST" ]]; then
+                while IFS='|' read -r d PLAN; do
+                  if [[ -f "$PLAN" ]]; then
+                    echo "----- Plan for $(basename "$d") -----"
+                    sed -n '1,10000p' "$PLAN" || true
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+              fi
+              echo ''
+              echo '</details>'
             else
-              # Fallback output
-              cat << EOF
-
-              ▶️ To apply this plan, comment:
-                 \`\`\`atlantis apply -p apps-production\`\`\`
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-production\`\`\`
-              EOF
+              echo '```bash'
+              echo "atlantis apply -p apps-production"
+              echo '```'
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-production"
+              echo '```'
             fi
 
     apply:
@@ -223,67 +266,87 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-        # Generate custom output that Atlantis will display in the main comment
+        # Generate custom output in Atlantis format
         - run: |
             set -euo pipefail
             ENV="helia"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            
+
+            # Print concise, copyable commands first
+            echo "### Apply Commands:"
+            echo ''
+
             if [[ -f "$PLANLIST" ]]; then
-              # Count apps and collect names
-              APP_COUNT=0
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
               APP_NAMES=""
               
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
-                  APP_COUNT=$((APP_COUNT + 1))
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                   APP_NAMES="${APP_NAMES} $APP_NAME"
                 fi
               done < "$PLANLIST"
               
-              # Generate Atlantis custom output format
-              cat << EOF
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
 
-              **Changed Applications ($APP_COUNT):**
-              $(for app in $APP_NAMES; do echo "- $app"; done)
-
-              ---
-
-              **Apply Commands:**
-
-              EOF
-              
-              if [[ $APP_COUNT -eq 1 ]]; then
+              if [[ $APP_COUNT -eq 0 ]]; then
+                echo '```bash'
+                echo "atlantis apply -p apps-helia"
+                echo '```'
+              elif [[ $APP_COUNT -eq 1 ]]; then
                 APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
                 echo "▶️ To apply **$APP_NAME**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-helia -- $APP_NAME\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-helia -- $APP_NAME"
+                echo '```'
               else
                 echo "▶️ To apply individual applications, comment:"
+                echo '```bash'
                 for app in $APP_NAMES; do
-                  echo "   - \`\`\`atlantis apply -p apps-helia -- $app\`\`\`"
+                  echo "atlantis apply -p apps-helia -- $app"
                 done
+                echo '```'
                 echo ""
                 echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                echo "   \`\`\`atlantis apply -p apps-helia\`\`\`"
+                echo '```bash'
+                echo "atlantis apply -p apps-helia"
+                echo '```'
               fi
-              
-              cat << EOF
 
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-helia\`\`\`
-              EOF
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-helia"
+              echo '```'
+
+              echo ""
+              echo '<details><summary>Full plan output (click to expand)</summary>'
+              echo ''
+              if [[ -f "$PLANLIST" ]]; then
+                while IFS='|' read -r d PLAN; do
+                  if [[ -f "$PLAN" ]]; then
+                    echo "----- Plan for $(basename "$d") -----"
+                    sed -n '1,10000p' "$PLAN" || true
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+              fi
+              echo ''
+              echo '</details>'
             else
-              # Fallback output
-              cat << EOF
-
-              ▶️ To apply this plan, comment:
-                 \`\`\`atlantis apply -p apps-helia\`\`\`
-              🚮 To delete this plan and lock, click here
-              🔁 To plan this project again, comment:
-                 \`\`\`atlantis plan -p apps-helia\`\`\`
-              EOF
+              echo '```bash'
+              echo "atlantis apply -p apps-helia"
+              echo '```'
+              echo ""
+              echo "🔁 To plan this project again, comment:"
+              echo '```bash'
+              echo "atlantis plan -p apps-helia"
+              echo '```'
             fi
 
     apply:
