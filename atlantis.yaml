@@ -78,6 +78,7 @@ workflows:
                 for app in $APP_NAMES; do
                   echo "- **$app**"
                 done
+                echo '```bash'
                 echo ""
                 echo "---"
                 echo ""
@@ -322,4 +323,3 @@ workflows:
             echo '```bash'
             echo "atlantis plan -p apps-helia"
             echo '```'
-
