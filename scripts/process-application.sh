@@ -138,7 +138,6 @@ echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
 
 if [[ -f "$PLANLIST" ]]; then
-    # Count apps and collect names
     APP_COUNT=0
     APP_NAMES=""
     
@@ -150,57 +149,29 @@ if [[ -f "$PLANLIST" ]]; then
         fi
     done < "$PLANLIST"
     
-    # This output will be captured by Atlantis and shown in the main comment
     echo ""
-    echo "---"
-    echo "## 📋 Application Summary"
+    echo "--- APPLY COMMANDS ---"
     echo ""
-    echo "**Changed Applications ($APP_COUNT):**"
+    
     for app in $APP_NAMES; do
-        echo "- $app"
+        echo "Apply $app:"
+        echo "\`\`\`bash"
+        echo "atlantis apply -p apps-$ENV -- $app"
+        echo "\`\`\`"
+        echo ""
     done
     
-    echo ""
-    echo "## 🚀 Apply Commands"
-    echo ""
-    
-    if [[ $APP_COUNT -eq 1 ]]; then
-        APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-        echo "### Apply $APP_NAME"
-        echo ""
-        echo "```bash"
-        echo "atlantis apply -p apps-$ENV -- $APP_NAME"
-        echo "```"
-        echo ""
-    else
-        echo "### Apply Individual Applications"
-        echo ""
-        for app in $APP_NAMES; do
-            echo "**Apply $app:**"
-            echo "```bash"
-            echo "atlantis apply -p apps-$ENV -- $app"
-            echo "```"
-            echo ""
-        done
-        
-        echo "### Apply All Applications"
-        echo ""
-        echo "```bash"
+    if [[ $APP_COUNT -gt 1 ]]; then
+        echo "Apply all:"
+        echo "\`\`\`bash"
         echo "atlantis apply -p apps-$ENV"
-        echo "```"
-        echo ""
+        echo "\`\`\`"
     fi
-    
-    echo "---"
-    echo "*💡 Click the copy button on any command above to copy it*"
     
 else
     echo ""
-    echo "---"
-    echo "## 🚀 Apply Command"
-    echo ""
-    echo "```bash"
+    echo "Apply:"
+    echo "\`\`\`bash"
     echo "atlantis apply -p apps-$ENV"
-    echo "```"
-    echo ""
+    echo "\`\`\`"
 fi
