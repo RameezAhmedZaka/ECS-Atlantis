@@ -159,39 +159,48 @@ if [[ -f "$PLANLIST" ]]; then
     for app in $APP_NAMES; do
         echo "- $app"
     done
+    
     echo ""
     echo "## 🚀 Apply Commands"
     echo ""
     
     if [[ $APP_COUNT -eq 1 ]]; then
         APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-        echo "To apply **$APP_NAME**, use:"
-        echo "\`\`\`"
+        echo "### Apply $APP_NAME"
+        echo ""
+        echo "```bash"
         echo "atlantis apply -p apps-$ENV -- $APP_NAME"
-        echo "\`\`\`"
+        echo "```"
+        echo ""
     else
-        echo "To apply individual applications:"
+        echo "### Apply Individual Applications"
         echo ""
         for app in $APP_NAMES; do
-            echo "- \`atlantis apply -p apps-$ENV -- $app\`"
+            echo "**Apply $app:**"
+            echo "```bash"
+            echo "atlantis apply -p apps-$ENV -- $app"
+            echo "```"
+            echo ""
         done
+        
+        echo "### Apply All Applications"
         echo ""
-        echo "To apply **all $APP_COUNT applications**:"
-        echo "\`\`\`"
+        echo "```bash"
         echo "atlantis apply -p apps-$ENV"
-        echo "\`\`\`"
+        echo "```"
+        echo ""
     fi
     
-    echo ""
     echo "---"
-    echo "**Note:** Click the copy button on the code blocks above to easily copy commands."
+    echo "*💡 Click the copy button on any command above to copy it*"
+    
 else
     echo ""
     echo "---"
     echo "## 🚀 Apply Command"
     echo ""
-    echo "To apply this plan:"
-    echo "\`\`\`"
+    echo "```bash"
     echo "atlantis apply -p apps-$ENV"
-    echo "\`\`\`"
+    echo "```"
+    echo ""
 fi
