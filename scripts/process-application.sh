@@ -118,7 +118,7 @@ for d in "${dirs[@]}"; do
 
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
-    ((processed_count++))
+    # ((processed_count++))
   else
     echo "Skipping $d (main.tf missing)"
   fi
