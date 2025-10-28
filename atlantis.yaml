@@ -128,20 +128,6 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-        # Custom apply output
-        - run: |
-            set -euo pipefail
-            ENV="staging"
-            echo ""
-            echo "### ✅ Apply Complete"
-            echo ""
-            echo "All applications have been successfully deployed to **staging** environment."
-            echo ""
-            echo "🔁 To plan again:"
-            echo "atlantis plan -p apps-staging"
-            echo '```'
-            echo "plan again"
-            echo '```'
 
   production-workflow:
     plan:
@@ -188,58 +174,38 @@ workflows:
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
-                  echo "- **$app**"
+                  echo "- **$app**"  
                 done
-                echo ""
-                echo "---"
-                echo ""
-                echo "### Apply Commands:"
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
+                  echo "$app"
                   echo '```'
                   echo "atlantis apply -p apps-production -- $app"
-                  echo '```'
-                  echo "$app"
                   echo '```'
                   echo ""
                 done
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
+                echo '```'
                 echo "atlantis apply -p apps-production"
                 echo '```'
-                echo "all $APP_COUNT applications"
-                echo '```'
-                echo ""
                 echo "🔁 To re-plan:"
                 echo ""
+                echo '```'
                 echo "atlantis plan -p apps-production"
                 echo '```'
-                echo "re-plan"
-                echo '```'
+                echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              # Fallback output
-              echo "Plan generated successfully"
-              echo ""
-              echo "▶️ To apply:"
-              echo "atlantis apply -p apps-production"
-              echo '```'
-              echo "apply"
-              echo '```'
-              echo ""
-              echo "🔁 To re-plan:"
-              echo "atlantis plan -p apps-production"
-              echo '```'
-              echo "re-plan"
-              echo '```'
+              echo "No Plan generated "
             fi
-
     apply:
       steps:
         - env:
@@ -251,21 +217,6 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-        # Custom apply output
-        - run: |
-            set -euo pipefail
-            ENV="production"
-            echo ""
-            echo "### ✅ Apply Complete"
-            echo ""
-            echo "All applications have been successfully deployed to **production** environment."
-            echo ""
-            echo "🔁 To plan again:"
-            echo "atlantis plan -p apps-production"
-            echo '```'
-            echo "plan again"
-            echo '```'
-
   helia-workflow:
     plan:
       steps:
@@ -278,7 +229,6 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-        # Generate and output custom plan summary
         - run: |
             set -euo pipefail
             ENV="helia"
@@ -311,44 +261,38 @@ workflows:
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
-                  echo "- **$app**"
+                  echo "- **$app**"  
                 done
-                echo ""
-                echo "---"
-                echo ""
-                echo "### Apply Commands:"
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
-                  echo "atlantis apply -p apps-helia -- $app"
-                  echo '```'
                   echo "$app"
+                  echo '```'
+                  echo "atlantis apply -p apps-helia -- $app"
                   echo '```'
                   echo ""
                 done
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
+                echo '```'
                 echo "atlantis apply -p apps-helia"
                 echo '```'
-                echo "all $APP_COUNT applications"
-                echo '```'
-                echo ""
                 echo "🔁 To re-plan:"
                 echo ""
+                echo '```'
                 echo "atlantis plan -p apps-helia"
                 echo '```'
-                echo "re-plan"
-                echo '```'
+                echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated"
+              echo "No Plan generated "
             fi
-
     apply:
       steps:
         - env:
@@ -360,17 +304,3 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-        # Custom apply output
-        - run: |
-            set -euo pipefail
-            ENV="helia"
-            echo ""
-            echo "### ✅ Apply Complete"
-            echo ""
-            echo "All applications have been successfully deployed to **helia** environment."
-            echo ""
-            echo "🔁 To plan again:"
-            echo "atlantis plan -p apps-helia"
-            echo '```'
-            echo "plan again"
-            echo '```'
