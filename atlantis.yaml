@@ -51,15 +51,25 @@ workflows:
         # Generate and output custom plan summary
         - run: |
             set -euo pipefail
-            ENV="staging"  # Change this for each environment
-            PROJECT="apps-staging"  # Change this for each project
+            ENV="staging"
+            PROJECT="apps-staging"
             CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-            if [[ -f "$CHANGED_APPS_LIST" && -s "$CHANGED_APPS_LIST" ]]; then
-              # Read changed apps into array
-              mapfile -t CHANGED_APPS < "$CHANGED_APPS_LIST"
-              APP_COUNT=${#CHANGED_APPS[@]}
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
+              
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
+              
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
               # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
@@ -69,9 +79,9 @@ workflows:
                 echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
-                if [[ $APP_COUNT -gt 0 ]]; then
+                if [ $APP_COUNT -gt 0 ]; then
                   echo "### Changed Applications:"
-                  for app in "${CHANGED_APPS[@]}"; do
+                  for app in $CHANGED_APPS; do
                     echo "- **$app**"  
                   done
                   echo ""
@@ -79,7 +89,7 @@ workflows:
                   echo ""
                   echo "▶️ To apply individual applications:"
                   echo ""
-                  for app in "${CHANGED_APPS[@]}"; do
+                  for app in $CHANGED_APPS; do
                     echo "**$app**"
                     echo '```'
                     echo "atlantis apply -p apps-staging -- $app"

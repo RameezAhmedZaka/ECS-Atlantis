@@ -8,8 +8,14 @@ echo "=== STARTING $ENV at $(date) ==="
 # Parse arguments (your existing code)
 DESTROY_FLAG=false
 APP_FILTER=""
-IFS=',' read -ra ARGS <<< "$RAW_FILTER"
-for arg in "${ARGS[@]}"; do
+
+# Use POSIX-compliant way to split by comma
+OLD_IFS="$IFS"
+IFS=','
+set -- $RAW_FILTER
+IFS="$OLD_IFS"
+
+for arg; do
     arg_clean=$(echo "$arg" | xargs)
     case "$arg_clean" in
         -destroy|--destroy)
@@ -19,7 +25,7 @@ for arg in "${ARGS[@]}"; do
         --)
             ;;
         *)
-            if [[ -n "$arg_clean" ]]; then
+            if [ -n "$arg_clean" ]; then
                 APP_FILTER="$arg_clean"
             fi
             ;;
@@ -28,26 +34,28 @@ done
 
 echo "App filter: $APP_FILTER"
 
-# Find application directories
-mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
-if [[ ${#dirs[@]} -eq 0 ]]; then
+# Find application directories using POSIX-compliant method
+dirs=$(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
+if [ -z "$dirs" ]; then
   echo "No application found!"
   exit 1
 fi
 
-echo "Found ${#dirs[@]} application: ${dirs[*]}"
+echo "Found applications:"
+echo "$dirs"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"  # New file for changed apps only
+CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
 : > "$PLANLIST"
-: > "$CHANGED_APPS_LIST"  # Initialize changed apps list
+: > "$CHANGED_APPS_LIST"
 
 processed_count=0
 
-for d in "${dirs[@]}"; do
-  if [[ -f "$d/main.tf" ]]; then
+# Process each directory using while-read loop (POSIX-compliant)
+echo "$dirs" | while IFS= read -r d; do
+  if [ -f "$d/main.tf" ]; then
     APP_NAME=$(basename "$d")
 
-    if [[ -n "$APP_FILTER" && "$APP_NAME" != "$APP_FILTER" ]]; then
+    if [ -n "$APP_FILTER" ] && [ "$APP_NAME" != "$APP_FILTER" ]; then
       echo "=== Skipping $APP_NAME (does not match filter: $APP_FILTER) ==="
       continue
     fi
@@ -72,11 +80,11 @@ for d in "${dirs[@]}"; do
     echo "Var file: $VAR_FILE"
     
     # Check if files exist
-    if [[ ! -f "$d/$BACKEND_CONFIG" ]]; then
+    if [ ! -f "$d/$BACKEND_CONFIG" ]; then
       echo "Backend config not found: $d/$BACKEND_CONFIG"
       continue
     fi
-    if [[ ! -f "$d/$VAR_FILE" ]]; then
+    if [ ! -f "$d/$VAR_FILE" ]; then
       echo "Var file not found: $d/$VAR_FILE"
       continue
     fi
@@ -100,7 +108,7 @@ for d in "${dirs[@]}"; do
     
     # Add destroy flag if needed
     DESTROY_ARG=""
-    if [[ "$DESTROY_FLAG" == "true" ]]; then
+    if [ "$DESTROY_FLAG" = "true" ]; then
       DESTROY_ARG="-destroy"
       echo "DESTROY MODE ENABLED"
     fi
@@ -121,8 +129,7 @@ for d in "${dirs[@]}"; do
     else
       echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
       echo "$d|$PLAN" >> "$PLANLIST"
-      echo "$APP_NAME" >> "$CHANGED_APPS_LIST"  # Add to changed apps list
-      # ((processed_count++))
+      echo "$APP_NAME" >> "$CHANGED_APPS_LIST"
     fi
     
     # Clean up
@@ -133,11 +140,16 @@ for d in "${dirs[@]}"; do
   fi
 done
 
-if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
+# Count processed applications
+if [ -f "$CHANGED_APPS_LIST" ]; then
+  processed_count=$(wc -l < "$CHANGED_APPS_LIST" | tr -d ' ')
+fi
+
+if [ -n "$APP_FILTER" ] && [ "$processed_count" -eq 0 ]; then
   echo "⚠️  No applications matched filter: $APP_FILTER"
   echo "Available applications:"
-  for d in "${dirs[@]}"; do
-    if [[ -f "$d/main.tf" ]]; then
+  echo "$dirs" | while IFS= read -r d; do
+    if [ -f "$d/main.tf" ]; then
       echo "  - $(basename "$d")"
     fi
   done
