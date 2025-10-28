@@ -45,8 +45,6 @@ workflows:
             set -euo pipefail
             ENV="staging"
             PROJECT="apps-staging"
-            echo "DEBUG: Raw COMMENT_ARGS='$COMMENT_ARGS'"
-            echo "DEBUG: Cleaned APP_FILTER='$APP_FILTER'"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
@@ -92,7 +90,6 @@ workflows:
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
-                echo '```'
                 for app in $APP_NAMES; do
                   echo "**$app**"
                   echo '```'
@@ -100,7 +97,6 @@ workflows:
                   echo '```'
                   echo ""
                 done
-                echo '```'
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
                 echo '```'
