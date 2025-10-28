@@ -100,19 +100,32 @@ workflows:
                 echo ""
                 if [[ $APP_COUNT -eq 1 ]]; then
                   APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**, comment:"
-                  echo "   \`atlantis apply -p apps-staging -- $APP_NAME\`"
-                else
-                  echo "▶️ To apply individual applications, comment:"
-                  for app in $APP_NAMES; do
-                    echo "   - \`atlantis apply -p apps-staging -- $app\`"
-                  done
+                  echo "▶️ To apply **$APP_NAME**:"
                   echo ""
-                  echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                  echo "   \`atlantis apply -p apps-staging\`"
+                  echo '```'
+                  echo "atlantis apply -p apps-staging -- $APP_NAME"
+                  echo '```'
+                else
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $APP_NAMES; do
+                    echo "**$app**:"
+                    echo '```'
+                    echo "atlantis apply -p apps-staging -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-staging"
+                  echo '```'
                 fi
                 echo ""
-                echo "🔁 To re-plan: \`atlantis plan -p apps-staging\`"
+                echo "🔁 To re-plan:"
+                echo '```'
+                echo "atlantis plan -p apps-staging"
+                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
@@ -122,8 +135,15 @@ workflows:
               # Fallback output
               echo "Plan generated successfully"
               echo ""
-              echo "▶️ To apply: \`atlantis apply -p apps-staging\`"
-              echo "🔁 To re-plan: \`atlantis plan -p apps-staging\`"
+              echo "▶️ To apply:"
+              echo '```'
+              echo "atlantis apply -p apps-staging"
+              echo '```'
+              echo ""
+              echo "🔁 To re-plan:"
+              echo '```'
+              echo "atlantis plan -p apps-staging"
+              echo '```'
             fi
 
     apply:
@@ -146,7 +166,10 @@ workflows:
             echo ""
             echo "All applications have been successfully deployed to **staging** environment."
             echo ""
-            echo "🔁 To plan again: \`atlantis plan -p apps-staging\`"
+            echo "🔁 To plan again:"
+            echo '```'
+            echo "atlantis plan -p apps-staging"
+            echo '```'
 
   production-workflow:
     plan:
@@ -202,19 +225,32 @@ workflows:
                 echo ""
                 if [[ $APP_COUNT -eq 1 ]]; then
                   APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**, comment:"
-                  echo "   \`atlantis apply -p apps-production -- $APP_NAME\`"
-                else
-                  echo "▶️ To apply individual applications, comment:"
-                  for app in $APP_NAMES; do
-                    echo "   - \`atlantis apply -p apps-production -- $app\`"
-                  done
+                  echo "▶️ To apply **$APP_NAME**:"
                   echo ""
-                  echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                  echo "   \`atlantis apply -p apps-production\`"
+                  echo '```'
+                  echo "atlantis apply -p apps-production -- $APP_NAME"
+                  echo '```'
+                else
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $APP_NAMES; do
+                    echo "**$app**:"
+                    echo '```'
+                    echo "atlantis apply -p apps-production -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-production"
+                  echo '```'
                 fi
                 echo ""
-                echo "🔁 To re-plan: \`atlantis plan -p apps-production\`"
+                echo "🔁 To re-plan:"
+                echo '```'
+                echo "atlantis plan -p apps-production"
+                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
@@ -224,8 +260,15 @@ workflows:
               # Fallback output
               echo "Plan generated successfully"
               echo ""
-              echo "▶️ To apply: \`atlantis apply -p apps-production\`"
-              echo "🔁 To re-plan: \`atlantis plan -p apps-production\`"
+              echo "▶️ To apply:"
+              echo '```'
+              echo "atlantis apply -p apps-production"
+              echo '```'
+              echo ""
+              echo "🔁 To re-plan:"
+              echo '```'
+              echo "atlantis plan -p apps-production"
+              echo '```'
             fi
 
     apply:
@@ -248,7 +291,10 @@ workflows:
             echo ""
             echo "All applications have been successfully deployed to **production** environment."
             echo ""
-            echo "🔁 To plan again: \`atlantis plan -p apps-production\`"
+            echo "🔁 To plan again:"
+            echo '```'
+            echo "atlantis plan -p apps-production"
+            echo '```'
 
   helia-workflow:
     plan:
@@ -304,19 +350,32 @@ workflows:
                 echo ""
                 if [[ $APP_COUNT -eq 1 ]]; then
                   APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**, comment:"
-                  echo "   \`atlantis apply -p apps-helia -- $APP_NAME\`"
-                else
-                  echo "▶️ To apply individual applications, comment:"
-                  for app in $APP_NAMES; do
-                    echo "   - \`atlantis apply -p apps-helia -- $app\`"
-                  done
+                  echo "▶️ To apply **$APP_NAME**:"
                   echo ""
-                  echo "⏩ To apply **all $APP_COUNT applications**, comment:"
-                  echo "   \`atlantis apply -p apps-helia\`"
+                  echo '```'
+                  echo "atlantis apply -p apps-helia -- $APP_NAME"
+                  echo '```'
+                else
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $APP_NAMES; do
+                    echo "**$app**:"
+                    echo '```'
+                    echo "atlantis apply -p apps-helia -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-helia"
+                  echo '```'
                 fi
                 echo ""
-                echo "🔁 To re-plan: \`atlantis plan -p apps-helia\`"
+                echo "🔁 To re-plan:"
+                echo '```'
+                echo "atlantis plan -p apps-helia"
+                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
@@ -326,8 +385,15 @@ workflows:
               # Fallback output
               echo "Plan generated successfully"
               echo ""
-              echo "▶️ To apply: \`atlantis apply -p apps-helia\`"
-              echo "🔁 To re-plan: \`atlantis plan -p apps-helia\`"
+              echo "▶️ To apply:"
+              echo '```'
+              echo "atlantis apply -p apps-helia"
+              echo '```'
+              echo ""
+              echo "🔁 To re-plan:"
+              echo '```'
+              echo "atlantis plan -p apps-helia"
+              echo '```'
             fi
 
     apply:
@@ -350,4 +416,7 @@ workflows:
             echo ""
             echo "All applications have been successfully deployed to **helia** environment."
             echo ""
-            echo "🔁 To plan again: \`atlantis plan -p apps-helia\`"
+            echo "🔁 To plan again:"
+            echo '```'
+            echo "atlantis plan -p apps-helia"
+            echo '```'
