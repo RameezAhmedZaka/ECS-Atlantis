@@ -26,7 +26,7 @@ projects:
 
   - name: apps-helia
     dir: .
-    terraverform_version: v1.6.6
+    terraform_version: v1.6.6  # Fixed typo here
     autoplan:
       enabled: true 
       when_modified:
@@ -44,6 +44,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
+            PROJECT="apps-staging"
             echo "DEBUG: Raw COMMENT_ARGS='$COMMENT_ARGS'"
             echo "DEBUG: Cleaned APP_FILTER='$APP_FILTER'"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
