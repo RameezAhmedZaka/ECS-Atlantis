@@ -15,13 +15,14 @@ for arg in "${ARGS[@]}"; do
     arg_clean=$(echo "$arg" | xargs)  # Trim whitespace
     case "$arg_clean" in
         -destroy|--destroy)
-            DESTROY_FLAG=true
+            echo "❌ You cannot perform this action. Destroy is disabled and cannot be run."
+            exit 1
             ;;
         --)
             # Skip separator
             ;;
         *)
-            if [[ -n "$arg_clean" && "$arg_clean" != "-destroy" && "$arg_clean" != "--destroy" ]]; then
+            if [[ -n "$arg_clean" ]]; then
                 APP_FILTER="$arg_clean"
             fi
             ;;
