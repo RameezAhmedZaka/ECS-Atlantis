@@ -283,6 +283,7 @@ workflows:
                 echo "atlantis plan -p $PROJECT_NAME"
                 echo '```'
                 echo ""
+                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
@@ -290,6 +291,7 @@ workflows:
               
             else
               echo "No Plan generated "
+              echo '```'
             fi
     apply:
       steps:
