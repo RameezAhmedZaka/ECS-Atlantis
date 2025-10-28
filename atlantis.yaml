@@ -40,8 +40,7 @@ workflows:
       steps:
         - env:
             name: APP_FILTER
-            command: echo "$COMMENT_ARGS" | tr -d '\\'  # Remove all backslashes
-        - run: echo "Running custom pre-plan command"    
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -50,6 +49,24 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
+        # Add step to generate custom apply commands
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            if [[ -f "$PLANLIST" ]]; then
+              echo "=== CUSTOM APPLY COMMANDS ==="
+              while IFS='|' read -r d PLAN; do
+                APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                if [[ -n "$APP_NAME" ]]; then
+                  echo "▶️ To apply $APP_NAME in staging, comment:"
+                  echo "   atlantis apply -p apps-staging -- $APP_NAME"
+                fi
+              done < "$PLANLIST"
+              echo ""
+              echo "🔁 To plan all apps in staging again, comment:"
+              echo "   atlantis plan -p apps-staging"
+            fi
     apply:
       steps:
         - env:
@@ -74,6 +91,24 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
+        # Add step to generate custom apply commands
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            if [[ -f "$PLANLIST" ]]; then
+              echo "=== CUSTOM APPLY COMMANDS ==="
+              while IFS='|' read -r d PLAN; do
+                APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                if [[ -n "$APP_NAME" ]]; then
+                  echo "▶️ To apply $APP_NAME in production, comment:"
+                  echo "   atlantis apply -p apps-production -- $APP_NAME"
+                fi
+              done < "$PLANLIST"
+              echo ""
+              echo "🔁 To plan all apps in production again, comment:"
+              echo "   atlantis plan -p apps-production"
+            fi
     apply:
       steps:
         - env:
@@ -98,6 +133,24 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./process-application.sh
             ./process-application.sh "$ENV" "$APP_FILTER"
+        # Add step to generate custom apply commands
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            if [[ -f "$PLANLIST" ]]; then
+              echo "=== CUSTOM APPLY COMMANDS ==="
+              while IFS='|' read -r d PLAN; do
+                APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                if [[ -n "$APP_NAME" ]]; then
+                  echo "▶️ To apply $APP_NAME in helia, comment:"
+                  echo "   atlantis apply -p apps-helia -- $APP_NAME"
+                fi
+              done < "$PLANLIST"
+              echo ""
+              echo "🔁 To plan all apps in helia again, comment:"
+              echo "   atlantis plan -p apps-helia"
+            fi
     apply:
       steps:
         - env:
