@@ -38,29 +38,32 @@ workflows:
   staging-workflow:
     plan:
       steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'  # Remove all backslashes
         - run: |
-            chmod +x ./detect-changes.sh
-            ./detect-changes.sh staging
+            set -euo pipefail
+            ENV="staging"
+            echo "DEBUG: Raw COMMENT_ARGS='$COMMENT_ARGS'"
+            echo "DEBUG: Cleaned APP_FILTER='$APP_FILTER'"
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./process-application.sh
+            ./process-application.sh "$ENV" "$APP_FILTER"
+    apply:
+      steps:
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
         - run: |
             set -euo pipefail
             ENV="staging"
-            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "$APP_FILTER"
-    apply:
-      steps:
-        - run: echo "Applying all plans for staging..."
-        - run: chmod +x ./apply-plans.sh && ./apply-plans.sh staging "$APP_FILTER"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
 
   production-workflow:
     plan:
       steps:
-        - run: |
-            chmod +x ./detect-changes.sh
-            ./detect-changes.sh production
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
@@ -72,15 +75,19 @@ workflows:
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
-        - run: echo "Applying all plans for production..."
-        - run: chmod +x ./apply-plans.sh && ./apply-plans.sh production "$APP_FILTER"
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
 
   helia-workflow:
     plan:
       steps:
-        - run: |
-            chmod +x ./detect-changes.sh
-            ./detect-changes.sh helia
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
@@ -92,5 +99,12 @@ workflows:
             ./process-application.sh "$ENV" "$APP_FILTER"
     apply:
       steps:
-        - run: echo "Applying all plans for helia..."
-        - run: chmod +x ./apply-plans.sh && ./apply-plans.sh helia "$APP_FILTER"
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./apply-plans.sh
+            ./apply-plans.sh "$ENV" "$APP_FILTER"
