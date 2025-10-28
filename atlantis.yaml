@@ -93,12 +93,14 @@ workflows:
                 echo ""
                 echo '```'
                 for app in $APP_NAMES; do
+                  echo ""
                   echo "**$app**"
                   echo '```'
                   echo "atlantis apply -p apps-staging -- $app"
                   echo '```'
                   echo ""
                 done
+                echo '```'
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
                 echo '```'
