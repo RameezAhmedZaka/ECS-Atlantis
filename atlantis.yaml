@@ -284,6 +284,10 @@ workflows:
                 echo '```'
                 echo ""
                 echo '```'
+                echo '```'
+                echo '```'
+                echo '```'
+                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
