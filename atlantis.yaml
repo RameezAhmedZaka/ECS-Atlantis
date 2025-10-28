@@ -95,7 +95,9 @@ workflows:
                 echo '```'
                 for app in $APP_NAMES; do
                   echo "**$app**"
+                  echo '```'
                   echo "atlantis apply -p apps-staging -- $app"
+                  echo '```'
                   echo ""
                 done
                 echo '```'
