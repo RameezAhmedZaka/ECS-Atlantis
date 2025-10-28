@@ -62,15 +62,24 @@ workflows:
             
             if [[ -f "$PLANLIST" ]]; then
               echo "=== CUSTOM APPLY COMMANDS ===" >> "$OUTPUT_FILE"
-              APP_COUNT=0
+              # Use a temporary file to count apps
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
+              
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
                   echo "▶️ To apply $APP_NAME, comment:" >> "$OUTPUT_FILE"
                   echo "   atlantis apply -p apps-staging -- $APP_NAME" >> "$OUTPUT_FILE"
-                  ((APP_COUNT++))
+                  # Increment count
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                 fi
               done < "$PLANLIST"
+              
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
               
               echo "" >> "$OUTPUT_FILE"
               if [[ $APP_COUNT -gt 1 ]]; then
@@ -128,15 +137,24 @@ workflows:
             
             if [[ -f "$PLANLIST" ]]; then
               echo "=== CUSTOM APPLY COMMANDS ===" >> "$OUTPUT_FILE"
-              APP_COUNT=0
+              # Use a temporary file to count apps
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
+              
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
                   echo "▶️ To apply $APP_NAME, comment:" >> "$OUTPUT_FILE"
                   echo "   atlantis apply -p apps-production -- $APP_NAME" >> "$OUTPUT_FILE"
-                  ((APP_COUNT++))
+                  # Increment count
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                 fi
               done < "$PLANLIST"
+              
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
               
               echo "" >> "$OUTPUT_FILE"
               if [[ $APP_COUNT -gt 1 ]]; then
@@ -194,15 +212,24 @@ workflows:
             
             if [[ -f "$PLANLIST" ]]; then
               echo "=== CUSTOM APPLY COMMANDS ===" >> "$OUTPUT_FILE"
-              APP_COUNT=0
+              # Use a temporary file to count apps
+              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
+              echo "0" > "$TEMP_COUNT_FILE"
+              
               while IFS='|' read -r d PLAN; do
                 APP_NAME=$(basename "$d" | tr -d '[:space:]')
                 if [[ -n "$APP_NAME" ]]; then
                   echo "▶️ To apply $APP_NAME, comment:" >> "$OUTPUT_FILE"
                   echo "   atlantis apply -p apps-helia -- $APP_NAME" >> "$OUTPUT_FILE"
-                  ((APP_COUNT++))
+                  # Increment count
+                  COUNT=$(cat "$TEMP_COUNT_FILE")
+                  COUNT=$((COUNT + 1))
+                  echo "$COUNT" > "$TEMP_COUNT_FILE"
                 fi
               done < "$PLANLIST"
+              
+              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
+              rm -f "$TEMP_COUNT_FILE"
               
               echo "" >> "$OUTPUT_FILE"
               if [[ $APP_COUNT -gt 1 ]]; then
