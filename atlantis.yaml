@@ -1,3 +1,39 @@
+version: 3
+automerge: false 
+parallel_plan: false  
+parallel_apply: false  
+
+projects:
+  - name: apps-staging
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: staging-workflow
+    apply_requirements: [] 
+
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: [approved, mergeable] 
+
+  - name: apps-helia
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true 
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
+    apply_requirements: []     
+
 # ... (projects section remains the same) ...
 
 workflows:
