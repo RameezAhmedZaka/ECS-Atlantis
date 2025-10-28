@@ -45,7 +45,10 @@ workflows:
             command: |
               set -euo pipefail
               ENV="staging"
-              echo "Running Atlantis plan for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🔵 Running Staging plan with APP_FILTER='$APP_FILTER'"
+              # Clean up any existing plan files to prevent contamination
+              rm -f /tmp/atlantis_planfiles_*.lst
+              rm -f /tmp/atlantis_custom_output_*.md
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
 
@@ -58,7 +61,7 @@ workflows:
             command: |
               set -euo pipefail
               ENV="staging"
-              echo "Applying changes for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🔵 Applying Staging changes with APP_FILTER='$APP_FILTER'"
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -72,7 +75,10 @@ workflows:
             command: |
               set -euo pipefail
               ENV="production"
-              echo "Running Atlantis plan for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🔴 Running Production plan with APP_FILTER='$APP_FILTER'"
+              # Clean up any existing plan files to prevent contamination
+              rm -f /tmp/atlantis_planfiles_*.lst
+              rm -f /tmp/atlantis_custom_output_*.md
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
 
@@ -85,7 +91,7 @@ workflows:
             command: |
               set -euo pipefail
               ENV="production"
-              echo "Applying changes for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🔴 Applying Production changes with APP_FILTER='$APP_FILTER'"
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -99,7 +105,10 @@ workflows:
             command: |
               set -euo pipefail
               ENV="helia"
-              echo "Running Atlantis plan for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🟣 Running Helia plan with APP_FILTER='$APP_FILTER'"
+              # Clean up any existing plan files to prevent contamination
+              rm -f /tmp/atlantis_planfiles_*.lst
+              rm -f /tmp/atlantis_custom_output_*.md
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
 
@@ -112,6 +121,6 @@ workflows:
             command: |
               set -euo pipefail
               ENV="helia"
-              echo "Applying changes for $ENV with APP_FILTER='$APP_FILTER'"
+              echo "🟣 Applying Helia changes with APP_FILTER='$APP_FILTER'"
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
