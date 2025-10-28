@@ -261,7 +261,6 @@ workflows:
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
-                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
@@ -277,25 +276,20 @@ workflows:
                 echo '```'
                 echo "atlantis apply -p $PROJECT_NAME"
                 echo '```'
+                echo ""
                 echo "🔁 To re-plan:"
                 echo ""
                 echo '```'
                 echo "atlantis plan -p $PROJECT_NAME"
                 echo '```'
                 echo ""
-                echo '```'
-                echo '```'
-                echo '```'
-                echo '```'
-                echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
               # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated "
-              echo '```'
+              echo "No Plan generated"
             fi
     apply:
       steps:
