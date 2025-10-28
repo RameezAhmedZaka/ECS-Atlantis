@@ -298,6 +298,7 @@ workflows:
             else
               echo "No Plan generated for staging"
             fi
+    apply :      
       steps:
         - env:
             name: APP_FILTER
