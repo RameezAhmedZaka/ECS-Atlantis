@@ -170,7 +170,7 @@ workflows:
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Staging Environment"
+                echo "## 🚀 Production Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
@@ -261,7 +261,7 @@ workflows:
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Staging Environment"
+                echo "## 🚀 Helia Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
@@ -298,15 +298,6 @@ workflows:
             else
               echo "No Plan generated for staging"
             fi
-
-              
-              # This output will be captured by Atlantis and shown in PR
-              cat "$CUSTOM_OUTPUT_FILE"
-              
-            else
-              echo "No Plan generated for helia"
-            fi
-    apply:
       steps:
         - env:
             name: APP_FILTER
