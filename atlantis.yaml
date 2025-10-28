@@ -46,38 +46,30 @@ workflows:
               set -euo pipefail
               ENV="staging"
               echo "🔵 Running Staging plan with APP_FILTER='$APP_FILTER'"
-
-              # create a unique plan list file to avoid collisions with other workflows
-              PLANLIST="$(mktemp /tmp/atlantis_planfiles_${ENV}.XXXXXX)"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_staging.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
-
-              # Capture the script output into the unique planlist file.
-              # If your process-application.sh already writes to a file, update it to write to stdout
-              # or accept an output-file argument so this redirection captures the correct content.
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER" > "$PLANLIST"
-
-              # persist the path so subsequent workflow steps can read it
-              echo "$PLANLIST" > "$PLANLIST_PATH_FILE"
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         - run:
             command: |
-              set -euo pipefail
               ENV="staging"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              PLANLIST=""
-
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
-              if [[ -n "$PLANLIST" && -f "$PLANLIST" ]]; then
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
                 echo ""
                 echo "---"
                 echo "## 🚀 Staging Apply Commands"
                 echo ""
+                # Read only well-formed plan lines and avoid calling external basename (BusyBox basename treats args starting with '-' as options).
+                # Use shell parameter expansion to extract the final path component safely.
                 while IFS='|' read -r d PLAN; do
-                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  # skip empty lines or lines that don't look like a path ("d" should be a path)
+                  if [[ -z "$d" || "$d" != */* ]]; then
+                    continue
+                  fi
+                  # extract last path element without using `basename` to avoid BusyBox option-parsing issues
+                  APP_NAME="${d##*/}"
+                  APP_NAME="$(printf '%s' "$APP_NAME" | tr -d '[:space:]')"
                   if [[ -n "$APP_NAME" ]]; then
                     echo "**Apply $APP_NAME:**"
                     echo '```shell'
@@ -102,13 +94,6 @@ workflows:
               set -euo pipefail
               ENV="staging"
               echo "🔵 Applying Staging changes with APP_FILTER='$APP_FILTER'"
-
-              # restore PLANLIST for apply step if present
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                export PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -123,31 +108,26 @@ workflows:
               set -euo pipefail
               ENV="production"
               echo "🔴 Running Production plan with APP_FILTER='$APP_FILTER'"
-
-              PLANLIST="$(mktemp /tmp/atlantis_planfiles_${ENV}.XXXXXX)"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_production.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER" > "$PLANLIST"
-              echo "$PLANLIST" > "$PLANLIST_PATH_FILE"
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         - run:
             command: |
-              set -euo pipefail
               ENV="production"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              PLANLIST=""
-
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
-              if [[ -n "$PLANLIST" && -f "$PLANLIST" ]]; then
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
                 echo ""
                 echo "---"
                 echo "## 🚀 Production Apply Commands"
                 echo ""
                 while IFS='|' read -r d PLAN; do
-                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  if [[ -z "$d" || "$d" != */* ]]; then
+                    continue
+                  fi
+                  APP_NAME="${d##*/}"
+                  APP_NAME="$(printf '%s' "$APP_NAME" | tr -d '[:space:]')"
                   if [[ -n "$APP_NAME" ]]; then
                     echo "**Apply $APP_NAME:**"
                     echo '```shell'
@@ -172,12 +152,6 @@ workflows:
               set -euo pipefail
               ENV="production"
               echo "🔴 Applying Production changes with APP_FILTER='$APP_FILTER'"
-
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                export PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
@@ -192,31 +166,26 @@ workflows:
               set -euo pipefail
               ENV="helia"
               echo "🟣 Running Helia plan with APP_FILTER='$APP_FILTER'"
-
-              PLANLIST="$(mktemp /tmp/atlantis_planfiles_${ENV}.XXXXXX)"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_helia.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER" > "$PLANLIST"
-              echo "$PLANLIST" > "$PLANLIST_PATH_FILE"
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         - run:
             command: |
-              set -euo pipefail
               ENV="helia"
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              PLANLIST=""
-
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
-              if [[ -n "$PLANLIST" && -f "$PLANLIST" ]]; then
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
                 echo ""
                 echo "---"
                 echo "## 🚀 Helia Apply Commands"
                 echo ""
                 while IFS='|' read -r d PLAN; do
-                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  if [[ -z "$d" || "$d" != */* ]]; then
+                    continue
+                  fi
+                  APP_NAME="${d##*/}"
+                  APP_NAME="$(printf '%s' "$APP_NAME" | tr -d '[:space:]')"
                   if [[ -n "$APP_NAME" ]]; then
                     echo "**Apply $APP_NAME:**"
                     echo '```shell'
@@ -241,11 +210,5 @@ workflows:
               set -euo pipefail
               ENV="helia"
               echo "🟣 Applying Helia changes with APP_FILTER='$APP_FILTER'"
-
-              PLANLIST_PATH_FILE="/tmp/atlantis_planfile_path_${ENV}"
-              if [[ -f "$PLANLIST_PATH_FILE" ]]; then
-                export PLANLIST="$(cat "$PLANLIST_PATH_FILE")"
-              fi
-
               chmod +x ./scripts/apply-plans.sh
               ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
