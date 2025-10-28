@@ -87,6 +87,7 @@ workflows:
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
@@ -109,9 +110,7 @@ workflows:
                 echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
-              
-              # This output will be captured by Atlantis and shown in PR
-              cat "$CUSTOM_OUTPUT_FILE"
+
               
             else
               echo "No Plan generated for staging"
@@ -255,35 +254,37 @@ workflows:
               # Write custom output to a file that Atlantis will display
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${ENV}.txt"
               
-              {
+                          {
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
                   echo "$app"
                   echo '```'
-                  echo "atlantis apply -p apps-helia -- $app"
+                  echo "atlantis apply -p apps-staging -- $app"
                   echo '```'
                   echo ""
                 done
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
                 echo '```'
-                echo "atlantis apply -p apps-helia"
+                echo "atlantis apply -p apps-staging"
                 echo '```'
                 echo "🔁 To re-plan:"
                 echo ""
                 echo '```'
-                echo "atlantis plan -p apps-helia"
+                echo "atlantis plan -p apps-staging"
                 echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
+
               
               # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
