@@ -117,11 +117,18 @@ for d in "${dirs[@]}"; do
 
     echo "$d|$PLAN" >> "$PLANLIST"
     echo "Successfully planned $APP_NAME"
-    # ((processed_count++))
+    
+    # PRINT INDIVIDUAL APPLY COMMAND AFTER EACH SUCCESSFUL PLAN
+    echo "atlantis apply apps-${ENV} -- $APP_NAME"
+    
+    ((processed_count++))
   else
     echo "Skipping $d (main.tf missing)"
   fi
 done
+
+# PRINT BULK APPLY COMMAND AFTER ALL PLANS COMPLETE
+echo "atlantis apply apps-${ENV}"
 
 if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
   echo "⚠️  No applications matched filter: $APP_FILTER"
@@ -136,7 +143,3 @@ fi
 echo "=== COMPLETED $ENV at $(date) ==="
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
-
-
-
-
