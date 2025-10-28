@@ -84,34 +84,34 @@ workflows:
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
-                  echo "- **$app**"
+                  echo "- **$app**"  
                 done
-                echo ""
-                echo "---"
-                echo ""
-                echo "### Apply Commands:"
+                echo '```'
+                # echo ""
+                # echo "---"
+                # echo ""
+                # echo "### Apply Commands:"
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
+                echo '```'
                 for app in $APP_NAMES; do
-                  echo "atlantis apply -p apps-staging -- $app"
-                  echo '```'
                   echo "$app"
+                  echo '```'
+                  echo "atlantis apply -p apps-staging -- $app"
                   echo '```'
                   echo ""
                 done
                 echo "⏩ To apply **all $APP_COUNT applications**:"
                 echo ""
+                echo '```'
                 echo "atlantis apply -p apps-staging"
                 echo '```'
-                echo "all $APP_COUNT applications"
-                echo '```'
-                echo ""
                 echo "🔁 To re-plan:"
                 echo ""
-                echo "atlantis plan -p apps-staging"
                 echo '```'
-                echo "re-plan"
+                echo "atlantis plan -p apps-staging"
                 echo '```'
               } > "$CUSTOM_OUTPUT_FILE"
               
@@ -216,6 +216,7 @@ workflows:
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
+                  echo '```'
                   echo "atlantis apply -p apps-production -- $app"
                   echo '```'
                   echo "$app"
