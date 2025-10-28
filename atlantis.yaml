@@ -108,7 +108,18 @@ workflows:
               echo "No Plan generated"
             fi
 
-            rm -rf "$TMP_DIR"
+            if [[ -f "$CUSTOM_OUTPUT_FILE" ]]; then
+              echo ""
+              echo "==================== Atlantis Custom Output ===================="
+              cat "$CUSTOM_OUTPUT_FILE"
+              echo "==============================================================="
+              else
+                echo "No Plan generated"
+              fi
+
+              # Delay cleanup to ensure output is flushed
+              sleep 2
+              rm -rf "$TMP_DIR"
 
     apply:
       steps:
@@ -201,7 +212,18 @@ workflows:
               echo "No Plan generated"
             fi
 
-            rm -rf "$TMP_DIR"
+            if [[ -f "$CUSTOM_OUTPUT_FILE" ]]; then
+              echo ""
+              echo "==================== Atlantis Custom Output ===================="
+              cat "$CUSTOM_OUTPUT_FILE"
+              echo "==============================================================="
+              else
+                echo "No Plan generated"
+              fi
+
+              # Delay cleanup to ensure output is flushed
+              sleep 2
+              rm -rf "$TMP_DIR"
 
     apply:
       steps:
@@ -294,7 +316,18 @@ workflows:
               echo "No Plan generated"
             fi
 
-            rm -rf "$TMP_DIR"
+            if [[ -f "$CUSTOM_OUTPUT_FILE" ]]; then
+              echo ""
+              echo "==================== Atlantis Custom Output ===================="
+              cat "$CUSTOM_OUTPUT_FILE"
+              echo "==============================================================="
+              else
+                echo "No Plan generated"
+              fi
+
+              # Delay cleanup to ensure output is flushed
+              sleep 2
+              rm -rf "$TMP_DIR"
 
     apply:
       steps:
@@ -312,4 +345,4 @@ workflows:
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
-            rm -rf "$TMP_DIR"
+              rm -rf "$TMP_DIR"
