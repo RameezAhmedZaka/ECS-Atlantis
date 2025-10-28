@@ -46,11 +46,35 @@ workflows:
               set -euo pipefail
               ENV="staging"
               echo "🔵 Running Staging plan with APP_FILTER='$APP_FILTER'"
-              # Clean up any existing plan files to prevent contamination
-              rm -f /tmp/atlantis_planfiles_*.lst
-              rm -f /tmp/atlantis_custom_output_*.md
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_staging.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run:
+            command: |
+              ENV="staging"
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
+                echo ""
+                echo "---"
+                echo "## 🚀 Staging Apply Commands"
+                echo ""
+                while IFS='|' read -r d PLAN; do
+                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  if [[ -n "$APP_NAME" ]]; then
+                    echo "**Apply $APP_NAME:**"
+                    echo '```shell'
+                    echo "atlantis apply -p apps-staging -- $APP_NAME"
+                    echo '```'
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+                echo "**Apply all staging applications:**"
+                echo '```shell'
+                echo "atlantis apply -p apps-staging"
+                echo '```'
+              fi
 
     apply:
       steps:
@@ -76,11 +100,35 @@ workflows:
               set -euo pipefail
               ENV="production"
               echo "🔴 Running Production plan with APP_FILTER='$APP_FILTER'"
-              # Clean up any existing plan files to prevent contamination
-              rm -f /tmp/atlantis_planfiles_*.lst
-              rm -f /tmp/atlantis_custom_output_*.md
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_production.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run:
+            command: |
+              ENV="production"
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
+                echo ""
+                echo "---"
+                echo "## 🚀 Production Apply Commands"
+                echo ""
+                while IFS='|' read -r d PLAN; do
+                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  if [[ -n "$APP_NAME" ]]; then
+                    echo "**Apply $APP_NAME:**"
+                    echo '```shell'
+                    echo "atlantis apply -p apps-production -- $APP_NAME"
+                    echo '```'
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+                echo "**Apply all production applications:**"
+                echo '```shell'
+                echo "atlantis apply -p apps-production"
+                echo '```'
+              fi
 
     apply:
       steps:
@@ -106,11 +154,35 @@ workflows:
               set -euo pipefail
               ENV="helia"
               echo "🟣 Running Helia plan with APP_FILTER='$APP_FILTER'"
-              # Clean up any existing plan files to prevent contamination
-              rm -f /tmp/atlantis_planfiles_*.lst
-              rm -f /tmp/atlantis_custom_output_*.md
+              # Use project-specific files
+              PLANLIST="/tmp/atlantis_planfiles_helia.lst"
+              rm -f "$PLANLIST"
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run:
+            command: |
+              ENV="helia"
+              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              if [[ -f "$PLANLIST" ]]; then
+                echo ""
+                echo "---"
+                echo "## 🚀 Helia Apply Commands"
+                echo ""
+                while IFS='|' read -r d PLAN; do
+                  APP_NAME=$(basename "$d" | tr -d '[:space:]')
+                  if [[ -n "$APP_NAME" ]]; then
+                    echo "**Apply $APP_NAME:**"
+                    echo '```shell'
+                    echo "atlantis apply -p apps-helia -- $APP_NAME"
+                    echo '```'
+                    echo ""
+                  fi
+                done < "$PLANLIST"
+                echo "**Apply all helia applications:**"
+                echo '```shell'
+                echo "atlantis apply -p apps-helia"
+                echo '```'
+              fi
 
     apply:
       steps:

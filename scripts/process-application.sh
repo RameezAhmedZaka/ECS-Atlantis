@@ -137,41 +137,41 @@ echo "=== COMPLETED $ENV at $(date) ==="
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
 
-if [[ -f "$PLANLIST" ]]; then
-    APP_COUNT=0
-    APP_NAMES=""
+# if [[ -f "$PLANLIST" ]]; then
+#     APP_COUNT=0
+#     APP_NAMES=""
     
-    while IFS='|' read -r d PLAN; do
-        APP_NAME=$(basename "$d" | tr -d '[:space:]')
-        if [[ -n "$APP_NAME" ]]; then
-            APP_COUNT=$((APP_COUNT + 1))
-            APP_NAMES="${APP_NAMES} $APP_NAME"
-        fi
-    done < "$PLANLIST"
+#     while IFS='|' read -r d PLAN; do
+#         APP_NAME=$(basename "$d" | tr -d '[:space:]')
+#         if [[ -n "$APP_NAME" ]]; then
+#             APP_COUNT=$((APP_COUNT + 1))
+#             APP_NAMES="${APP_NAMES} $APP_NAME"
+#         fi
+#     done < "$PLANLIST"
     
-    echo ""
-    echo "--- APPLY COMMANDS ---"
-    echo ""
+#     echo ""
+#     echo "--- APPLY COMMANDS ---"
+#     echo ""
     
-    for app in $APP_NAMES; do
-        echo "Apply $app:"
-        echo "\`\`\`bash"
-        echo "atlantis apply -p apps-$ENV -- $app"
-        echo "\`\`\`"
-        echo ""
-    done
+#     for app in $APP_NAMES; do
+#         echo "Apply $app:"
+#         echo "\`\`\`bash"
+#         echo "atlantis apply -p apps-$ENV -- $app"
+#         echo "\`\`\`"
+#         echo ""
+#     done
     
-    if [[ $APP_COUNT -gt 1 ]]; then
-        echo "Apply all:"
-        echo "\`\`\`bash"
-        echo "atlantis apply -p apps-$ENV"
-        echo "\`\`\`"
-    fi
+#     if [[ $APP_COUNT -gt 1 ]]; then
+#         echo "Apply all:"
+#         echo "\`\`\`bash"
+#         echo "atlantis apply -p apps-$ENV"
+#         echo "\`\`\`"
+#     fi
     
-else
-    echo ""
-    echo "Apply:"
-    echo "\`\`\`bash"
-    echo "atlantis apply -p apps-$ENV"
-    echo "\`\`\`"
-fi
+# else
+#     echo ""
+#     echo "Apply:"
+#     echo "\`\`\`bash"
+#     echo "atlantis apply -p apps-$ENV"
+#     echo "\`\`\`"
+# fi
