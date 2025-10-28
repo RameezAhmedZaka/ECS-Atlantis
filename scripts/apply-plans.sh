@@ -6,55 +6,58 @@ APP_FILTER="${2:-}"
 
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 
-if [[ ! -s "$PLANLIST" ]]; then
-  echo "❌ Plan list missing or empty for $ENV: $PLANLIST"
-  exit 0
+if [[ ! -f "$PLANLIST" ]]; then
+  echo "No plan list found: $PLANLIST"
+  exit 1
 fi
 
-mapfile -t PLANFILES < "$PLANLIST"
-APP_NAMES=()
-for line in "${PLANFILES[@]}"; do
-  d=$(echo "$line" | cut -d'|' -f1 | xargs)
-  plan=$(echo "$line" | cut -d'|' -f2 | xargs)
-  APP_NAMES+=("$(basename "$d")")
-done
+if [[ ! -s "$PLANLIST" ]]; then
+  echo "Plan list is empty: $PLANLIST"
+  exit 1
+fi
 
-CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${ENV}.md"
-APP_COUNT=${#APP_NAMES[@]}
+echo "Applying plans from: $PLANLIST"
+cat "$PLANLIST"
 
-{
-  echo "## 🚀 Atlantis Apply Summary for **$ENV**"
-  echo ""
-  echo "**Total Applications:** $APP_COUNT"
-  echo ""
-  echo "### 🧩 Applications Detected:"
-  for app in "${APP_NAMES[@]}"; do
-    echo "- **$app**"
-  done
-  echo ""
-  echo "---"
-  echo ""
-  echo "### 🧱 Apply Commands"
-  echo ""
-  for app in "${APP_NAMES[@]}"; do
-    echo '```bash'
-    echo "atlantis apply -p apps-$ENV -- $app"
-    echo '```'
-  done
-  echo ""
-  echo "⏩ Apply all:"
-  echo '```bash'
-  echo "atlantis apply -p apps-$ENV"
-  echo '```'
-} > "$CUSTOM_OUTPUT_FILE"
-
-# Apply each plan
+# FIX: Use pipe separator to read both directory and plan path
 while IFS='|' read -r d PLAN; do
-  [[ -f "$PLAN" ]] || continue
-  echo "=== Applying $PLAN for directory $d ==="
-  timeout 600 terraform -chdir="$d" apply -auto-approve "$PLAN" || echo "❌ Failed for $PLAN"
-  rm -f "$PLAN"
+  # Clean up any whitespace
+  d=$(echo "$d" | tr -d '[:space:]')
+  PLAN=$(echo "$PLAN" | tr -d '[:space:]')
+  
+  if [[ -f "$PLAN" ]]; then
+    echo "=== Applying $PLAN for directory $d ==="
+    
+    # FIX: Use -chdir to switch to the correct directory before apply
+    timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
+      echo "Apply failed for $PLAN"
+      continue
+    }
+    echo "✅ Successfully applied $PLAN"
+    rm -f "$PLAN"
+  else
+    echo "Plan file not found: $PLAN"
+    echo "Current directory: $(pwd)"
+    echo "Looking for plan files in /tmp/:"
+    ls -la /tmp/*${ENV}*.tfplan 2>/dev/null || echo "No ${ENV} plan files in /tmp/"
+    
+    # Try to find the plan file by app name and environment
+    APP_NAME=$(basename "$d")
+    POSSIBLE_PLAN="/tmp/application_${APP_NAME}_${ENV}.tfplan"
+    if [[ -f "$POSSIBLE_PLAN" ]]; then
+      echo "🔍 Found plan file: $POSSIBLE_PLAN"
+      echo "=== Applying $POSSIBLE_PLAN for directory $d ==="
+      timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$POSSIBLE_PLAN" && {
+        echo "✅ Successfully applied $POSSIBLE_PLAN"
+        rm -f "$POSSIBLE_PLAN"
+      } || {
+        echo "❌ Apply failed for $POSSIBLE_PLAN"
+      }
+    else
+      echo "No matching plan file found for $APP_NAME in $ENV"
+    fi
+  fi
 done < "$PLANLIST"
 
 rm -f "$PLANLIST"
-echo "✅ APPLY COMPLETE for $ENV"
+echo "=== APPLY COMPLETED for $ENV at $(date) ==="
