@@ -89,6 +89,7 @@ workflows:
                   echo ""
                   echo "▶️ To apply individual applications:"
                   echo ""
+                  echo '```'
                   for app in $CHANGED_APPS; do
                     echo "**$app**"
                     echo '```'
