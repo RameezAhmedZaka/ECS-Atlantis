@@ -1,25 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 ENV="$1"
-RAW_FILTER="${2:-}"  # Raw filter that might include flags
+RAW_FILTER="${2:-}"
 
 echo "=== STARTING $ENV at $(date) ==="
 
-# Parse arguments to extract app name and detect destroy flag
+# Parse arguments (your existing code)
 DESTROY_FLAG=false
 APP_FILTER=""
-
-# Split the raw filter by commas
 IFS=',' read -ra ARGS <<< "$RAW_FILTER"
 for arg in "${ARGS[@]}"; do
-    arg_clean=$(echo "$arg" | xargs)  # Trim whitespace
+    arg_clean=$(echo "$arg" | xargs)
     case "$arg_clean" in
         -destroy|--destroy)
             echo "❌ You cannot perform this action. Destroy is disabled and cannot be run."
             exit 1
             ;;
         --)
-            # Skip separator
             ;;
         *)
             if [[ -n "$arg_clean" ]]; then
@@ -29,12 +26,7 @@ for arg in "${ARGS[@]}"; do
     esac
 done
 
-echo "Destroy flag: $DESTROY_FLAG"
 echo "App filter: $APP_FILTER"
-
-if [[ -n "$APP_FILTER" ]]; then
-  echo "Filtering for app: $APP_FILTER"
-fi
 
 # Find application directories
 mapfile -t dirs < <(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
@@ -45,7 +37,10 @@ fi
 
 echo "Found ${#dirs[@]} application: ${dirs[*]}"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"  # New file for changed apps only
 : > "$PLANLIST"
+: > "$CHANGED_APPS_LIST"  # Initialize changed apps list
+
 processed_count=0
 
 for d in "${dirs[@]}"; do
@@ -110,15 +105,29 @@ for d in "${dirs[@]}"; do
       echo "DESTROY MODE ENABLED"
     fi
     
-    # Plan with var-file and optional destroy flag
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" || {
+    # Create a temporary file to capture plan output
+    PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
+    
+    # Plan and capture output
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
       echo "Plan failed for $d"
       continue
     }
 
-    echo "$d|$PLAN" >> "$PLANLIST"
-    echo "Successfully planned $APP_NAME"
-    # ((processed_count++))
+    # Check if plan has changes (not "No changes")
+    if grep -q "No changes." "$PLAN_OUTPUT"; then
+      echo "✅ No changes for $APP_NAME - skipping from changed applications list"
+      rm -f "$PLAN"  # Remove the plan file since no changes
+    else
+      echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
+      echo "$d|$PLAN" >> "$PLANLIST"
+      echo "$APP_NAME" >> "$CHANGED_APPS_LIST"  # Add to changed apps list
+      # ((processed_count++))
+    fi
+    
+    # Clean up
+    rm -f "$PLAN_OUTPUT"
+    
   else
     echo "Skipping $d (main.tf missing)"
   fi
@@ -135,6 +144,7 @@ if [[ -n "$APP_FILTER" && $processed_count -eq 0 ]]; then
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
+echo "Changed applications:"
+cat "$CHANGED_APPS_LIST" 2>/dev/null || echo "No applications with changes"
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
-
