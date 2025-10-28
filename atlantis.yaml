@@ -199,6 +199,7 @@ workflows:
                 echo '```'
                 echo "atlantis plan -p apps-production"
                 echo '```'
+                echo '```shell'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
