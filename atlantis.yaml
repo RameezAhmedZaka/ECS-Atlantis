@@ -1,5 +1,3 @@
-
-
 version: 3
 automerge: false 
 parallel_plan: false  
@@ -28,7 +26,7 @@ projects:
 
   - name: apps-helia
     dir: .
-    terraform_version: v1.6.6
+    terraverform_version: v1.6.6
     autoplan:
       enabled: true 
       when_modified:
@@ -55,6 +53,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="staging"
+            PROJECT="apps-staging"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
             if [[ -f "$PLANLIST" ]]; then
@@ -76,22 +75,22 @@ workflows:
               APP_COUNT=$(cat "$TEMP_COUNT_FILE")
               rm -f "$TEMP_COUNT_FILE"
               
-              # Write custom output to a file that Atlantis will display
-              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${ENV}.txt"
+              # Write custom output to a project-specific file
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
+                echo "## 🚀 Staging Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
-                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
-                  echo "$app"
+                  echo "**$app**"
                   echo '```'
                   echo "atlantis apply -p apps-staging -- $app"
                   echo '```'
@@ -114,7 +113,7 @@ workflows:
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated "
+              echo "No Plan generated for staging"
             fi
 
     apply:
@@ -145,6 +144,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
+            PROJECT="apps-production"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
             if [[ -f "$PLANLIST" ]]; then
@@ -166,22 +166,22 @@ workflows:
               APP_COUNT=$(cat "$TEMP_COUNT_FILE")
               rm -f "$TEMP_COUNT_FILE"
               
-              # Write custom output to a file that Atlantis will display
-              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${ENV}.txt"
+              # Write custom output to a project-specific file
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
+                echo "## 🔥 Production Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
-                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
-                  echo "$app"
+                  echo "**$app**"
                   echo '```'
                   echo "atlantis apply -p apps-production -- $app"
                   echo '```'
@@ -204,7 +204,7 @@ workflows:
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated "
+              echo "No Plan generated for production"
             fi
     apply:
       steps:
@@ -217,6 +217,7 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
+
   helia-workflow:
     plan:
       steps:
@@ -232,6 +233,7 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
+            PROJECT="apps-helia"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
             if [[ -f "$PLANLIST" ]]; then
@@ -253,22 +255,22 @@ workflows:
               APP_COUNT=$(cat "$TEMP_COUNT_FILE")
               rm -f "$TEMP_COUNT_FILE"
               
-              # Write custom output to a file that Atlantis will display
-              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${ENV}.txt"
+              # Write custom output to a project-specific file
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
+                echo "## 🌊 Helia Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
-                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
                 for app in $APP_NAMES; do
-                  echo "$app"
+                  echo "**$app**"
                   echo '```'
                   echo "atlantis apply -p apps-helia -- $app"
                   echo '```'
@@ -291,7 +293,7 @@ workflows:
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated "
+              echo "No Plan generated for helia"
             fi
     apply:
       steps:
@@ -304,4 +306,3 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-
