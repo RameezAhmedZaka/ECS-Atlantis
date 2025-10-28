@@ -41,6 +41,7 @@ workflows:
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'  # Remove all backslashes
+        - run: echo "Running custom pre-plan command"    
         - run: |
             set -euo pipefail
             ENV="staging"
