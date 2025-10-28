@@ -47,8 +47,8 @@ workflows:
             echo "DEBUG: Raw COMMENT_ARGS='$COMMENT_ARGS'"
             echo "DEBUG: Cleaned APP_FILTER='$APP_FILTER'"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         # Generate and output custom plan summary
         - run: |
             set -euo pipefail
@@ -126,8 +126,8 @@ workflows:
             set -euo pipefail
             ENV="staging"
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
         # Custom apply output
         - run: |
             set -euo pipefail
@@ -149,8 +149,8 @@ workflows:
             set -euo pipefail
             ENV="production"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         # Generate and output custom plan summary
         - run: |
             set -euo pipefail
@@ -228,8 +228,8 @@ workflows:
             set -euo pipefail
             ENV="production"
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
         # Custom apply output
         - run: |
             set -euo pipefail
@@ -251,8 +251,8 @@ workflows:
             set -euo pipefail
             ENV="helia"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./process-application.sh
-            ./process-application.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
         # Generate and output custom plan summary
         - run: |
             set -euo pipefail
@@ -330,8 +330,8 @@ workflows:
             set -euo pipefail
             ENV="helia"
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./apply-plans.sh
-            ./apply-plans.sh "$ENV" "$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
         # Custom apply output
         - run: |
             set -euo pipefail
