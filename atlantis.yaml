@@ -87,9 +87,11 @@ workflows:
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
+                echo '```'
                 for app in $APP_NAMES; do
                   echo "**$app**"
                   echo '```'
