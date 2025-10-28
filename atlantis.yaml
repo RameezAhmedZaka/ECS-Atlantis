@@ -108,8 +108,6 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-staging"
-                echo '```'
-                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
