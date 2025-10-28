@@ -36,7 +36,7 @@ while IFS='|' read -r d PLAN; do
     echo "✅ Successfully applied $PLAN"
     rm -f "$PLAN"
   else
-    echo "❌ Plan file not found: $PLAN"
+    echo "Plan file not found: $PLAN"
     echo "Current directory: $(pwd)"
     echo "Looking for plan files in /tmp/:"
     ls -la /tmp/*${ENV}*.tfplan 2>/dev/null || echo "No ${ENV} plan files in /tmp/"
