@@ -170,13 +170,15 @@ workflows:
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🔥 Production Environment"
+                echo "## 🚀 Staging Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
+                echo ""
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
@@ -196,7 +198,6 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-production"
-                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
@@ -204,8 +205,9 @@ workflows:
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated for production"
+              echo "No Plan generated for staging"
             fi
+
     apply:
       steps:
         - env:
@@ -259,13 +261,15 @@ workflows:
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🌊 Helia Environment"
+                echo "## 🚀 Staging Environment"
                 echo "Plan generated for $APP_COUNT application(s)"
                 echo ""
                 echo "### Changed Applications:"
                 for app in $APP_NAMES; do
                   echo "- **$app**"  
                 done
+                echo ""
+                echo '```'
                 echo ""
                 echo "▶️ To apply individual applications:"
                 echo ""
@@ -285,9 +289,16 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-helia"
-                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
+              
+              # This output will be captured by Atlantis and shown in PR
+              cat "$CUSTOM_OUTPUT_FILE"
+              
+            else
+              echo "No Plan generated for staging"
+            fi
+
               
               # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
