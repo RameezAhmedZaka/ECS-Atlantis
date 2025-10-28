@@ -1,33 +1,41 @@
 #!/bin/bash
 set -euo pipefail
-ENV="$1"
 
-echo "🔍 Detecting changed applications for environment: $ENV"
+# Script to generate Atlantis commands based on changed applications
+CHANGED_APPS=$(git diff --name-only HEAD~1 HEAD | grep -o 'application/[^/]*' | sort -u | sed 's|application/||')
 
-# Find all changed files in this PR (Atlantis automatically checks out the branch)
-CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD || true)
-
-if [[ -z "$CHANGED_FILES" ]]; then
-  echo "No changed files detected."
-  exit 0
+if [[ -z "$CHANGED_APPS" ]]; then
+    echo "No application changes detected."
+    exit 0
 fi
 
-# Extract app directories under application/
-mapfile -t changed_apps < <(echo "$CHANGED_FILES" | grep -E '^application/' | awk -F'/' '{print $2}' | sort -u)
+echo "Changed applications: $CHANGED_APPS"
+echo ""
+echo "=== ATLANTIS COMMANDS ==="
+echo ""
 
-if [[ ${#changed_apps[@]} -eq 0 ]]; then
-  echo "No Terraform apps changed in application/ directory."
-  exit 0
-fi
-
-echo "🧱 Changed applications (${#changed_apps[@]}): ${changed_apps[*]}"
-echo
-echo "💬 Suggested Atlantis commands:"
-echo
-for app in "${changed_apps[@]}"; do
-  echo "👉 atlantis plan -p apps-${ENV} -- ${app}"
+# Generate individual plan commands for each environment
+for app in $CHANGED_APPS; do
+    echo "# Plan commands for $app:"
+    echo "atlantis plan -p apps-staging -- $app"
+    echo "atlantis plan -p apps-production -- $app"
+    echo "atlantis plan -p apps-helia -- $app"
+    echo ""
 done
 
-echo
-echo "🚀 To apply all at once after approval:"
-echo "👉 atlantis apply -p apps-${ENV}"
+# Generate bulk apply commands
+echo "# Apply all plans for each environment:"
+echo "atlantis apply -p apps-staging"
+echo "atlantis apply -p apps-production" 
+echo "atlantis apply -p apps-helia"
+echo ""
+
+# Generate individual apply commands (optional)
+echo "# Individual apply commands:"
+for app in $CHANGED_APPS; do
+    echo "# Apply commands for $app:"
+    echo "atlantis apply -p apps-staging -- $app"
+    echo "atlantis apply -p apps-production -- $app"
+    echo "atlantis apply -p apps-helia -- $app"
+    echo ""
+done
