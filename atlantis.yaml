@@ -98,31 +98,23 @@ workflows:
                 echo ""
                 echo "### Apply Commands:"
                 echo ""
-                if [[ $APP_COUNT -eq 1 ]]; then
-                  APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**:"
+                echo "▶️ To apply individual applications:"
+                echo ""
+                for app in $APP_NAMES; do
+                  echo "**$app**:"
+                  echo '```'
+                  echo "atlantis apply -p apps-staging -- $app"
+                  echo '```'
                   echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-staging -- $APP_NAME"
-                  echo '```'
-                else
-                  echo "▶️ To apply individual applications:"
-                  echo ""
-                  for app in $APP_NAMES; do
-                    echo "**$app**:"
-                    echo '```'
-                    echo "atlantis apply -p apps-staging -- $app"
-                    echo '```'
-                    echo ""
-                  done
-                  echo "⏩ To apply **all $APP_COUNT applications**:"
-                  echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-staging"
-                  echo '```'
-                fi
+                done
+                echo "⏩ To apply **all $APP_COUNT applications**:"
+                echo ""
+                echo '```'
+                echo "atlantis apply -p apps-staging"
+                echo '```'
                 echo ""
                 echo "🔁 To re-plan:"
+                echo ""
                 echo '```'
                 echo "atlantis plan -p apps-staging"
                 echo '```'
@@ -223,31 +215,23 @@ workflows:
                 echo ""
                 echo "### Apply Commands:"
                 echo ""
-                if [[ $APP_COUNT -eq 1 ]]; then
-                  APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**:"
+                echo "▶️ To apply individual applications:"
+                echo ""
+                for app in $APP_NAMES; do
+                  echo "**$app**:"
+                  echo '```'
+                  echo "atlantis apply -p apps-production -- $app"
+                  echo '```'
                   echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-production -- $APP_NAME"
-                  echo '```'
-                else
-                  echo "▶️ To apply individual applications:"
-                  echo ""
-                  for app in $APP_NAMES; do
-                    echo "**$app**:"
-                    echo '```'
-                    echo "atlantis apply -p apps-production -- $app"
-                    echo '```'
-                    echo ""
-                  done
-                  echo "⏩ To apply **all $APP_COUNT applications**:"
-                  echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-production"
-                  echo '```'
-                fi
+                done
+                echo "⏩ To apply **all $APP_COUNT applications**:"
+                echo ""
+                echo '```'
+                echo "atlantis apply -p apps-production"
+                echo '```'
                 echo ""
                 echo "🔁 To re-plan:"
+                echo ""
                 echo '```'
                 echo "atlantis plan -p apps-production"
                 echo '```'
@@ -348,31 +332,23 @@ workflows:
                 echo ""
                 echo "### Apply Commands:"
                 echo ""
-                if [[ $APP_COUNT -eq 1 ]]; then
-                  APP_NAME=$(echo "$APP_NAMES" | tr -d '[:space:]')
-                  echo "▶️ To apply **$APP_NAME**:"
+                echo "▶️ To apply individual applications:"
+                echo ""
+                for app in $APP_NAMES; do
+                  echo "**$app**:"
+                  echo '```'
+                  echo "atlantis apply -p apps-helia -- $app"
+                  echo '```'
                   echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-helia -- $APP_NAME"
-                  echo '```'
-                else
-                  echo "▶️ To apply individual applications:"
-                  echo ""
-                  for app in $APP_NAMES; do
-                    echo "**$app**:"
-                    echo '```'
-                    echo "atlantis apply -p apps-helia -- $app"
-                    echo '```'
-                    echo ""
-                  done
-                  echo "⏩ To apply **all $APP_COUNT applications**:"
-                  echo ""
-                  echo '```'
-                  echo "atlantis apply -p apps-helia"
-                  echo '```'
-                fi
+                done
+                echo "⏩ To apply **all $APP_COUNT applications**:"
+                echo ""
+                echo '```'
+                echo "atlantis apply -p apps-helia"
+                echo '```'
                 echo ""
                 echo "🔁 To re-plan:"
+                echo ""
                 echo '```'
                 echo "atlantis plan -p apps-helia"
                 echo '```'
