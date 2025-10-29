@@ -148,6 +148,7 @@ workflows:
             set -euo pipefail
             ENV="production"
             PROJECT="apps-production"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
@@ -242,6 +243,7 @@ workflows:
             set -euo pipefail
             ENV="helia"
             PROJECT="apps-helia"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
