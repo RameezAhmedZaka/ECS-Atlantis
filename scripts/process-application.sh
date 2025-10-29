@@ -117,10 +117,11 @@ echo "$dirs" | while IFS= read -r d; do
     PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
     
     # Plan and capture output
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" > "$PLAN_OUTPUT" 2>&1 || {
       echo "Plan failed for $d"
       continue
     }
+
 
     # Check if plan has changes (not "No changes")
     if grep -q "No changes." "$PLAN_OUTPUT"; then
