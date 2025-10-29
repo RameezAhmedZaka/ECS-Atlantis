@@ -1,3 +1,3 @@
 region      = "us-east-1"
 environment = "staging"
-bucket_name = "myapp-staging-bucket"
+bucket_name = "rdot-staging-bucket"
