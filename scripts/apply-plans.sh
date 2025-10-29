@@ -26,7 +26,7 @@ while IFS='|' read -r d PLAN; do
   d=$(echo "$d" | tr -d '[:space:]')
   PLAN=$(echo "$PLAN" | tr -d '[:space:]')
   
-  if [ -f "$PLAN" ]; then 
+  if [ -f "$PLAN" ]; then  
     echo "=== Applying $PLAN for directory $d ==="
     
     timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {

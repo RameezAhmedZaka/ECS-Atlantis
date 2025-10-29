@@ -12,7 +12,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: staging-workflow
-    apply_requirements: []
+    apply_requirements: [] 
 
   - name: apps-production
     dir: .
@@ -22,17 +22,17 @@ projects:
       when_modified:
         - "application/**"
     workflow: production-workflow
-    apply_requirements: [approved, mergeable]
+    apply_requirements: [approved, mergeable] 
 
   - name: apps-helia
     dir: .
-    terraform_version: v1.6.6
+    terraform_version: v1.6.6  # Fixed typo here
     autoplan:
       enabled: true 
       when_modified:
         - "application/**"
     workflow: helia-workflow
-    apply_requirements: []
+    apply_requirements: []     
 
 workflows:
   staging-workflow:
@@ -48,15 +48,6 @@ workflows:
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-            
-            # Display individual application summaries
-            APP_SUMMARY_FILE="/tmp/atlantis_app_summaries_${ENV}.lst"
-            if [ -f "$APP_SUMMARY_FILE" ] && [ -s "$APP_SUMMARY_FILE" ]; then
-              echo ""
-              echo "## 📊 Application Change Summary"
-              cat "$APP_SUMMARY_FILE"
-              rm -f "$APP_SUMMARY_FILE"
-            fi
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -79,70 +70,43 @@ workflows:
               # Trim leading space
               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-              # Calculate total resource changes
-              TOTAL_ADD=0
-              TOTAL_CHANGE=0
-              TOTAL_DESTROY=0
-              
-              if [ -f "$PLANLIST" ]; then
-                while IFS='|' read -r app_dir plan_file; do
-                  if [ -f "$plan_file" ]; then
-                    # Extract resource counts from plan files
-                    PLAN_OUTPUT=$(terraform show -json "$plan_file" 2>/dev/null || echo "")
-                    if [ -n "$PLAN_OUTPUT" ]; then
-                      ADD=$(echo "$PLAN_OUTPUT" | grep -o '"add": [0-9]*' | head -1 | awk '{print $2}')
-                      CHANGE=$(echo "$PLAN_OUTPUT" | grep -o '"change": [0-9]*' | head -1 | awk '{print $2}')
-                      DESTROY=$(echo "$PLAN_OUTPUT" | grep -o '"destroy": [0-9]*' | head -1 | awk '{print $2}')
-                      TOTAL_ADD=$((TOTAL_ADD + ${ADD:-0}))
-                      TOTAL_CHANGE=$((TOTAL_CHANGE + ${CHANGE:-0}))
-                      TOTAL_DESTROY=$((TOTAL_DESTROY + ${DESTROY:-0}))
-                    fi
-                  fi
-                done < "$PLANLIST"
-              fi
-              
               # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Staging Environment - Plan Summary"
-                echo ""
-                echo "### 📈 Change Summary"
-                echo "- **Projects with changes:** $APP_COUNT"
-                echo "- **Resources to add:** $TOTAL_ADD"
-                echo "- **Resources to change:** $TOTAL_CHANGE" 
-                echo "- **Resources to destroy:** $TOTAL_DESTROY"
+                echo "## 🚀 Staging Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
                 if [ $APP_COUNT -gt 0 ]; then
-                  echo "### 🔧 Changed Applications"
+                  echo "### Changed Applications:"
                   for app in $CHANGED_APPS; do
                     echo "- **$app**"  
                   done
                   echo ""
-                  echo "### 🎯 Apply Commands"
+                  echo '```'
                   echo ""
-                  echo "▶️ **Apply individual applications:**"
+                  echo "▶️ To apply individual applications:"
                   echo ""
                   for app in $CHANGED_APPS; do
+                    echo "**$app**"
                     echo '```'
                     echo "atlantis apply -p apps-staging -- $app"
                     echo '```'
                     echo ""
                   done
-                  
-                  echo "⏩ **Apply all $APP_COUNT applications:**"
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
                   echo '```'
                   echo "atlantis apply -p apps-staging"
                   echo '```'
                 fi
                 
+                echo "🔁 To re-plan:"
                 echo ""
-                echo "### 🔁 Re-plan Command"
                 echo '```'
                 echo "atlantis plan -p apps-staging"
-                echo '```'
-                
+                echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
               cat "$CUSTOM_OUTPUT_FILE"
@@ -166,7 +130,7 @@ workflows:
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
-  production-workflow:
+  production-workflow:                   
     plan:
       steps:
         - env:
@@ -175,19 +139,9 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="production"
-            PROJECT="apps-production"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-            
-            # Display individual application summaries
-            APP_SUMMARY_FILE="/tmp/atlantis_app_summaries_${ENV}.lst"
-            if [ -f "$APP_SUMMARY_FILE" ] && [ -s "$APP_SUMMARY_FILE" ]; then
-              echo ""
-              echo "## 📊 Application Change Summary"
-              cat "$APP_SUMMARY_FILE"
-              rm -f "$APP_SUMMARY_FILE"
-            fi
         - run: |
             set -euo pipefail
             ENV="production"
@@ -210,69 +164,43 @@ workflows:
               # Trim leading space
               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-              # Calculate total resource changes
-              TOTAL_ADD=0
-              TOTAL_CHANGE=0
-              TOTAL_DESTROY=0
-              
-              if [ -f "$PLANLIST" ]; then
-                while IFS='|' read -r app_dir plan_file; do
-                  if [ -f "$plan_file" ]; then
-                    PLAN_OUTPUT=$(terraform show -json "$plan_file" 2>/dev/null || echo "")
-                    if [ -n "$PLAN_OUTPUT" ]; then
-                      ADD=$(echo "$PLAN_OUTPUT" | grep -o '"add": [0-9]*' | head -1 | awk '{print $2}')
-                      CHANGE=$(echo "$PLAN_OUTPUT" | grep -o '"change": [0-9]*' | head -1 | awk '{print $2}')
-                      DESTROY=$(echo "$PLAN_OUTPUT" | grep -o '"destroy": [0-9]*' | head -1 | awk '{print $2}')
-                      TOTAL_ADD=$((TOTAL_ADD + ${ADD:-0}))
-                      TOTAL_CHANGE=$((TOTAL_CHANGE + ${CHANGE:-0}))
-                      TOTAL_DESTROY=$((TOTAL_DESTROY + ${DESTROY:-0}))
-                    fi
-                  fi
-                done < "$PLANLIST"
-              fi
-              
               # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Production Environment - Plan Summary"
-                echo ""
-                echo "### 📈 Change Summary"
-                echo "- **Projects with changes:** $APP_COUNT"
-                echo "- **Resources to add:** $TOTAL_ADD"
-                echo "- **Resources to change:** $TOTAL_CHANGE" 
-                echo "- **Resources to destroy:** $TOTAL_DESTROY"
+                echo "## 🚀 Production Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
                 if [ $APP_COUNT -gt 0 ]; then
-                  echo "### 🔧 Changed Applications"
+                  echo "### Changed Applications:"
                   for app in $CHANGED_APPS; do
                     echo "- **$app**"  
                   done
                   echo ""
-                  echo "### 🎯 Apply Commands"
+                  echo '```'
                   echo ""
-                  echo "▶️ **Apply individual applications:**"
+                  echo "▶️ To apply individual applications:"
                   echo ""
                   for app in $CHANGED_APPS; do
+                    echo "**$app**"
                     echo '```'
                     echo "atlantis apply -p apps-production -- $app"
                     echo '```'
                     echo ""
                   done
-                  
-                  echo "⏩ **Apply all $APP_COUNT applications:**"
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
                   echo '```'
                   echo "atlantis apply -p apps-production"
                   echo '```'
                 fi
                 
+                echo "🔁 To re-plan:"
                 echo ""
-                echo "### 🔁 Re-plan Command"
                 echo '```'
                 echo "atlantis plan -p apps-production"
-                echo '```'
-                
+                echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
               cat "$CUSTOM_OUTPUT_FILE"
@@ -283,6 +211,7 @@ workflows:
               echo ""
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
+
 
     apply:
       steps:
@@ -305,19 +234,9 @@ workflows:
         - run: |
             set -euo pipefail
             ENV="helia"
-            PROJECT="apps-helia"
             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/process-application.sh
             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-            
-            # Display individual application summaries
-            APP_SUMMARY_FILE="/tmp/atlantis_app_summaries_${ENV}.lst"
-            if [ -f "$APP_SUMMARY_FILE" ] && [ -s "$APP_SUMMARY_FILE" ]; then
-              echo ""
-              echo "## 📊 Application Change Summary"
-              cat "$APP_SUMMARY_FILE"
-              rm -f "$APP_SUMMARY_FILE"
-            fi
         - run: |
             set -euo pipefail
             ENV="helia"
@@ -340,69 +259,43 @@ workflows:
               # Trim leading space
               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-              # Calculate total resource changes
-              TOTAL_ADD=0
-              TOTAL_CHANGE=0
-              TOTAL_DESTROY=0
-              
-              if [ -f "$PLANLIST" ]; then
-                while IFS='|' read -r app_dir plan_file; do
-                  if [ -f "$plan_file" ]; then
-                    PLAN_OUTPUT=$(terraform show -json "$plan_file" 2>/dev/null || echo "")
-                    if [ -n "$PLAN_OUTPUT" ]; then
-                      ADD=$(echo "$PLAN_OUTPUT" | grep -o '"add": [0-9]*' | head -1 | awk '{print $2}')
-                      CHANGE=$(echo "$PLAN_OUTPUT" | grep -o '"change": [0-9]*' | head -1 | awk '{print $2}')
-                      DESTROY=$(echo "$PLAN_OUTPUT" | grep -o '"destroy": [0-9]*' | head -1 | awk '{print $2}')
-                      TOTAL_ADD=$((TOTAL_ADD + ${ADD:-0}))
-                      TOTAL_CHANGE=$((TOTAL_CHANGE + ${CHANGE:-0}))
-                      TOTAL_DESTROY=$((TOTAL_DESTROY + ${DESTROY:-0}))
-                    fi
-                  fi
-                done < "$PLANLIST"
-              fi
-              
               # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Helia Environment - Plan Summary"
-                echo ""
-                echo "### 📈 Change Summary"
-                echo "- **Projects with changes:** $APP_COUNT"
-                echo "- **Resources to add:** $TOTAL_ADD"
-                echo "- **Resources to change:** $TOTAL_CHANGE" 
-                echo "- **Resources to destroy:** $TOTAL_DESTROY"
+                echo "## 🚀 Helia Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
                 if [ $APP_COUNT -gt 0 ]; then
-                  echo "### 🔧 Changed Applications"
+                  echo "### Changed Applications:"
                   for app in $CHANGED_APPS; do
                     echo "- **$app**"  
                   done
                   echo ""
-                  echo "### 🎯 Apply Commands"
+                  echo '```'
                   echo ""
-                  echo "▶️ **Apply individual applications:**"
+                  echo "▶️ To apply individual applications:"
                   echo ""
                   for app in $CHANGED_APPS; do
+                    echo "**$app**"
                     echo '```'
                     echo "atlantis apply -p apps-helia -- $app"
                     echo '```'
                     echo ""
                   done
-                  
-                  echo "⏩ **Apply all $APP_COUNT applications:**"
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
                   echo '```'
                   echo "atlantis apply -p apps-helia"
                   echo '```'
                 fi
                 
+                echo "🔁 To re-plan:"
                 echo ""
-                echo "### 🔁 Re-plan Command"
                 echo '```'
                 echo "atlantis plan -p apps-helia"
-                echo '```'
-                
+                echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
               cat "$CUSTOM_OUTPUT_FILE"
@@ -414,7 +307,7 @@ workflows:
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
 
-    apply:
+    apply :      
       steps:
         - env:
             name: APP_FILTER

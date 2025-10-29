@@ -5,7 +5,7 @@ RAW_FILTER="${2:-}"
 
 echo "=== STARTING $ENV at $(date) ==="
 
-# Parse arguments
+# Parse arguments (your existing code)
 DESTROY_FLAG=false
 APP_FILTER=""
 
@@ -34,7 +34,7 @@ done
 
 echo "App filter: $APP_FILTER"
 
-# Find application directories
+# Find application directories using POSIX-compliant method
 dirs=$(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
 if [ -z "$dirs" ]; then
   echo "No application found!"
@@ -45,16 +45,12 @@ echo "Found applications:"
 echo "$dirs"
 PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
 CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-APP_SUMMARY_FILE="/tmp/atlantis_app_summaries_${ENV}.lst"
 : > "$PLANLIST"
 : > "$CHANGED_APPS_LIST"
-: > "$APP_SUMMARY_FILE"
 
 processed_count=0
-changed_count=0
-no_change_count=0
 
-# Process each directory
+# Process each directory using while-read loop (POSIX-compliant)
 echo "$dirs" | while IFS= read -r d; do
   if [ -f "$d/main.tf" ]; then
     APP_NAME=$(basename "$d")
@@ -120,41 +116,20 @@ echo "$dirs" | while IFS= read -r d; do
     # Create a temporary file to capture plan output
     PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
     
-    # Plan and capture output - ADD -no-color FLAG HERE
-    timeout 300 terraform -chdir="$d" plan -no-color -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
+    # Plan and capture output
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
       echo "Plan failed for $d"
       continue
     }
 
-    # Extract resource changes for individual app summary
-    RESOURCE_ADD=$(grep -oE '[0-9]+ to add' "$PLAN_OUTPUT" | head -1 | awk '{print $1}' || echo "0")
-    RESOURCE_CHANGE=$(grep -oE '[0-9]+ to change' "$PLAN_OUTPUT" | head -1 | awk '{print $1}' || echo "0")
-    RESOURCE_DESTROY=$(grep -oE '[0-9]+ to destroy' "$PLAN_OUTPUT" | head -1 | awk '{print $1}' || echo "0")
-
     # Check if plan has changes (not "No changes")
     if grep -q "No changes." "$PLAN_OUTPUT"; then
       echo "✅ No changes for $APP_NAME - skipping from changed applications list"
-      {
-        echo "### ${APP_NAME} Summary:"
-        echo "**No changes**"
-        echo ""
-      } >> "$APP_SUMMARY_FILE"
-      no_change_count=$((no_change_count + 1))
-      rm -f "$PLAN"
+      rm -f "$PLAN"  # Remove the plan file since no changes
     else
       echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
       echo "$d|$PLAN" >> "$PLANLIST"
       echo "$APP_NAME" >> "$CHANGED_APPS_LIST"
-      changed_count=$((changed_count + 1))
-      
-      # Create individual app summary
-      {
-        echo "### ${APP_NAME} Summary:"
-        echo "- **Resources to add:** ${RESOURCE_ADD}"
-        echo "- **Resources to change:** ${RESOURCE_CHANGE}"
-        echo "- **Resources to destroy:** ${RESOURCE_DESTROY}"
-        echo ""
-      } >> "$APP_SUMMARY_FILE"
     fi
     
     # Clean up
@@ -181,5 +156,8 @@ if [ -n "$APP_FILTER" ] && [ "$processed_count" -eq 0 ]; then
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
-echo "Changed applications: $changed_count"
-echo "No change applications: $no_change_count"
+echo "Changed applications:"
+cat "$CHANGED_APPS_LIST" 2>/dev/null || echo "No applications with changes"
+echo "Plan files created:"
+cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
