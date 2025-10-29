@@ -2,8 +2,6 @@ version: 3
 automerge: false 
 parallel_plan: false  
 parallel_apply: false  
-output:
-  hide_plan_outputs: true
 
 projects:
   - name: apps-staging
@@ -15,7 +13,6 @@ projects:
         - "application/**"
     workflow: staging-workflow
     apply_requirements: []
-    terraform_plan_flags: "-no-color -input=false -lock-timeout=5m"
 
   - name: apps-production
     dir: .
@@ -26,7 +23,6 @@ projects:
         - "application/**"
     workflow: production-workflow
     apply_requirements: [approved, mergeable]
-    terraform_plan_flags: "-no-color -input=false -lock-timeout=5m"
 
   - name: apps-helia
     dir: .
@@ -37,7 +33,6 @@ projects:
         - "application/**"
     workflow: helia-workflow
     apply_requirements: []
-    terraform_plan_flags: "-no-color -input=false -lock-timeout=5m"
 
 workflows:
   staging-workflow:
@@ -92,7 +87,7 @@ workflows:
               if [ -f "$PLANLIST" ]; then
                 while IFS='|' read -r app_dir plan_file; do
                   if [ -f "$plan_file" ]; then
-                    # Extract resource counts from plan files (simplified approach)
+                    # Extract resource counts from plan files
                     PLAN_OUTPUT=$(terraform show -json "$plan_file" 2>/dev/null || echo "")
                     if [ -n "$PLAN_OUTPUT" ]; then
                       ADD=$(echo "$PLAN_OUTPUT" | grep -o '"add": [0-9]*' | head -1 | awk '{print $2}')

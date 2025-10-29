@@ -120,8 +120,8 @@ echo "$dirs" | while IFS= read -r d; do
     # Create a temporary file to capture plan output
     PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
     
-    # Plan and capture output
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
+    # Plan and capture output - ADD -no-color FLAG HERE
+    timeout 300 terraform -chdir="$d" plan -no-color -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
       echo "Plan failed for $d"
       continue
     }
