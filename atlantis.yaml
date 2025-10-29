@@ -26,7 +26,7 @@ projects:
 
   - name: apps-helia
     dir: .
-    terraform_version: v1.6.6  # Fixed typo here
+    terraform_version: v1.6.6
     autoplan:
       enabled: true 
       when_modified:
@@ -106,6 +106,7 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-staging"
+                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
@@ -192,7 +193,7 @@ workflows:
                   echo "⏩ To apply **all $APP_COUNT applications**:"
                   echo ""
                   echo '```'
-                  echo "atlantis apply -p apps-production"
+                    echo "atlantis apply -p apps-production"
                   echo '```'
                 fi
                 
@@ -200,6 +201,7 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-production"
+                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
@@ -211,7 +213,6 @@ workflows:
               echo ""
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
-
 
     apply:
       steps:
@@ -295,6 +296,7 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-helia"
+                echo '```'
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
@@ -307,7 +309,7 @@ workflows:
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
 
-    apply :      
+    apply:      
       steps:
         - env:
             name: APP_FILTER
