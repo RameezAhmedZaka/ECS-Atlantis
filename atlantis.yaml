@@ -5,6 +5,7 @@ parallel_apply: true
 
 projects:
   - name: apps-staging
+    branch: /main/ 
     dir: .
     terraform_version: v1.6.6
     autoplan:
@@ -15,6 +16,7 @@ projects:
     apply_requirements: [] 
 
   - name: apps-production
+    branch: /main/ 
     dir: .
     terraform_version: v1.6.6
     autoplan:
@@ -25,6 +27,7 @@ projects:
     apply_requirements: [approved, mergeable] 
 
   - name: apps-helia
+    branch: /main/ 
     dir: .
     terraform_version: v1.6.6  
     autoplan:
