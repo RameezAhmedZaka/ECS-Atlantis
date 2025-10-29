@@ -74,7 +74,7 @@ workflows:
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
-                echo "## 🚀 Staging Environment"
+                echo "## 🚀 Staging Environment "
                 echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
