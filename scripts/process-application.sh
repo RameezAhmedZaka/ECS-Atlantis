@@ -155,8 +155,38 @@ if [ -n "$APP_FILTER" ] && [ "$processed_count" -eq 0 ]; then
   done
 fi
 
+# echo "=== COMPLETED $ENV at $(date) ==="
+# echo "Changed applications:"
+# cat "$CHANGED_APPS_LIST" 2>/dev/null || echo "No applications with changes"
+# echo "Plan files created:"
+# cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
 echo "=== COMPLETED $ENV at $(date) ==="
 echo "Changed applications:"
 cat "$CHANGED_APPS_LIST" 2>/dev/null || echo "No applications with changes"
 echo "Plan files created:"
 cat "$PLANLIST" 2>/dev/null || echo "No plan files created"
+
+echo ""
+echo "============================"
+echo "🧾 Combined Terraform Plan Summary"
+echo "============================"
+echo ""
+
+# Loop through all changed apps and show a summarized diff
+if [ -s "$CHANGED_APPS_LIST" ]; then
+  while IFS= read -r app; do
+    PLAN_FILE="/tmp/application_${app}_${ENV}.tfplan"
+    echo "▶️ Showing plan summary for $app:"
+    echo "---------------------------------"
+    if [ -f "$PLAN_FILE" ]; then
+      terraform -chdir="application/$app" show -no-color "$PLAN_FILE" | head -n 100
+      echo ""
+    else
+      echo "(No plan file found for $app)"
+    fi
+    echo ""
+  done < "$CHANGED_APPS_LIST"
+else
+  echo "✅ No plans with changes."
+fi
