@@ -41,14 +41,15 @@ workflows:
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
-        - run: |
-            set -euo pipefail
-            ENV="staging"
-            PROJECT="apps-staging"
-            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./scripts/process-application.sh
-            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-          output: hide  
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              PROJECT="apps-staging"
+              echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+              chmod +x ./scripts/process-application.sh
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+            output: hide  
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -129,8 +130,7 @@ workflows:
             ENV="staging"
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
-            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-          output: hide  
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
 
   production-workflow:                   
     plan:
