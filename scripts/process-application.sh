@@ -5,7 +5,7 @@ RAW_FILTER="${2:-}"
 
 echo "=== STARTING $ENV at $(date) ==="
 
-# Parse arguments
+# Parse arguments (your existing code)
 DESTROY_FLAG=false
 APP_FILTER=""
 
@@ -50,8 +50,8 @@ CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
 
 processed_count=0
 
-# Process each directory using here-string to avoid subshell issues
-while IFS= read -r d; do
+# Process each directory using while-read loop (POSIX-compliant)
+echo "$dirs" | while IFS= read -r d; do
   if [ -f "$d/main.tf" ]; then
     APP_NAME=$(basename "$d")
 
@@ -73,11 +73,6 @@ while IFS= read -r d; do
       "helia")
         BACKEND_CONFIG="env/helia/helia.conf"
         VAR_FILE="config/helia.tfvars"                   
-        ;;
-      *)
-        echo "Unknown environment: $ENV"
-        exit 1
-        ;;
     esac
     
     echo "Directory: $d"
@@ -135,7 +130,6 @@ while IFS= read -r d; do
       echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
       echo "$d|$PLAN" >> "$PLANLIST"
       echo "$APP_NAME" >> "$CHANGED_APPS_LIST"
-      processed_count=$((processed_count + 1))
     fi
     
     # Clean up
@@ -144,27 +138,24 @@ while IFS= read -r d; do
   else
     echo "Skipping $d (main.tf missing)"
   fi
-done <<< "$dirs"  # Use here-string instead of pipe to avoid subshell
+done
 
-# Count processed applications from the list file
+# Count processed applications
 if [ -f "$CHANGED_APPS_LIST" ]; then
-  final_count=$(wc -l < "$CHANGED_APPS_LIST" | tr -d ' ')
-else
-  final_count=0
+  processed_count=$(wc -l < "$CHANGED_APPS_LIST" | tr -d ' ')
 fi
 
-if [ -n "$APP_FILTER" ] && [ "$final_count" -eq 0 ]; then
+if [ -n "$APP_FILTER" ] && [ "$processed_count" -eq 0 ]; then
   echo "⚠️  No applications matched filter: $APP_FILTER"
   echo "Available applications:"
-  while IFS= read -r d; do
+  echo "$dirs" | while IFS= read -r d; do
     if [ -f "$d/main.tf" ]; then
       echo "  - $(basename "$d")"
     fi
-  done <<< "$dirs"
+  done
 fi
 
 echo "=== COMPLETED $ENV at $(date) ==="
-echo "Total applications with changes: $final_count"
 echo "Changed applications:"
 cat "$CHANGED_APPS_LIST" 2>/dev/null || echo "No applications with changes"
 echo "Plan files created:"
