@@ -131,8 +131,7 @@ echo "$dirs" | while IFS= read -r d; do
       echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
       echo "$d|$PLAN" >> "$PLANLIST"
       echo "$APP_NAME" >> "$CHANGED_APPS_LIST"
-    fi
-    
+    fi    
     # Clean up
     rm -f "$PLAN_OUTPUT"
     
