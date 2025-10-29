@@ -1,7 +1,7 @@
 version: 3
 automerge: true 
 parallel_plan: false  
-parallel_apply: false  
+parallel_apply: true  
 
 projects:
   - name: apps-staging
