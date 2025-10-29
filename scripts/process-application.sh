@@ -117,11 +117,10 @@ echo "$dirs" | while IFS= read -r d; do
     PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
     
     # Plan and capture output
-    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" > "$PLAN_OUTPUT" 2>&1 || {
+    timeout 300 terraform -chdir="$d" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" $DESTROY_ARG -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
       echo "Plan failed for $d"
       continue
     }
-
 
     # Check if plan has changes (not "No changes")
     if grep -q "No changes." "$PLAN_OUTPUT"; then
@@ -131,7 +130,8 @@ echo "$dirs" | while IFS= read -r d; do
       echo "🔄 Changes detected for $APP_NAME - adding to changed applications"
       echo "$d|$PLAN" >> "$PLANLIST"
       echo "$APP_NAME" >> "$CHANGED_APPS_LIST"
-    fi    
+    fi
+    
     # Clean up
     rm -f "$PLAN_OUTPUT"
     
