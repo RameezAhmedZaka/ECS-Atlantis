@@ -6,13 +6,13 @@ APP_FILTER="${2:-}"
 
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 
-if [ ! -f "$PLANLIST" ]; then  # ✅ Changed to POSIX [ ]
+if [ ! -f "$PLANLIST" ]; then  
   echo "No plan list found: $PLANLIST"
   echo "This usually means no changes were detected during planning."
   exit 0
 fi
 
-if [ ! -s "$PLANLIST" ]; then  # ✅ Changed to POSIX [ ]
+if [ ! -s "$PLANLIST" ]; then 
   echo "Plan list is empty: $PLANLIST"
   echo "No changes to apply."
   exit 0
@@ -26,7 +26,7 @@ while IFS='|' read -r d PLAN; do
   d=$(echo "$d" | tr -d '[:space:]')
   PLAN=$(echo "$PLAN" | tr -d '[:space:]')
   
-  if [ -f "$PLAN" ]; then  # ✅ Changed to POSIX [ ]
+  if [ -f "$PLAN" ]; then 
     echo "=== Applying $PLAN for directory $d ==="
     
     timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
@@ -44,7 +44,7 @@ while IFS='|' read -r d PLAN; do
     # Try to find the plan file by app name and environment
     APP_NAME=$(basename "$d")
     POSSIBLE_PLAN="/tmp/application_${APP_NAME}_${ENV}.tfplan"
-    if [ -f "$POSSIBLE_PLAN" ]; then  # ✅ Changed to POSIX [ ]
+    if [ -f "$POSSIBLE_PLAN" ]; then  
       echo "🔍 Found plan file: $POSSIBLE_PLAN"
       echo "=== Applying $POSSIBLE_PLAN for directory $d ==="
       timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$POSSIBLE_PLAN" && {
