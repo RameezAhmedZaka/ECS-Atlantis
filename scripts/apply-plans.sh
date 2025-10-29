@@ -26,6 +26,12 @@ while IFS='|' read -r d PLAN; do
   d=$(echo "$d" | tr -d '[:space:]')
   PLAN=$(echo "$PLAN" | tr -d '[:space:]')
   
+  # FILTER by APP_FILTER if provided
+  if [ -n "$APP_FILTER" ] && [[ "$d" != *"$APP_FILTER"* ]]; then
+    echo "Skipping $d because it doesn't match filter $APP_FILTER"
+    continue
+  fi
+
   if [ -f "$PLAN" ]; then  
     echo "=== Applying $PLAN for directory $d ==="
     
