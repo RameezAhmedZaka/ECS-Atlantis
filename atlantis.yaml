@@ -131,7 +131,7 @@ workflows:
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
-  production-workflow:
+  production-workflow:                     #change 
     plan:
       steps:
         - env:
@@ -150,53 +150,53 @@ workflows:
             PROJECT="apps-production"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-            if [[ -f "$PLANLIST" ]]; then
-              # Count apps
-              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
-              echo "0" > "$TEMP_COUNT_FILE"
-              APP_NAMES=""
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-              while IFS='|' read -r d PLAN; do
-                APP_NAME=$(basename "$d" | tr -d '[:space:]')
-                if [[ -n "$APP_NAME" ]]; then
-                  COUNT=$(cat "$TEMP_COUNT_FILE")
-                  COUNT=$((COUNT + 1))
-                  echo "$COUNT" > "$TEMP_COUNT_FILE"
-                  APP_NAMES="${APP_NAMES} $APP_NAME"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
                 fi
-              done < "$PLANLIST"
+              done < "$CHANGED_APPS_LIST"
               
-              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
-              rm -f "$TEMP_COUNT_FILE"
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-              # Write custom output to a project-specific file
+              # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
                 echo "## 🚀 Production Environment"
-                echo "Plan generated for $APP_COUNT application(s)"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
-                echo "### Changed Applications:"
-                for app in $APP_NAMES; do
-                  echo "- **$app**"  
-                done
-                echo ""
-                echo '```'
-                echo ""
-                echo "▶️ To apply individual applications:"
-                echo ""
-                for app in $APP_NAMES; do
-                  echo "**$app**"
-                  echo '```'
-                  echo "atlantis apply -p apps-production -- $app"
+                
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
                   echo '```'
                   echo ""
-                done
-                echo "⏩ To apply **all $APP_COUNT applications**:"
-                echo ""
-                echo '```'
-                echo "atlantis apply -p apps-production"
-                echo '```'
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-production -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-production"
+                  echo '```'
+                fi
+                
                 echo "🔁 To re-plan:"
                 echo ""
                 echo '```'
@@ -204,12 +204,15 @@ workflows:
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
-              # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated for staging"
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
+
 
     apply:
       steps:
@@ -241,53 +244,53 @@ workflows:
             PROJECT="apps-helia"
             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-            if [[ -f "$PLANLIST" ]]; then
-              # Count apps
-              TEMP_COUNT_FILE="/tmp/app_count_${ENV}.txt"
-              echo "0" > "$TEMP_COUNT_FILE"
-              APP_NAMES=""
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-              while IFS='|' read -r d PLAN; do
-                APP_NAME=$(basename "$d" | tr -d '[:space:]')
-                if [[ -n "$APP_NAME" ]]; then
-                  COUNT=$(cat "$TEMP_COUNT_FILE")
-                  COUNT=$((COUNT + 1))
-                  echo "$COUNT" > "$TEMP_COUNT_FILE"
-                  APP_NAMES="${APP_NAMES} $APP_NAME"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
                 fi
-              done < "$PLANLIST"
+              done < "$CHANGED_APPS_LIST"
               
-              APP_COUNT=$(cat "$TEMP_COUNT_FILE")
-              rm -f "$TEMP_COUNT_FILE"
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-              # Write custom output to a project-specific file
+              # Write custom output
               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
               {
                 echo "## 🚀 Helia Environment"
-                echo "Plan generated for $APP_COUNT application(s)"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
-                echo "### Changed Applications:"
-                for app in $APP_NAMES; do
-                  echo "- **$app**"  
-                done
-                echo ""
-                echo '```'
-                echo ""
-                echo "▶️ To apply individual applications:"
-                echo ""
-                for app in $APP_NAMES; do
-                  echo "**$app**"
-                  echo '```'
-                  echo "atlantis apply -p apps-helia -- $app"
+                
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
                   echo '```'
                   echo ""
-                done
-                echo "⏩ To apply **all $APP_COUNT applications**:"
-                echo ""
-                echo '```'
-                echo "atlantis apply -p apps-helia"
-                echo '```'
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-helia -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-helia"
+                  echo '```'
+                fi
+                
                 echo "🔁 To re-plan:"
                 echo ""
                 echo '```'
@@ -295,12 +298,15 @@ workflows:
                 echo ""
               } > "$CUSTOM_OUTPUT_FILE"
               
-              # This output will be captured by Atlantis and shown in PR
               cat "$CUSTOM_OUTPUT_FILE"
               
             else
-              echo "No Plan generated for staging"
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
+
     apply :      
       steps:
         - env:

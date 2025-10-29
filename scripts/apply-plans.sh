@@ -6,29 +6,29 @@ APP_FILTER="${2:-}"
 
 echo "=== STARTING APPLY for $ENV at $(date) ==="
 
-if [[ ! -f "$PLANLIST" ]]; then
+if [ ! -f "$PLANLIST" ]; then  # ✅ Changed to POSIX [ ]
   echo "No plan list found: $PLANLIST"
-  exit 1
+  echo "This usually means no changes were detected during planning."
+  exit 0
 fi
 
-if [[ ! -s "$PLANLIST" ]]; then
+if [ ! -s "$PLANLIST" ]; then  # ✅ Changed to POSIX [ ]
   echo "Plan list is empty: $PLANLIST"
-  exit 1
+  echo "No changes to apply."
+  exit 0
 fi
 
 echo "Applying plans from: $PLANLIST"
 cat "$PLANLIST"
 
-# FIX: Use pipe separator to read both directory and plan path
 while IFS='|' read -r d PLAN; do
   # Clean up any whitespace
   d=$(echo "$d" | tr -d '[:space:]')
   PLAN=$(echo "$PLAN" | tr -d '[:space:]')
   
-  if [[ -f "$PLAN" ]]; then
+  if [ -f "$PLAN" ]; then  # ✅ Changed to POSIX [ ]
     echo "=== Applying $PLAN for directory $d ==="
     
-    # FIX: Use -chdir to switch to the correct directory before apply
     timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$PLAN" || {
       echo "Apply failed for $PLAN"
       continue
@@ -44,7 +44,7 @@ while IFS='|' read -r d PLAN; do
     # Try to find the plan file by app name and environment
     APP_NAME=$(basename "$d")
     POSSIBLE_PLAN="/tmp/application_${APP_NAME}_${ENV}.tfplan"
-    if [[ -f "$POSSIBLE_PLAN" ]]; then
+    if [ -f "$POSSIBLE_PLAN" ]; then  # ✅ Changed to POSIX [ ]
       echo "🔍 Found plan file: $POSSIBLE_PLAN"
       echo "=== Applying $POSSIBLE_PLAN for directory $d ==="
       timeout 600 terraform -chdir="$d" apply -input=false -auto-approve "$POSSIBLE_PLAN" && {
