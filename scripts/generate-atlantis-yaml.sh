@@ -1,69 +1,176 @@
 #!/bin/bash
+
+# generate-atlantis-projects.sh
+# Pre-workflow hook to dynamically generate projects for Atlantis based on app structure
+
 set -euo pipefail
-ENV="$1"
-RAW_FILTER="${2:-}"
 
-echo "=== STARTING $ENV for project: $ATLANTIS_PROJECT ==="
+echo "🚀 Starting dynamic Atlantis configuration generation..."
 
-# Extract app name from project name (e.g., "app1-staging" -> "app1")
-APP_NAME=$(echo "$ATLANTIS_PROJECT" | sed 's/-staging//' | sed 's/-production//' | sed 's/-helia//')
-APP_DIR="application/$APP_NAME"
+# Configuration
+APPS_DIR="application"
+TEMP_FILE="dynamic-projects.yaml"
+BACKUP_FILE="atlantis.yaml.backup"
 
-echo "Processing application: $APP_NAME in directory: $APP_DIR"
-
-if [ ! -f "$APP_DIR/main.tf" ]; then
-  echo "Error: Application directory $APP_DIR not found or missing main.tf"
-  exit 1
+# Backup original atlantis.yaml
+if [[ -f "atlantis.yaml" ]]; then
+    cp "atlantis.yaml" "$BACKUP_FILE"
 fi
 
-# Your existing processing logic here, but for single app
-case "$ENV" in
-  "production")
-    BACKEND_CONFIG="env/production/prod.conf"
-    VAR_FILE="config/production.tfvars"
-    ;;
-  "staging")
-    BACKEND_CONFIG="env/staging/stage.conf"   
-    VAR_FILE="config/stage.tfvars"            
-    ;;
-  "helia")
-    BACKEND_CONFIG="env/helia/helia.conf"
-    VAR_FILE="config/helia.tfvars"                   
-esac
-
-echo "Backend config: $BACKEND_CONFIG"
-echo "Var file: $VAR_FILE"
-
-# Initialize
-rm -rf "$APP_DIR/.terraform"
-timeout 120 terraform -chdir="$APP_DIR" init -upgrade \
-  -backend-config="$BACKEND_CONFIG" \
-  -reconfigure \
-  -input=false || {
-  echo "Init failed for $APP_DIR"
-  exit 1
+# Function to discover environments from config and env directories
+discover_environments() {
+    local app_dir="$1"
+    local environments=()
+    
+    # Check config directory for tfvars files
+    if [[ -d "$app_dir/config" ]]; then
+        for tfvars_file in "$app_dir/config"/*.tfvars; do
+            [[ -f "$tfvars_file" ]] || continue
+            env_name=$(basename "$tfvars_file" .tfvars)
+            environments+=("$env_name")
+        done
+    fi
+    
+    # Check env directory for environment folders
+    if [[ -d "$app_dir/env" ]]; then
+        for env_dir in "$app_dir/env"/*/; do
+            [[ -d "$env_dir" ]] || continue
+            env_name=$(basename "$env_dir")
+            environments+=("$env_name")
+        done
+    fi
+    
+    # Remove duplicates and return
+    printf '%s\n' "${environments[@]}" | sort -u
 }
 
-# Create plan
-PLAN_NAME="${APP_NAME}_${ENV}.tfplan"
-PLAN="/tmp/${PLAN_NAME}"
-PLAN_OUTPUT="/tmp/plan_output_${APP_NAME}_${ENV}.txt"
+# Function to generate projects YAML
+generate_projects_yaml() {
+    cat > "$TEMP_FILE" << EOF
+projects:
+EOF
 
-timeout 300 terraform -chdir="$APP_DIR" plan -input=false -lock-timeout=5m -var-file="$VAR_FILE" -out="$PLAN" 2>&1 | tee "$PLAN_OUTPUT" || {
-  echo "Plan failed for $APP_DIR"
-  exit 1
+    local project_count=0
+    
+    # Find all app directories
+    while IFS= read -r -d '' app_dir; do
+        app_name=$(basename "$app_dir")
+        echo "🔍 Processing application: $app_name"
+        
+        # Discover environments for this app
+        environments=$(discover_environments "$app_dir")
+        
+        if [[ -z "$environments" ]]; then
+            echo "   ⚠️  No environments found, creating default project"
+            cat >> "$TEMP_FILE" << PROJECTEOF
+  - name: ${app_name}-default
+    dir: ${app_dir}
+    workspace: default
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "*.tfvars"
+        - "**/*.tf"
+        - "**/*.tfvars"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+
+PROJECTEOF
+            ((project_count++))
+        else
+            # Create project for each environment
+            while IFS= read -r env_name; do
+                [[ -z "$env_name" ]] && continue
+                
+                echo "   ✅ Creating project for environment: $env_name"
+                
+                cat >> "$TEMP_FILE" << PROJECTEOF
+  - name: ${app_name}-${env_name}
+    dir: ${app_dir}
+    workspace: ${env_name}
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "*.tfvars"
+        - "**/*.tf"
+        - "**/*.tfvars"
+        - "**/.conf"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+
+PROJECTEOF
+                ((project_count++))
+            done <<< "$environments"
+        fi
+    done < <(find "$APPS_DIR" -mindepth 1 -maxdepth 1 -type d -print0)
+    
+    echo "$project_count"
 }
 
-# Update changed apps list
-CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-if grep -q "No changes." "$PLAN_OUTPUT"; then
-  echo "✅ No changes for $APP_NAME"
-  # Ensure file exists but empty if no changes
-  : > "$CHANGED_APPS_LIST"
-else
-  echo "🔄 Changes detected for $APP_NAME"
-  echo "$APP_NAME" > "$CHANGED_APPS_LIST"
+# Main execution
+echo "📁 Scanning applications directory: $APPS_DIR"
+
+if [[ ! -d "$APPS_DIR" ]]; then
+    echo "❌ Applications directory '$APPS_DIR' not found!"
+    exit 1
 fi
 
-rm -f "$PLAN_OUTPUT"
-echo "=== COMPLETED $ENV for $APP_NAME at $(date) ==="
+# Generate projects YAML
+project_count=$(generate_projects_yaml)
+
+if [[ "$project_count" -eq 0 ]]; then
+    echo "⚠️  No projects found. Creating fallback configuration."
+    cat > "$TEMP_FILE" << EOF
+projects:
+  - name: default
+    dir: .
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "*.tfvars"
+    terraform_version: v1.5.0
+EOF
+    project_count=1
+fi
+
+# Create final atlantis.yaml
+cat > "atlantis.yaml" << EOF
+version: 3
+automerge: false
+parallel_plan: true
+parallel_apply: true
+
+$(cat "$TEMP_FILE")
+
+workflows:
+  default:
+    plan:
+      steps:
+        - init
+        - plan:
+            extra_args: ["-lock=false"]
+    apply:
+      steps:
+        - apply
+
+allowed_regexp_prefixes:
+  - ".*"
+EOF
+
+# Cleanup
+rm -f "$TEMP_FILE"
+
+echo "✅ Successfully generated atlantis.yaml with $project_count projects!"
+echo "📋 Summary of generated projects:"
+
+# Display project summary
+grep "name:" "atlantis.yaml" | grep -v "atlantis.yaml" | sed 's/^[[:space:]]*//' | while read -r line; do
+    echo "   📍 $line"
+done
+
+echo "🎉 Dynamic Atlantis configuration complete!"
