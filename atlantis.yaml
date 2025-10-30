@@ -49,7 +49,7 @@ workflows:
               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER" 
-            # output: hide  
+            output: hide  
         - run: 
             command: |
               set -euo pipefail
@@ -132,7 +132,7 @@ workflows:
                   fi
                 done < "$PLANLIST"
               fi
-            output: hide  
+            # output: hide  
                 
 
     apply:
