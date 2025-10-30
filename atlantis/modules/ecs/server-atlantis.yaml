@@ -11,8 +11,8 @@ repos:
       - run: |
           echo "Generating dynamic atlantis.yaml for $(basename $REPO_ROOT)"
           
-          # Create dynamic atlantis.yaml
           cat > atlantis.yaml << EOF
+          
           version: 3
           automerge: false
           parallel_plan: true
@@ -21,10 +21,11 @@ repos:
           EOF
 
                     # Function to check if directory is a valid Terraform project
+                    # Now requires ALL THREE essential files
                     is_terraform_project() {
                       local dir="$1"
-                      # Check for at least one of the main Terraform files
-                      [ -f "$dir/main.tf" ] || [ -f "$dir/backend.tf" ] || [ -f "$dir/providers.tf" ]
+                      # Check for ALL THREE main Terraform files
+                      [ -f "$dir/main.tf" ] && [ -f "$dir/backend.tf" ] && [ -f "$dir/providers.tf" ]
                     }
 
                     # Function to discover environments from config directory
