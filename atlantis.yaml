@@ -49,7 +49,7 @@ workflows:
               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
               chmod +x ./scripts/process-application.sh
               ./scripts/process-application.sh "$ENV" "$APP_FILTER" 
-            output: hide  
+            # output: hide  
         - run: 
             command: |
               set -euo pipefail
@@ -131,7 +131,9 @@ workflows:
                     terraform -chdir="$app_dir" show -no-color "$plan_path" | sed -e 's/^/    /'
                   fi
                 done < "$PLANLIST"
-              fi                
+              fi
+            output: hide  
+                
 
     apply:
       steps:
