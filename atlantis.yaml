@@ -116,14 +116,14 @@
 #         shellArgs: -cv
 
 
-# version: 3
-# automerge: false
-# parallel_plan: true
-# parallel_apply: true
+version: 3
+automerge: false
+parallel_plan: true
+parallel_apply: true
 
-# # Enable auto-discovery for Terraform projects
-# autodiscover:
-#   mode: enabled
+# Enable auto-discovery for Terraform projects
+autodiscover:
+  mode: enabled
 
 # # Default project configuration applied to all discovered projects
 # default_project_config:
