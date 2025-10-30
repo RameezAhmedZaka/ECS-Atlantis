@@ -1,12 +1,29 @@
-repos:
-  - id: /.*/
-    pre_workflow_hooks:
-      - run: |
-          echo "Generating atlantis.yaml dynamically..."
-          ./scripts/generate_atlantis_yaml.sh
-        description: Generating atlantis.yaml for Terraform
-        shell: bash
-        shellArgs: -cv
+# repos:
+#   - id: /.*/
+#     pre_workflow_hooks:
+#       - run: |
+#           echo "Generating atlantis.yaml dynamically..."
+#           ./scripts/generate_atlantis_yaml.sh
+#         description: Generating atlantis.yaml for Terraform
+#         shell: bash
+#         shellArgs: -cv
+
+
+version: 3 # Available since v0.1.0
+automerge: true # Available since v0.15.0
+autodiscover: # Available since v0.18.0
+  mode: auto
+  ignore_paths:
+  - atlantis
+
+projects:
+- name: my-project-name 
+  dir: . 
+  workspace: default 
+  terraform_distribution: terraform 
+  terraform_version: v0.11.0 
+  autoplan: 
+    when_modified: ["*.tf", "../modules/**/*.tf", ".terraform.lock.hcl"]  
 
 
 # version: 3
