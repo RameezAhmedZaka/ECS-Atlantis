@@ -12,6 +12,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: staging-workflow
+    max_comment_size: 0 
     apply_requirements: [] 
 
   - name: apps-production
@@ -22,6 +23,7 @@ projects:
       when_modified:
         - "application/**"
     workflow: production-workflow
+    max_comment_size: 0 
     apply_requirements: [approved, mergeable] 
 
   # - name: apps-helia
