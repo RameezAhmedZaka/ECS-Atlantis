@@ -28,7 +28,12 @@ workflows:
               PROJECT="apps-staging"
               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
               chmod +x ./scripts/process-application.sh
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+              
+              # Run the plan but capture and filter output to suppress default summary
+              {
+                ./scripts/process-application.sh "$ENV" "$APP_FILTER" 2>&1 | \
+                grep -v -E "(Plan:|To apply|To apply all|Do you want to perform these actions|Terraform will perform the following actions|Note:|╷|│|╵)" || true
+              }
         - run: |
             set -euo pipefail
             ENV="staging"
@@ -92,7 +97,7 @@ workflows:
                           IS_CHANGED=true
                           break
                         fi
-                      done < "$CHANGED_APPS_LIST"
+                      done < "$CHANGED_APPS_LIST" 2>/dev/null || true
                     fi
                     
                     if [ "$IS_CHANGED" = "false" ]; then
@@ -106,7 +111,13 @@ workflows:
               if [ $CHANGED_COUNT -gt 0 ]; then
                 echo ""
                 echo "### 🔄 Applications with Changes ($CHANGED_COUNT):"
-                echo "*Changes detected - review plan details above*"
+                if [ -f "$CHANGED_APPS_LIST" ]; then
+                  while IFS= read -r changed_app; do
+                    if [ -n "$changed_app" ]; then
+                      echo "- **$changed_app** - Changes pending application"
+                    fi
+                  done < "$CHANGED_APPS_LIST"
+                fi
                 
                 echo ""
                 echo "▶️ To apply changes:"
@@ -117,6 +128,10 @@ workflows:
                   echo "atlantis apply -p apps-staging"
                 fi
                 echo '```'
+              else
+                echo ""
+                echo "### ✅ All applications are up-to-date!"
+                echo "No infrastructure changes required."
               fi
               
               echo ""
@@ -126,11 +141,6 @@ workflows:
             } > "$CUSTOM_OUTPUT_FILE"
             
             cat "$CUSTOM_OUTPUT_FILE"
-            
-        # This step suppresses Atlantis' default plan output
-        - show: 
-            # Empty show step to override default plan output
-            # This will be replaced with our custom output above
 
     apply:
       steps:
@@ -143,9 +153,6 @@ workflows:
             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
             chmod +x ./scripts/apply-plans.sh
             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-
-
-
 
 # version: 3
 # automerge: true 
