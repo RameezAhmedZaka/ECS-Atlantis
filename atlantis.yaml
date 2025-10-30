@@ -103,7 +103,7 @@ workflows:
                   echo '```'
                 fi
                 
-                echo "🔁 To re-plan:"
+                echo "🔁 To re-plan :"
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-staging"
