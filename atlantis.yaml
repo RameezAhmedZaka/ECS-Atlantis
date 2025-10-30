@@ -14,25 +14,25 @@ projects:
     workflow: staging-workflow
     apply_requirements: [] 
 
-  - name: apps-production
-    dir: .
-    terraform_version: v1.6.6
-    autoplan:
-      enabled: true  
-      when_modified:
-        - "application/**"
-    workflow: production-workflow
-    apply_requirements: [approved, mergeable] 
+  # - name: apps-production
+  #   dir: .
+  #   terraform_version: v1.6.6
+  #   autoplan:
+  #     enabled: true  
+  #     when_modified:
+  #       - "application/**"
+  #   workflow: production-workflow
+  #   apply_requirements: [approved, mergeable] 
 
-  - name: apps-helia
-    dir: .
-    terraform_version: v1.6.6  
-    autoplan:
-      enabled: true 
-      when_modified:
-        - "application/**"
-    workflow: helia-workflow
-    apply_requirements: [approved, mergeable]     
+  # - name: apps-helia
+  #   dir: .
+  #   terraform_version: v1.6.6  
+  #   autoplan:
+  #     enabled: true 
+  #     when_modified:
+  #       - "application/**"
+  #   workflow: helia-workflow
+  #   apply_requirements: [approved, mergeable]     
 
 workflows:
   staging-workflow:
