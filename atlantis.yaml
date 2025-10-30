@@ -16,7 +16,7 @@ parallel_apply: true
 
 # Enable auto-discovery for Terraform projects
 autodiscover:
-  mode: auto
+  mode: enabled
 
 # Default project configuration applied to all discovered projects
 default_project_config:
