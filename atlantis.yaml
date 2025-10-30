@@ -10,17 +10,22 @@
 
 
 version: 3
-automerge: false             # Disable auto-merging by default
-parallel_plan: true          # Optional: plan multiple projects in parallel
-parallel_apply: false        # Apply sequentially to avoid conflicts
+automerge: false
+parallel_plan: true
+parallel_apply: true
 
-# Auto-plan for any modified Terraform files
-autoplan:
-  enabled: true
-  when_modified:
-    - "application/**"
+# Enable auto-discovery for Terraform projects
+autodiscover:
+  mode: auto
 
-# Optionally define a default workflow
+# Default project configuration applied to all discovered projects
+default_project_config:
+  terraform_version: v1.5.0
+  apply_requirements: [mergeable]
+  autoplan:
+    enabled: true
+  workflow: default
+
 workflows:
   default:
     plan:
@@ -30,8 +35,6 @@ workflows:
     apply:
       steps:
         - apply
-
-
 # version: 3
 # automerge: true 
 # parallel_plan: false  
