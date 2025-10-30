@@ -1,7 +1,7 @@
 
 
     repos:
-    - id: /.*/ # Or a specific repo ID
+    - id: /application/*/ # Or a specific repo ID
       pre_workflow_hooks:
       - run: ./scripts/generate-atlantis-yaml.sh
 
