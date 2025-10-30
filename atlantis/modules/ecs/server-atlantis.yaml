@@ -7,3 +7,70 @@ repos:
       - plan_requirements
     apply_requirements: []
     workflow: default
+
+# server.yaml
+repos:
+  - id: /.*/  # Match all repositories
+    apply_requirements: [approved, mergeable]
+    workflow: default
+    allow_custom_workflows: true
+    allowed_overrides:
+      - apply_requirements
+      - workflow
+      - plan_requirements
+    apply_requirements: []    
+    pre_workflow_hooks:
+      - run: |
+          echo "Generating dynamic atlantis.yaml for $(basename $REPO_ROOT)"
+          
+          # Create dynamic atlantis.yaml
+          cat > atlantis.yaml << EOF
+          version: 3
+          automerge: false
+          parallel_plan: true
+          parallel_apply: true
+          projects:
+          EOF
+
+                    # Find all Terraform directories and generate config
+                    find . -type f -name "*.tf" | sed 's|/[^/]*$||' | sort -u | while read dir; do
+                      if [[ "$dir" =~ ^\./application/([^/]+) ]]; then
+                        project_name="app-${BASH_REMATCH[1]}"
+                        cat >> atlantis.yaml << EOF
+            - name: $project_name
+              dir: $dir
+              autoplan:
+                enabled: true
+                when_modified: ["$dir/**/*"]
+              workspace: default
+              terraform_version: v1.5.0
+              apply_requirements: [approved, mergeable]
+          EOF
+                      elif [[ "$dir" =~ ^\./([^/]+) ]]; then
+                        project_name="${BASH_REMATCH[1]}"
+                        cat >> atlantis.yaml << EOF
+            - name: $project_name
+              dir: $dir
+              autoplan:
+                enabled: true
+                when_modified: ["$dir/**/*"]
+              workspace: default
+              terraform_version: v1.5.0
+              apply_requirements: [approved, mergeable]
+          EOF
+                      fi
+                    done
+
+                    cat >> atlantis.yaml << EOF
+          workflows:
+            default:
+              plan:
+                steps:
+                  - init
+                  - plan
+              apply:
+                steps:
+                  - apply
+          EOF
+                    
+                    echo "Generated atlantis.yaml with dynamic projects"    
