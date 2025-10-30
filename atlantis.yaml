@@ -11,8 +11,7 @@ projects:
       enabled: true  
       when_modified:
         - "application/**"
-    workflow: staging-workflow
-    max_comment_size: 0 
+    workflow: staging-workflow 
     apply_requirements: [] 
 
   - name: apps-production
@@ -23,7 +22,6 @@ projects:
       when_modified:
         - "application/**"
     workflow: production-workflow
-    max_comment_size: 0 
     apply_requirements: [approved, mergeable] 
 
   # - name: apps-helia
@@ -39,6 +37,7 @@ projects:
 workflows:
   staging-workflow:
     plan:
+      max_comment_size: 0 
       steps:
         - env:
             name: APP_FILTER
