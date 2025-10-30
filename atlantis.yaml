@@ -131,9 +131,7 @@ workflows:
                     terraform -chdir="$app_dir" show -no-color "$plan_path" | sed -e 's/^/    /'
                   fi
                 done < "$PLANLIST"
-              fi
-            output: hide  
-                
+              fi                
 
     apply:
       steps:
