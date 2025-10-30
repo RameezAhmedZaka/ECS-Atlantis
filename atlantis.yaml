@@ -9,32 +9,32 @@
 #         shellArgs: -cv
 
 
-version: 3
-automerge: false
-parallel_plan: true
-parallel_apply: true
+# version: 3
+# automerge: false
+# parallel_plan: true
+# parallel_apply: true
 
-# Enable auto-discovery for Terraform projects
-autodiscover:
-  mode: enabled
+# # Enable auto-discovery for Terraform projects
+# autodiscover:
+#   mode: enabled
 
-# Default project configuration applied to all discovered projects
-default_project_config:
-  terraform_version: v1.5.0
-  apply_requirements: [mergeable]
-  autoplan:
-    enabled: true
-  workflow: default
+# # Default project configuration applied to all discovered projects
+# default_project_config:
+#   terraform_version: v1.5.0
+#   apply_requirements: [mergeable]
+#   autoplan:
+#     enabled: true
+#   workflow: default
 
-workflows:
-  default:
-    plan:
-      steps:
-        - init
-        - plan
-    apply:
-      steps:
-        - apply
+# workflows:
+#   default:
+#     plan:
+#       steps:
+#         - init
+#         - plan
+#     apply:
+#       steps:
+#         - apply
 # version: 3
 # automerge: true 
 # parallel_plan: false  
