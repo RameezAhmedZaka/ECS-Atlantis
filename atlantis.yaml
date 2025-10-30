@@ -9,21 +9,26 @@
 #         shellArgs: -cv
 
 
-version: 3 # Available since v0.1.0
-automerge: true # Available since v0.15.0
-autodiscover: # Available since v0.18.0
-  mode: auto
-  ignore_paths:
-  - atlantis
+version: 3
+automerge: false             # Disable auto-merging by default
+parallel_plan: true          # Optional: plan multiple projects in parallel
+parallel_apply: false        # Apply sequentially to avoid conflicts
 
-projects:
-- name: my-project-name 
-  dir: . 
-  workspace: default 
-  terraform_distribution: terraform 
-  terraform_version: v0.11.0 
-  autoplan: 
-    when_modified: ["*.tf", "../modules/**/*.tf", ".terraform.lock.hcl"]  
+# Auto-plan for any modified Terraform files
+autoplan:
+  when_modified:
+    - '**/*.tf'
+
+# Optionally define a default workflow
+workflows:
+  default:
+    plan:
+      steps:
+        - init
+        - plan
+    apply:
+      steps:
+        - apply
 
 
 # version: 3
