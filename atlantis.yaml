@@ -114,6 +114,11 @@ workflows:
               
             else
               echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
+            
         - run: |
             set -euo pipefail
             ENV="staging"

@@ -91,10 +91,10 @@ resource "aws_ecs_task_definition" "backend_task" {
         name : "ATLANTIS_REPO_CONFIG_JSON",
         value : jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
         },
-        {
-          name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
-          value = "1"  
-        },
+        # {
+        #   name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
+        #   value = "1"  
+        # },
         {
           name  = "ATLANTIS_GH_APP_ID"
           value = var.github_app_id
