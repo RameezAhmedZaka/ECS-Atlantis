@@ -119,6 +119,16 @@ workflows:
               echo ""
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
+              cat "$CUSTOM_OUTPUT_FILE"
+              
+              # Show plan files if they exist
+              if [ -f "$PLANLIST" ] && [ -s "$PLANLIST" ]; then
+                echo ""
+                echo "📦 Terraform plan files created:"
+                echo '```'
+                cut -d'|' -f2 "$PLANLIST"
+                echo '```'
+              fi            
 
     apply:
       steps:
