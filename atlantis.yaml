@@ -16,6 +16,7 @@ parallel_apply: false        # Apply sequentially to avoid conflicts
 
 # Auto-plan for any modified Terraform files
 autoplan:
+  enabled: true
   when_modified:
     - '**/*.tf'
 
