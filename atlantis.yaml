@@ -120,8 +120,10 @@ workflows:
                       APP_NAME=$(basename "$app_dir")
                       echo "**🔹 $APP_NAME**"
                       echo '```diff'
-                      # Show only the resource changes summary, not the full plan
-                      terraform -chdir="$app_dir" show "$plan_path" | grep -E "(^[[:space:]]*#[[:space:]]+|#.*will be|#.*created|#.*destroyed|#.*replaced)" | head -20
+                      # Multiple patterns to catch different Terraform output formats
+                      terraform -chdir="$app_dir" show -no-color "$plan_path" | \
+                        grep -E "(^[[:space:]]*#[[:space:]]+|[#] |Plan:|Terraform will perform|will be created|will be destroyed|will be updated|will be replaced|created|destroyed|replaced|added|changed|deleted)" | \
+                        head -15
                       echo '```'
                       echo ""
                     fi
@@ -134,7 +136,6 @@ workflows:
                 echo ""
                 echo "If you expected changes, ensure your modifications affect the Terraform configuration."
               fi
-
     apply:
       steps:
         - env:
