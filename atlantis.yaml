@@ -119,7 +119,6 @@ workflows:
               echo ""
               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
             fi
-        - run: |
             if [ -f "$PLANLIST" ] && [ -s "$PLANLIST" ]; then
               echo ""
               echo "📦 Terraform plan details:"
