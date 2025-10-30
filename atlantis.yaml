@@ -48,7 +48,8 @@ workflows:
               PROJECT="apps-staging"
               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
               chmod +x ./scripts/process-application.sh
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER" 
+              # Run the script but suppress its output
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER" > /tmp/process_output.log 2>&1
             output: hide  
         - run: 
             command: |
@@ -73,47 +74,59 @@ workflows:
                 # Trim leading space
                 CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
                 
-                # Write custom output
-                CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+                # Show ONLY your custom output
+                echo "## 🚀 Staging Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-                {
-                  echo "## 🚀 Staging Environment"
-                  echo "Plan generated for $APP_COUNT application(s) with changes"
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
                   echo ""
-                  
-                  if [ $APP_COUNT -gt 0 ]; then
-                    echo "### Changed Applications:"
-                    for app in $CHANGED_APPS; do
-                      echo "- **$app**"  
-                    done
-                    echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-staging -- $app"
                     echo '```'
                     echo ""
-                    echo "▶️ To apply individual applications:"
-                    echo ""
-                    for app in $CHANGED_APPS; do
-                      echo "**$app**"
-                      echo '```'
-                      echo "atlantis apply -p apps-staging -- $app"
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-staging"
+                  echo '```'
+                fi
+                
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-staging"
+                echo '```'
+                echo ""
+                
+                # Show plan details in a clean way
+                if [ -f "$PLANLIST" ] && [ -s "$PLANLIST" ]; then
+                  echo ""
+                  echo "📦 Terraform Plan Summary:"
+                  echo ""
+                  while IFS='|' read -r app_dir plan_path; do
+                    if [ -n "$plan_path" ] && [ -f "$plan_path" ]; then
+                      APP_NAME=$(basename "$app_dir")
+                      echo "**🔹 $APP_NAME**"
+                      echo '```diff'
+                      # Show only the resource changes summary, not the full plan
+                      terraform -chdir="$app_dir" show "$plan_path" | grep -E "(^[[:space:]]*#[[:space:]]+|#.*will be|#.*created|#.*destroyed|#.*replaced)" | head -20
                       echo '```'
                       echo ""
-                    done
-                    echo "⏩ To apply **all $APP_COUNT applications**:"
-                    echo ""
-                    echo '```'
-                    echo "atlantis apply -p apps-staging"
-                    echo '```'
-                  fi
-                  
-                  echo "🔁 To re-plan:"
-                  echo ""
-                  echo '```'
-                  echo "atlantis plan -p apps-staging"
-                  echo '```'
-                  echo ""
-                } > "$CUSTOM_OUTPUT_FILE"
-                
-                cat "$CUSTOM_OUTPUT_FILE"
+                    fi
+                  done < "$PLANLIST"
+                fi
                 
               else
                 echo "## ✅ No Infrastructure Changes"
@@ -121,31 +134,49 @@ workflows:
                 echo ""
                 echo "If you expected changes, ensure your modifications affect the Terraform configuration."
               fi
-              if [ -f "$PLANLIST" ] && [ -s "$PLANLIST" ]; then
-                echo ""
-                echo "📦 Terraform plan details:"
-                while IFS='|' read -r app_dir plan_path; do
-                  if [ -n "$plan_path" ] && [ -f "$plan_path" ]; then
-                    echo ""
-                    echo "🔹 Plan for $(basename "$app_dir")"
-                    terraform -chdir="$app_dir" show -no-color "$plan_path" | sed -e 's/^/    /'
-                  fi
-                done < "$PLANLIST"
-              fi
-            # output: hide  
-                
 
     apply:
       steps:
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
-        - run: |
-            set -euo pipefail
-            ENV="staging"
-            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-            chmod +x ./scripts/apply-plans.sh
-            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+              chmod +x ./scripts/apply-plans.sh
+              # Run apply but suppress its output
+              ./scripts/apply-plans.sh "$ENV" "$APP_FILTER" > /tmp/apply_output.log 2>&1
+            output: hide
+        - run:
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              
+              # Check if apply was successful and show custom message
+              if [ $? -eq 0 ]; then
+                echo "## ✅ Apply Completed Successfully"
+                echo "All infrastructure changes have been applied to the staging environment."
+                echo ""
+                
+                # If you have a way to track what was applied, show it here
+                APPLIED_APPS_LIST="/tmp/atlantis_applied_apps_${ENV}.lst"
+                if [ -f "$APPLIED_APPS_LIST" ] && [ -s "$APPLIED_APPS_LIST" ]; then
+                  echo "### Applied Applications:"
+                  while IFS= read -r app; do
+                    if [ -n "$app" ]; then
+                      echo "- ✅ $app"
+                    fi
+                  done < "$APPLIED_APPS_LIST"
+                else
+                  echo "All planned changes have been applied."
+                fi
+              else
+                echo "## ❌ Apply Failed"
+                echo "There were errors during the apply process. Check the logs for details."
+              fi
+
 
   # production-workflow:                   
   #   plan:
