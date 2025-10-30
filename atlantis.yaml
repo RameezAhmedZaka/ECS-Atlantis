@@ -18,7 +18,7 @@ parallel_apply: false        # Apply sequentially to avoid conflicts
 autoplan:
   enabled: true
   when_modified:
-    - '**/*.tf'
+    - "application/**"
 
 # Optionally define a default workflow
 workflows:
