@@ -14,15 +14,15 @@ projects:
     workflow: staging-workflow
     apply_requirements: [] 
 
-  # - name: apps-production
-  #   dir: .
-  #   terraform_version: v1.6.6
-  #   autoplan:
-  #     enabled: true  
-  #     when_modified:
-  #       - "application/**"
-  #   workflow: production-workflow
-  #   apply_requirements: [approved, mergeable] 
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: [approved, mergeable] 
 
   # - name: apps-helia
   #   dir: .
@@ -48,33 +48,33 @@ workflows:
               PROJECT="apps-staging"
               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
               chmod +x ./scripts/process-application.sh
-              # Run the script but suppress its output
-              ./scripts/process-application.sh "$ENV" "$APP_FILTER" > /tmp/process_output.log 2>&1
-            output: hide  
-        - run: 
-            command: |
-              set -euo pipefail
-              ENV="staging"
-              PROJECT="apps-staging"
-              CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-              PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER" 
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            PROJECT="apps-staging"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-              if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-                # Read changed apps using POSIX-compliant method
-                CHANGED_APPS=""
-                APP_COUNT=0
-                
-                while IFS= read -r app; do
-                  if [ -n "$app" ]; then
-                    CHANGED_APPS="${CHANGED_APPS} $app"
-                    APP_COUNT=$((APP_COUNT + 1))
-                  fi
-                done < "$CHANGED_APPS_LIST"
-                
-                # Trim leading space
-                CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
-                
-                # Show ONLY your custom output
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
+              
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              
+              {
                 echo "## 🚀 Staging Environment"
                 echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
@@ -107,172 +107,124 @@ workflows:
                 echo ""
                 echo '```'
                 echo "atlantis plan -p apps-staging"
-                echo '```'
                 echo ""
-                
-                # Show plan details in a clean way
-                if [ -f "$PLANLIST" ] && [ -s "$PLANLIST" ]; then
-                  echo ""
-                  echo "📦 Terraform Plan Summary:"
-                  echo ""
-                  while IFS='|' read -r app_dir plan_path; do
-                    if [ -n "$plan_path" ] && [ -f "$plan_path" ]; then
-                      APP_NAME=$(basename "$app_dir")
-                      echo "**🔹 $APP_NAME**"
-                      echo '```diff'
-                      # Multiple patterns to catch different Terraform output formats
-                      terraform -chdir="$app_dir" show -no-color "$plan_path" | \
-                        grep -E "(^[[:space:]]*#[[:space:]]+|[#] |Plan:|Terraform will perform|will be created|will be destroyed|will be updated|will be replaced|created|destroyed|replaced|added|changed|deleted)" | \
-                        head -15
-                      echo '```'
-                      echo ""
-                    fi
-                  done < "$PLANLIST"
-                fi
-                
-              else
-                echo "## ✅ No Infrastructure Changes"
-                echo "No changes detected in any application. Your infrastructure matches the configuration."
-                echo ""
-                echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-              fi
+              } > "$CUSTOM_OUTPUT_FILE"
+              
+              cat "$CUSTOM_OUTPUT_FILE"
+              
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi            
+
     apply:
       steps:
         - env:
             name: APP_FILTER
             command: echo "$COMMENT_ARGS" | tr -d '\\'
-        - run: 
-            command: |
-              set -euo pipefail
-              ENV="staging"
-              echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-              chmod +x ./scripts/apply-plans.sh
-              # Run apply but suppress its output
-              ./scripts/apply-plans.sh "$ENV" "$APP_FILTER" > /tmp/apply_output.log 2>&1
-            output: hide
-        - run:
-            command: |
-              set -euo pipefail
-              ENV="staging"
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
+
+  production-workflow:                   
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            PROJECT="apps-production"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-              # Check if apply was successful and show custom message
-              if [ $? -eq 0 ]; then
-                echo "## ✅ Apply Completed Successfully"
-                echo "All infrastructure changes have been applied to the staging environment."
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
+              
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              
+              {
+                echo "## 🚀 Production Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
                 echo ""
                 
-                # If you have a way to track what was applied, show it here
-                APPLIED_APPS_LIST="/tmp/atlantis_applied_apps_${ENV}.lst"
-                if [ -f "$APPLIED_APPS_LIST" ] && [ -s "$APPLIED_APPS_LIST" ]; then
-                  echo "### Applied Applications:"
-                  while IFS= read -r app; do
-                    if [ -n "$app" ]; then
-                      echo "- ✅ $app"
-                    fi
-                  done < "$APPLIED_APPS_LIST"
-                else
-                  echo "All planned changes have been applied."
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-production -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-production"
+                  echo '```'
                 fi
-              else
-                echo "## ❌ Apply Failed"
-                echo "There were errors during the apply process. Check the logs for details."
-              fi
-
-
-  # production-workflow:                   
-  #   plan:
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-  #           chmod +x ./scripts/process-application.sh
-  #           ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           PROJECT="apps-production"
-  #           CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-  #           PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
-            
-  #           if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-  #             # Read changed apps using POSIX-compliant method
-  #             CHANGED_APPS=""
-  #             APP_COUNT=0
-              
-  #             while IFS= read -r app; do
-  #               if [ -n "$app" ]; then
-  #                 CHANGED_APPS="${CHANGED_APPS} $app"
-  #                 APP_COUNT=$((APP_COUNT + 1))
-  #               fi
-  #             done < "$CHANGED_APPS_LIST"
-              
-  #             # Trim leading space
-  #             CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
-              
-  #             # Write custom output
-  #             CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
-              
-  #             {
-  #               echo "## 🚀 Production Environment"
-  #               echo "Plan generated for $APP_COUNT application(s) with changes"
-  #               echo ""
                 
-  #               if [ $APP_COUNT -gt 0 ]; then
-  #                 echo "### Changed Applications:"
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "- **$app**"  
-  #                 done
-  #                 echo ""
-  #                 echo '```'
-  #                 echo ""
-  #                 echo "▶️ To apply individual applications:"
-  #                 echo ""
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "**$app**"
-  #                   echo '```'
-  #                   echo "atlantis apply -p apps-production -- $app"
-  #                   echo '```'
-  #                   echo ""
-  #                 done
-  #                 echo "⏩ To apply **all $APP_COUNT applications**:"
-  #                 echo ""
-  #                 echo '```'
-  #                 echo "atlantis apply -p apps-production"
-  #                 echo '```'
-  #               fi
-                
-  #               echo "🔁 To re-plan:"
-  #               echo ""
-  #               echo '```'
-  #               echo "atlantis plan -p apps-production"
-  #               echo ""
-  #             } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-production"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-  #             cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-  #           else
-  #             echo "## ✅ No Infrastructure Changes"
-  #             echo "No changes detected in any application. Your infrastructure matches the configuration."
-  #             echo ""
-  #             echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-  #           fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
 
-  #   apply:
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-  #           chmod +x ./scripts/apply-plans.sh
-  #           ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
+    apply:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
   # helia-workflow:
   #   plan:
