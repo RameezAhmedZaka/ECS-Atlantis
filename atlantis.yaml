@@ -1,16 +1,9 @@
-version: 3
-automerge: true
-parallel_plan: false
-parallel_apply: false
 
-# Pre-hook to generate the full atlantis.yaml dynamically
-pre_workflow_hooks:
-  - run: ./scripts/generate-atlantis-yaml.sh
-    description: "Generate dynamic atlantis.yaml based on applications"
 
-# Initial empty projects (will be populated by pre-hook)
-projects: []
-
+    repos:
+    - id: /.*/ # Or a specific repo ID
+      pre_workflow_hooks:
+      - run: ./scripts/generate-atlantis-yaml.sh
 
 
 
