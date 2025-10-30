@@ -1,9 +1,23 @@
 
-repos:
-  - id: /.*/  # Matches all repositories
-    pre_workflow_hooks:
-      - run: ./scripts/generate-atlantis-projects.sh
-        shell: bash
+
+
+
+
+
+
+repoConfig: |
+  repos:
+    - id: /.*/
+      apply_requirements: [approved, mergeable]
+      pre_workflow_hooks:
+        - run: |
+            echo "Generating atlantis.yaml for Terraform"
+            chmod +x ./scripts/generate-terraform-projects.sh
+            ./scripts/generate-terraform-projects.sh
+          description: Generating atlantis.yaml for Terraform
+          shell: bash
+
+          
 
 
 
