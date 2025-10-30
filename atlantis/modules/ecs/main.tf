@@ -92,6 +92,10 @@ resource "aws_ecs_task_definition" "backend_task" {
         value : jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
         },
         {
+          name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
+          value = "1"  
+        },
+        {
           name  = "ATLANTIS_GH_APP_ID"
           value = var.github_app_id
         }
@@ -141,7 +145,6 @@ resource "aws_security_group" "backend_service" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 data "aws_iam_policy_document" "ecs_assume_role_policy_doc" {
   version = "2012-10-17"
 
@@ -158,6 +161,17 @@ data "aws_iam_policy_document" "ecs_assume_role_policy_doc" {
     }
     sid = ""
   }
+}
+
+resource "aws_iam_role" "backend_task_role" {
+  name               = var.backend_task_role_name
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy_doc.json
+}
+
+# Attach full admin to Task Role
+resource "aws_iam_role_policy_attachment" "admin_access" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 data "aws_iam_policy_document" "allow_all_secrets_manager_doc" {
@@ -195,11 +209,6 @@ data "aws_iam_policy_document" "allow_api_gateway_execute" {
   }
 }
 
-resource "aws_iam_role" "backend_task_role" {
-  name               = var.backend_task_role_name
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy_doc.json
-}
-
 resource "aws_iam_policy" "secrets_manager_access" {
   name   = "SecretsManagerAccess"
   policy = data.aws_iam_policy_document.allow_all_secrets_manager_doc.json
@@ -208,31 +217,6 @@ resource "aws_iam_policy" "secrets_manager_access" {
 resource "aws_iam_policy" "api_gateway_access" {
   name   = "APIGatewayExecute"
   policy = data.aws_iam_policy_document.allow_api_gateway_execute.json
-}
-
-resource "aws_iam_role_policy_attachment" "vpc_full_access" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_full_access" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "s3_full_access" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "attach_secrets" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = aws_iam_policy.secrets_manager_access.arn
-}
-
-resource "aws_iam_role_policy_attachment" "attach_apigw" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = aws_iam_policy.api_gateway_access.arn
 }
 
 resource "aws_iam_role" "backend_execution_role" {
