@@ -1,5 +1,3 @@
-atlantis plan -p rdot-staging -- -destroy
-
 #!/bin/bash
 set -euo pipefail
 
