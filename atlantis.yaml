@@ -11,7 +11,7 @@ projects:
         - "application/app1/**/*"
         - "application/app1/config/production.tfvars"
         - "application/app1/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -23,7 +23,7 @@ projects:
         - "application/app1/**/*"
         - "application/app1/config/helia.tfvars"
         - "application/app1/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -35,7 +35,7 @@ projects:
         - "application/app2/**/*"
         - "application/app2/config/production.tfvars"
         - "application/app2/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -47,7 +47,7 @@ projects:
         - "application/app2/**/*"
         - "application/app2/config/helia.tfvars"
         - "application/app2/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -59,7 +59,7 @@ projects:
         - "application/app3/**/*"
         - "application/app3/config/production.tfvars"
         - "application/app3/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -71,7 +71,7 @@ projects:
         - "application/app3/**/*"
         - "application/app3/config/helia.tfvars"
         - "application/app3/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -83,7 +83,7 @@ projects:
         - "application/app4/**/*"
         - "application/app4/config/production.tfvars"
         - "application/app4/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -95,7 +95,7 @@ projects:
         - "application/app4/**/*"
         - "application/app4/config/helia.tfvars"
         - "application/app4/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -107,7 +107,7 @@ projects:
         - "application/network/**/*"
         - "application/network/config/production.tfvars"
         - "application/network/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -119,7 +119,7 @@ projects:
         - "application/network/**/*"
         - "application/network/config/helia.tfvars"
         - "application/network/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -131,7 +131,7 @@ projects:
         - "application/rdot/**/*"
         - "application/rdot/config/production.tfvars"
         - "application/rdot/env/production/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
@@ -143,7 +143,7 @@ projects:
         - "application/rdot/**/*"
         - "application/rdot/config/helia.tfvars"
         - "application/rdot/env/helia/*"
-    terraform_version: v1.5.0
+    terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
