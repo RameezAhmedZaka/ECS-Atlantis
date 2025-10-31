@@ -98,6 +98,10 @@ workflows:
       steps:
         - run: |
             PLANFILE="plan.tfplan"
+            if [[ "${COMMENT_ARGS:-}" == *"destroy"* ]]; then
+            echo "Destroy commands are not allowed through Atlantis!"
+            exit 1
+            fi
 
             case "\$PROJECT_NAME" in
               *-production)
