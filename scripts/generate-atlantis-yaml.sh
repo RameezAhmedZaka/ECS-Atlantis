@@ -31,6 +31,9 @@ get_environments() {
     echo "${envs[@]}"
 }
 
+# Array to track project names
+declare -a project_names=()
+
 # Loop through application apps
 if [ -d "application" ]; then
     for app_dir in application/*; do
@@ -40,8 +43,7 @@ if [ -d "application" ]; then
             envs=$(get_environments "$app_dir")
 
             if [ -z "$envs" ]; then
-                # Default project if no env detected
-                cat >> atlantis.yaml <<-PROJECT_EOF
+                cat >> atlantis.yaml << PROJECT_EOF
   - name: ${app_name}-default
     dir: $app_dir
     autoplan:
@@ -56,10 +58,10 @@ if [ -d "application" ]; then
       - approved
       - mergeable
 PROJECT_EOF
+                project_names+=("${app_name}-default")
             else
-                # Create project for each environment
                 for env in $envs; do
-                    cat >> atlantis.yaml <<-PROJECT_EOF
+                    cat >> atlantis.yaml << PROJECT_EOF
   - name: ${app_name}-${env}
     dir: $app_dir
     autoplan:
@@ -74,11 +76,15 @@ PROJECT_EOF
       - approved
       - mergeable
 PROJECT_EOF
+                    project_names+=("${app_name}-${env}")
                 done
             fi
         fi
     done
 fi
+
+echo "Total projects configured: ${#project_names[@]}"
+echo "Project names: ${project_names[*]}"
 
 # Workflows section
 cat >> atlantis.yaml <<-EOF
