@@ -11,12 +11,12 @@
 
  repos:
   - id: github.com/RameezAhmedZaka/ECS-Atlantis
-    allow_custom_workflows: true
-    allowed_overrides:
-      - apply_requirements
-      - workflow
-      - plan_requirements
-    apply_requirements: []
+    # allow_custom_workflows: true
+    # allowed_overrides:
+    #   - apply_requirements
+    #   - workflow
+    #   - plan_requirements
+    # apply_requirements: []
     pre_workflow_hooks:
         - run: |
             echo "Running config-generator from $(pwd)"
