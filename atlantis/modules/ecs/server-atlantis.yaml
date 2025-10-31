@@ -1,15 +1,4 @@
-repos:
-  - id: /.*/
-    allow_custom_workflows: true
-    allowed_overrides:
-      - apply_requirements
-      - workflow
-      - plan_requirements
-    apply_requirements: []
-
-    
-
-#  repos:
+# repos:
 #   - id: /.*/
 #     allow_custom_workflows: true
 #     allowed_overrides:
@@ -17,8 +6,19 @@ repos:
 #       - workflow
 #       - plan_requirements
 #     apply_requirements: []
-#     pre_workflow_hooks:
-#         - run: |
-#             chmod +x config-generator.sh
-#             ./config-generator.sh
-#           description: Generating configs for   
+
+    
+
+ repos:
+  - id: github.com/RameezAhmedZaka/ECS-Atlantis
+    allow_custom_workflows: true
+    allowed_overrides:
+      - apply_requirements
+      - workflow
+      - plan_requirements
+    apply_requirements: []
+    pre_workflow_hooks:
+        - run: |
+            chmod +x config-generator.sh
+            ./config-generator.sh
+          description: Generating configs for   
