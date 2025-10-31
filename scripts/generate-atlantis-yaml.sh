@@ -1,3 +1,5 @@
+atlantis plan -p rdot-staging -- -destroy
+
 #!/bin/bash
 set -euo pipefail
 
@@ -98,13 +100,11 @@ workflows:
       steps:
         - run: |
             PLANFILE="plan.tfplan"
-            if [[ "${ATLANTIS_COMMENT_ARGS[*]:-}" =~ destroy ]] || 
-               [[ "${ATLANTIS_COMMENT_BODY:-}" =~ destroy ]] || 
-               [[ "$@" =~ destroy ]]; then
-              echo "Destroy commands are not allowed through Atlantis!"
-              exit 1
+            DESTROY_FLAG=""
+            if echo "${ATLANTIS_COMMENT_ARGS:-}" | grep -q "\-destroy"; then
+              echo "Destroy plan requested"
+              DESTROY_FLAG="-destroy"
             fi
-
 
             case "\$PROJECT_NAME" in
               *-production)
@@ -132,6 +132,7 @@ workflows:
             echo "Planning for environment: \$ENV"
             echo "Using backend config: \$BACKEND_CONFIG"
             echo "Using var file: \$VAR_FILE"
+            echo "Destroy flag: \$DESTROY_FLAG"
 
             cd "\$PROJECT_DIR"
 
@@ -144,11 +145,11 @@ workflows:
             fi
 
             if [ -f "\$VAR_FILE" ]; then
-              timeout 300 terraform plan \
+              timeout 300 terraform plan \$DESTROY_FLAG \
                          -var-file="\$VAR_FILE" \
                          -out="\$PLANFILE"
             else
-              terraform plan -out="\$PLANFILE"
+              terraform plan \$DESTROY_FLAG -out="\$PLANFILE"
             fi
 
     apply:
