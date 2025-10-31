@@ -194,21 +194,23 @@ workflows:
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
 
+            cd "$PROJECT_DIR"
+
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$PROJECT_DIR" \
-                             -backend-config="$BACKEND_CONFIG" \
-                             -input=false -reconfigure
+              terraform init \
+                         -backend-config="$BACKEND_CONFIG" \
+                         -input=false -reconfigure
             else
               echo "Backend config not found, skipping backend init"
-              terraform init -chdir="$PROJECT_DIR" -input=false -reconfigure
+              terraform init -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform plan -chdir="$PROJECT_DIR" \
-                             -var-file="$VAR_FILE" \
-                             -out="$PLANFILE"
+              terraform plan \
+                         -var-file="$VAR_FILE" \
+                         -out="$PLANFILE"
             else
-              terraform plan -chdir="$PROJECT_DIR" -out="$PLANFILE"
+              terraform plan -out="$PLANFILE"
             fi
 
     apply:
@@ -239,16 +241,18 @@ workflows:
 
             echo "Applying for environment: $ENV"
 
+            cd "$PROJECT_DIR"
+
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$PROJECT_DIR" \
-                             -backend-config="$BACKEND_CONFIG" \
-                             -input=false -reconfigure
+              terraform init \
+                         -backend-config="$BACKEND_CONFIG" \
+                         -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform apply -chdir="$PROJECT_DIR" \
+              terraform apply \
                               -var-file="$VAR_FILE" \
                               "$PLANFILE"
             else
-              terraform apply -chdir="$PROJECT_DIR" "$PLANFILE"
+              terraform apply "$PLANFILE"
             fi
