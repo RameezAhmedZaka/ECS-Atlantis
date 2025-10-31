@@ -19,6 +19,7 @@
     apply_requirements: []
     pre_workflow_hooks:
         - run: |
+            echo "DEBUG: pre_workflow_hook is running"
             chmod +x config-generator.sh
             ./config-generator.sh
           description: Generating configs for   
