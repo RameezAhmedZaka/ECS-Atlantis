@@ -3,8 +3,9 @@ set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Create base atlantis.yaml
+# Create base atlantis.yaml with document start
 cat > atlantis.yaml << 'EOF'
+---
 version: 3
 automerge: false
 parallel_plan: false
@@ -75,14 +76,15 @@ PROJECT_EOF
     done
 fi
 
-# Workflows
+# Workflows section
 cat >> atlantis.yaml << 'EOF'
 workflows:
   multi_env_workflow:
     plan:
       steps:
         - run: |
-            PLANFILE="plan.tfplan"  
+            PLANFILE="plan.tfplan"
+
             case "$PROJECT_NAME" in
               *-production)
                 ENV="production"
@@ -111,16 +113,22 @@ workflows:
             echo "Using var file: $VAR_FILE"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$dir" -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+              terraform init -chdir="$dir" \
+                             -backend-config="$BACKEND_CONFIG" \
+                             -input=false -reconfigure
             else
               echo "Backend config not found, skipping init"
+              terraform init -chdir="$dir" -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform plan -var-file="$VAR_FILE" -out="$PLANFILE"
+              terraform plan -chdir="$dir" \
+                             -var-file="$VAR_FILE" \
+                             -out="$PLANFILE"
             else
-              terraform plan -out="$PLANFILE"
+              terraform plan -chdir="$dir" -out="$PLANFILE"
             fi
+
     apply:
       steps:
         - run: |
@@ -148,14 +156,19 @@ workflows:
             esac
 
             echo "Applying for environment: $ENV"
+
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+              terraform init -chdir="$dir" \
+                             -backend-config="$BACKEND_CONFIG" \
+                             -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform apply -var-file="$VAR_FILE" "$PLANFILE"
+              terraform apply -chdir="$dir" \
+                              -var-file="$VAR_FILE" \
+                              "$PLANFILE"
             else
-              terraform apply "$PLANFILE"
+              terraform apply -chdir="$dir" "$PLANFILE"
             fi
 EOF
 
