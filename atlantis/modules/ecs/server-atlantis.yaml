@@ -22,5 +22,5 @@ repos:
       - plan_requirements
     apply_requirements: []  
     pre_workflow_hooks:
-      - run: ./repo-config-generator.sh
+      # - run: ./repo-config-generator.sh
         description: Generating atlantis configs.
