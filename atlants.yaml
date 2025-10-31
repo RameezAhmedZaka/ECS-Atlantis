@@ -1,806 +1,806 @@
-# workflows:
-#   multi_env_workflow:
-#     plan:
-#       steps:
-#         - run: |
-#             # Extract environment from project name
-#             if [[ "\$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
-#               ENV="\${BASH_REMATCH[1]}"
+workflows:
+  multi_env_workflow:
+    plan:
+      steps:
+        - run: |
+            # Extract environment from project name
+            if [[ "\$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="\${BASH_REMATCH[1]}"
               
-#               # Set backend config and var file paths based on environment
-#               case "\$ENV" in
-#                 "production")
-#                   BACKEND_CONFIG="env/production/prod.conf"
-#                   VAR_FILE="config/production.tfvars"
-#                   ;;
-#                 "staging")
-#                   BACKEND_CONFIG="env/staging/stage.conf"
-#                   VAR_FILE="config/stage.tfvars"
-#                   ;;
-#                 "helia")
-#                   BACKEND_CONFIG="env/helia/helia.conf"
-#                   VAR_FILE="config/helia.tfvars"
-#                   ;;
-#                 *)
-#                   BACKEND_CONFIG="env/staging/stage.conf"
-#                   VAR_FILE="config/stage.tfvars"
-#                   ;;
-#               esac
-#             else
-#               # Default to staging if no environment detected
-#               ENV="staging"
-#               BACKEND_CONFIG="env/staging/stage.conf"
-#               VAR_FILE="config/stage.tfvars"
-#             fi
+              # Set backend config and var file paths based on environment
+              case "\$ENV" in
+                "production")
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                "staging")
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                "helia")
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              # Default to staging if no environment detected
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
             
-#             echo "Planning for environment: \$ENV"
-#             echo "Using backend config: \$BACKEND_CONFIG"
-#             echo "Using var file: \$VAR_FILE"
+            echo "Planning for environment: \$ENV"
+            echo "Using backend config: \$BACKEND_CONFIG"
+            echo "Using var file: \$VAR_FILE"
             
-#             # Initialize with backend config
-#             if [ -f "\$BACKEND_CONFIG" ]; then
-#               echo "Initializing with backend config: \$BACKEND_CONFIG"
-#               terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure
-#             else
-#               echo "Warning: Backend config \$BACKEND_CONFIG not found, using default init"
-#               terraform init -input=false -reconfigure
-#             fi
+            # Initialize with backend config
+            if [ -f "\$BACKEND_CONFIG" ]; then
+              echo "Initializing with backend config: \$BACKEND_CONFIG"
+              terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure
+            else
+              echo "Warning: Backend config \$BACKEND_CONFIG not found, using default init"
+              terraform init -input=false -reconfigure
+            fi
             
-#             # Plan with var file
-#             if [ -f "\$VAR_FILE" ]; then
-#               terraform plan -var-file="\$VAR_FILE" -out="\$PLANFILE"
-#             else
-#               echo "Warning: Var file \$VAR_FILE not found, using default plan"
-#               terraform plan -out="\$PLANFILE"
-#             fi
-#     apply:
-#       steps:
-#         - run: |
-#             # Extract environment from project name (same logic as plan)
-#             if [[ "\$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
-#               ENV="\${BASH_REMATCH[1]}"
+            # Plan with var file
+            if [ -f "\$VAR_FILE" ]; then
+              terraform plan -var-file="\$VAR_FILE" -out="\$PLANFILE"
+            else
+              echo "Warning: Var file \$VAR_FILE not found, using default plan"
+              terraform plan -out="\$PLANFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            # Extract environment from project name (same logic as plan)
+            if [[ "\$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="\${BASH_REMATCH[1]}"
               
-#               case "\$ENV" in
-#                 "production")
-#                   BACKEND_CONFIG="env/production/prod.conf"
-#                   VAR_FILE="config/production.tfvars"
-#                   ;;
-#                 "staging")
-#                   BACKEND_CONFIG="env/staging/stage.conf"
-#                   VAR_FILE="config/stage.tfvars"
-#                   ;;
-#                 "helia")
-#                   BACKEND_CONFIG="env/helia/helia.conf"
-#                   VAR_FILE="config/helia.tfvars"
-#                   ;;
-#                 *)
-#                   BACKEND_CONFIG="env/staging/stage.conf"
-#                   VAR_FILE="config/stage.tfvars"
-#                   ;;
-#               esac
-#             else
-#               ENV="staging"
-#               BACKEND_CONFIG="env/staging/stage.conf"
-#               VAR_FILE="config/stage.tfvars"
-#             fi
+              case "\$ENV" in
+                "production")
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                "staging")
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                "helia")
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
             
-#             echo "Applying for environment: \$ENV"
-#             echo "Using backend config: \$BACKEND_CONFIG"
-#             echo "Using var file: \$VAR_FILE"
+            echo "Applying for environment: \$ENV"
+            echo "Using backend config: \$BACKEND_CONFIG"
+            echo "Using var file: \$VAR_FILE"
             
-#             # Re-init with backend config for apply (to ensure consistency)
-#             if [ -f "\$BACKEND_CONFIG" ]; then
-#               terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure
-#             fi
+            # Re-init with backend config for apply (to ensure consistency)
+            if [ -f "\$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure
+            fi
             
-#             # Apply with var file
-#             if [ -f "\$VAR_FILE" ]; then
-#               terraform apply -var-file="\$VAR_FILE" "\$PLANFILE"
-#             else
-#               terraform apply "\$PLANFILE"
-#             fi
-#             EOF
+            # Apply with var file
+            if [ -f "\$VAR_FILE" ]; then
+              terraform apply -var-file="\$VAR_FILE" "\$PLANFILE"
+            else
+              terraform apply "\$PLANFILE"
+            fi
+            EOF
           
       
 
 
 
-# repos:
-#   - id: /.*/
-#     pre_workflow_hooks:
-#       - run: |
-#           echo "Generating atlantis.yaml dynamically..."
-#           ./scripts/generate-atlantis-yaml.sh
-#         description: Generating atlantis.yaml for Terraform
-#         shell: bash
-#         shellArgs: -cv
+repos:
+  - id: /.*/
+    pre_workflow_hooks:
+      - run: |
+          echo "Generating atlantis.yaml dynamically..."
+          ./scripts/generate-atlantis-yaml.sh
+        description: Generating atlantis.yaml for Terraform
+        shell: bash
+        shellArgs: -cv
 
 
-# # Default project configuration applied to all discovered projects
-# default_project_config:
-#   terraform_version: v1.5.0
-#   apply_requirements: [mergeable]
-#   autoplan:
-#     enabled: true
-#   workflow: default
+# Default project configuration applied to all discovered projects
+default_project_config:
+  terraform_version: v1.5.0
+  apply_requirements: [mergeable]
+  autoplan:
+    enabled: true
+  workflow: default
 
-# workflows:
-#   default:
-#     plan:
-#       steps:
-#         - init
-#         - plan
-#     apply:
-#       steps:
-#         - apply
-# version: 3
-# automerge: true 
-# parallel_plan: false  
-# parallel_apply: false  
+workflows:
+  default:
+    plan:
+      steps:
+        - init
+        - plan
+    apply:
+      steps:
+        - apply
+version: 3
+automerge: true 
+parallel_plan: false  
+parallel_apply: false  
 
-# projects:
-#   - name: apps-staging
-#     dir: .
-#     terraform_version: v1.6.6
-#     autoplan:
-#       enabled: true  
-#       when_modified:
-#         - "application/**"
-#     workflow: staging-workflow
-#     apply_requirements: [] 
+projects:
+  - name: apps-staging
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: staging-workflow
+    apply_requirements: [] 
 
-#   - name: apps-production
-#     dir: .
-#     terraform_version: v1.6.6
-#     autoplan:
-#       enabled: true  
-#       when_modified:
-#         - "application/**"
-#     workflow: production-workflow
-#     apply_requirements: [approved, mergeable] 
+  - name: apps-production
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: [approved, mergeable] 
 
-#   - name: apps-helia
-#     dir: .
-#     terraform_version: v1.6.6  
-#     autoplan:
-#       enabled: true 
-#       when_modified:
-#         - "application/**"
-#     workflow: helia-workflow
-#     apply_requirements: [approved, mergeable]     
+  - name: apps-helia
+    dir: .
+    terraform_version: v1.6.6  
+    autoplan:
+      enabled: true 
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
+    apply_requirements: [approved, mergeable]     
 
-# workflows:
-#   staging-workflow:
-#     plan:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: 
-#             command: |
-#               set -euo pipefail
-#               ENV="staging"
-#               PROJECT="apps-staging"
-#               echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#               chmod +x ./scripts/process-application.sh
-#               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-#         - run: |
-#             set -euo pipefail
-#             ENV="staging"
-#             PROJECT="apps-staging"
-#             CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-#             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+workflows:
+  staging-workflow:
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              PROJECT="apps-staging"
+              echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+              chmod +x ./scripts/process-application.sh
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            PROJECT="apps-staging"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-#             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-#               # Read changed apps using POSIX-compliant method
-#               CHANGED_APPS=""
-#               APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-#               while IFS= read -r app; do
-#                 if [ -n "$app" ]; then
-#                   CHANGED_APPS="${CHANGED_APPS} $app"
-#                   APP_COUNT=$((APP_COUNT + 1))
-#                 fi
-#               done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-#               # Trim leading space
-#               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-#               # Write custom output
-#               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-#               {
-#                 echo "## 🚀 Staging Environment"
-#                 echo "Plan generated for $APP_COUNT application(s) with changes"
-#                 echo ""
+              {
+                echo "## 🚀 Staging Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-#                 if [ $APP_COUNT -gt 0 ]; then
-#                   echo "### Changed Applications:"
-#                   for app in $CHANGED_APPS; do
-#                     echo "- **$app**"  
-#                   done
-#                   echo ""
-#                   echo '```'
-#                   echo ""
-#                   echo "▶️ To apply individual applications:"
-#                   echo ""
-#                   for app in $CHANGED_APPS; do
-#                     echo "**$app**"
-#                     echo '```'
-#                     echo "atlantis apply -p apps-staging -- $app"
-#                     echo '```'
-#                     echo ""
-#                   done
-#                   echo "⏩ To apply **all $APP_COUNT applications**:"
-#                   echo ""
-#                   echo '```'
-#                   echo "atlantis apply -p apps-staging"
-#                   echo '```'
-#                 fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-staging -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-staging"
+                  echo '```'
+                fi
                 
-#                 echo "🔁 To re-plan:"
-#                 echo ""
-#                 echo '```'
-#                 echo "atlantis plan -p apps-staging"
-#                 echo ""
-#               } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-staging"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-#               cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-#             else
-#               echo "## ✅ No Infrastructure Changes"
-#               echo "No changes detected in any application. Your infrastructure matches the configuration."
-#               echo ""
-#               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-#             fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
-#     apply:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="staging"
-#             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/apply-plans.sh
-#             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
+    apply:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
 
-#   production-workflow:                   
-#     plan:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="production"
-#             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/process-application.sh
-#             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-#         - run: |
-#             set -euo pipefail
-#             ENV="production"
-#             PROJECT="apps-production"
-#             CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-#             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+  production-workflow:                   
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            PROJECT="apps-production"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-#             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-#               # Read changed apps using POSIX-compliant method
-#               CHANGED_APPS=""
-#               APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-#               while IFS= read -r app; do
-#                 if [ -n "$app" ]; then
-#                   CHANGED_APPS="${CHANGED_APPS} $app"
-#                   APP_COUNT=$((APP_COUNT + 1))
-#                 fi
-#               done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-#               # Trim leading space
-#               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-#               # Write custom output
-#               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-#               {
-#                 echo "## 🚀 Production Environment"
-#                 echo "Plan generated for $APP_COUNT application(s) with changes"
-#                 echo ""
+              {
+                echo "## 🚀 Production Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-#                 if [ $APP_COUNT -gt 0 ]; then
-#                   echo "### Changed Applications:"
-#                   for app in $CHANGED_APPS; do
-#                     echo "- **$app**"  
-#                   done
-#                   echo ""
-#                   echo '```'
-#                   echo ""
-#                   echo "▶️ To apply individual applications:"
-#                   echo ""
-#                   for app in $CHANGED_APPS; do
-#                     echo "**$app**"
-#                     echo '```'
-#                     echo "atlantis apply -p apps-production -- $app"
-#                     echo '```'
-#                     echo ""
-#                   done
-#                   echo "⏩ To apply **all $APP_COUNT applications**:"
-#                   echo ""
-#                   echo '```'
-#                   echo "atlantis apply -p apps-production"
-#                   echo '```'
-#                 fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-production -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-production"
+                  echo '```'
+                fi
                 
-#                 echo "🔁 To re-plan:"
-#                 echo ""
-#                 echo '```'
-#                 echo "atlantis plan -p apps-production"
-#                 echo ""
-#               } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-production"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-#               cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-#             else
-#               echo "## ✅ No Infrastructure Changes"
-#               echo "No changes detected in any application. Your infrastructure matches the configuration."
-#               echo ""
-#               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-#             fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
 
-#     apply:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="production"
-#             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/apply-plans.sh
-#             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
+    apply:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
-#   helia-workflow:
-#     plan:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="helia"
-#             echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/process-application.sh
-#             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-#         - run: |
-#             set -euo pipefail
-#             ENV="helia"
-#             PROJECT="apps-helia"
-#             CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-#             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+  helia-workflow:
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "Running Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/process-application.sh
+            ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            PROJECT="apps-helia"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-#             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-#               # Read changed apps using POSIX-compliant method
-#               CHANGED_APPS=""
-#               APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-#               while IFS= read -r app; do
-#                 if [ -n "$app" ]; then
-#                   CHANGED_APPS="${CHANGED_APPS} $app"
-#                   APP_COUNT=$((APP_COUNT + 1))
-#                 fi
-#               done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-#               # Trim leading space
-#               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-#               # Write custom output
-#               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-#               {
-#                 echo "## 🚀 Helia Environment"
-#                 echo "Plan generated for $APP_COUNT application(s) with changes"
-#                 echo ""
+              {
+                echo "## 🚀 Helia Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-#                 if [ $APP_COUNT -gt 0 ]; then
-#                   echo "### Changed Applications:"
-#                   for app in $CHANGED_APPS; do
-#                     echo "- **$app**"  
-#                   done
-#                   echo ""
-#                   echo '```'
-#                   echo ""
-#                   echo "▶️ To apply individual applications:"
-#                   echo ""
-#                   for app in $CHANGED_APPS; do
-#                     echo "**$app**"
-#                     echo '```'
-#                     echo "atlantis apply -p apps-helia -- $app"
-#                     echo '```'
-#                     echo ""
-#                   done
-#                   echo "⏩ To apply **all $APP_COUNT applications**:"
-#                   echo ""
-#                   echo '```'
-#                   echo "atlantis apply -p apps-helia"
-#                   echo '```'
-#                 fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-helia -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-helia"
+                  echo '```'
+                fi
                 
-#                 echo "🔁 To re-plan:"
-#                 echo ""
-#                 echo '```'
-#                 echo "atlantis plan -p apps-helia"
-#                 echo ""
-#               } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-helia"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-#               cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-#             else
-#               echo "## ✅ No Infrastructure Changes"
-#               echo "No changes detected in any application. Your infrastructure matches the configuration."
-#               echo ""
-#               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-#             fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
-#     apply :      
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="helia"
-#             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/apply-plans.sh
-#             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
-
-
+    apply :      
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
 
-# version: 3
-# automerge: true 
-# parallel_plan: false  
-# parallel_apply: false  
 
-# projects:
-#   - name: apps-staging
-#     dir: .
-#     terraform_version: v1.6.6
-#     autoplan:
-#       enabled: true  
-#       when_modified:
-#         - "application/**"
-#     workflow: staging-workflow
-#     apply_requirements: [] 
 
-  # - name: apps-production
-  #   dir: .
-  #   terraverform_version: v1.6.6
-  #   autoplan:
-  #     enabled: true  
-  #     when_modified:
-  #       - "application/**"
-  #   workflow: production-workflow
-  #   apply_requirements: [approved, mergeable] 
+version: 3
+automerge: true 
+parallel_plan: false  
+parallel_apply: false  
 
-  # - name: apps-helia
-  #   dir: .
-  #   terraform_version: v1.6.6  
-  #   autoplan:
-  #     enabled: true 
-  #     when_modified:
-  #       - "application/**"
-  #   workflow: helia-workflow
-  #   apply_requirements: [approved, mergeable]     
+projects:
+  - name: apps-staging
+    dir: .
+    terraform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: staging-workflow
+    apply_requirements: [] 
 
-# workflows:
-#   staging-workflow:
-#     plan:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: 
-#             command: |
-#               set -euo pipefail
-#               ENV="staging"
-#               echo "🚀 Initializing Terraform for $ENV environment..."
-#               chmod +x ./scripts/init-terraform.sh
-#               ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
-#             output: hide  
-#         - run: 
-#             command: |
-#               set -euo pipefail
-#               ENV="staging"
-#               PROJECT="apps-staging"
-#               echo "📋 Planning Terraform changes for $ENV..."
-#               chmod +x ./scripts/process-application.sh
-#               ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-#         - run: |
-#             set -euo pipefail
-#             ENV="staging"
-#             PROJECT="apps-staging"
-#             CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-#             PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+  - name: apps-production
+    dir: .
+    terraverform_version: v1.6.6
+    autoplan:
+      enabled: true  
+      when_modified:
+        - "application/**"
+    workflow: production-workflow
+    apply_requirements: [approved, mergeable] 
+
+  - name: apps-helia
+    dir: .
+    terraform_version: v1.6.6  
+    autoplan:
+      enabled: true 
+      when_modified:
+        - "application/**"
+    workflow: helia-workflow
+    apply_requirements: [approved, mergeable]     
+
+workflows:
+  staging-workflow:
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              echo "🚀 Initializing Terraform for $ENV environment..."
+              chmod +x ./scripts/init-terraform.sh
+              ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
+            output: hide  
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="staging"
+              PROJECT="apps-staging"
+              echo "📋 Planning Terraform changes for $ENV..."
+              chmod +x ./scripts/process-application.sh
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            PROJECT="apps-staging"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-#             if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-#               # Read changed apps using POSIX-compliant method
-#               CHANGED_APPS=""
-#               APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-#               while IFS= read -r app; do
-#                 if [ -n "$app" ]; then
-#                   CHANGED_APPS="${CHANGED_APPS} $app"
-#                   APP_COUNT=$((APP_COUNT + 1))
-#                 fi
-#               done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-#               # Trim leading space
-#               CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-#               # Write custom output
-#               CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-#               {
-#                 echo "## 🚀 Staging Environment"
-#                 echo "Plan generated for $APP_COUNT application(s) with changes"
-#                 echo ""
+              {
+                echo "## 🚀 Staging Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-#                 if [ $APP_COUNT -gt 0 ]; then
-#                   echo "### Changed Applications:"
-#                   for app in $CHANGED_APPS; do
-#                     echo "- **$app**"  
-#                   done
-#                   echo ""
-#                   echo '```'
-#                   echo ""
-#                   echo "▶️ To apply individual applications:"
-#                   echo ""
-#                   for app in $CHANGED_APPS; do
-#                     echo "**$app**"
-#                     echo '```'
-#                     echo "atlantis apply -p apps-staging -- $app"
-#                     echo '```'
-#                     echo ""
-#                   done
-#                   echo "⏩ To apply **all $APP_COUNT applications**:"
-#                   echo ""
-#                   echo '```'
-#                   echo "atlantis apply -p apps-staging"
-#                   echo '```'
-#                 fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-staging -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-staging"
+                  echo '```'
+                fi
                 
-#                 echo "🔁 To re-plan:"
-#                 echo ""
-#                 echo '```'
-#                 echo "atlantis plan -p apps-staging"
-#                 echo ""
-#               } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-staging"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-#               cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-#             else
-#               echo "## ✅ No Infrastructure Changes"
-#               echo "No changes detected in any application. Your infrastructure matches the configuration."
-#               echo ""
-#               echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-#             fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
-#     apply:
-#       steps:
-#         - env:
-#             name: APP_FILTER
-#             command: echo "$COMMENT_ARGS" | tr -d '\\'
-#         - run: |
-#             set -euo pipefail
-#             ENV="staging"
-#             echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-#             chmod +x ./scripts/apply-plans.sh
-#             ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
+    apply:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="staging"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"  
 
-  # production-workflow:                   
-  #   plan:
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: 
-  #           command: |
-  #             set -euo pipefail
-  #             ENV="production"
-  #             echo "🚀 Initializing Terraform for $ENV environment..."
-  #             chmod +x ./scripts/init-terraform.sh
-  #             ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
-  #       - run: 
-  #           command: |
-  #             set -euo pipefail
-  #             ENV="production"
-  #             PROJECT="apps-production"
-  #             echo "📋 Planning Terraform changes for $ENV..."
-  #             chmod +x ./scripts/process-application.sh
-  #             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           PROJECT="apps-production"
-  #           CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-  #           PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+  production-workflow:                   
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="production"
+              echo "🚀 Initializing Terraform for $ENV environment..."
+              chmod +x ./scripts/init-terraform.sh
+              ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="production"
+              PROJECT="apps-production"
+              echo "📋 Planning Terraform changes for $ENV..."
+              chmod +x ./scripts/process-application.sh
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            PROJECT="apps-production"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-  #           if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-  #             # Read changed apps using POSIX-compliant method
-  #             CHANGED_APPS=""
-  #             APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-  #             while IFS= read -r app; do
-  #               if [ -n "$app" ]; then
-  #                 CHANGED_APPS="${CHANGED_APPS} $app"
-  #                 APP_COUNT=$((APP_COUNT + 1))
-  #               fi
-  #             done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-  #             # Trim leading space
-  #             CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-  #             # Write custom output
-  #             CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-  #             {
-  #               echo "## 🚀 Production Environment"
-  #               echo "Plan generated for $APP_COUNT application(s) with changes"
-  #               echo ""
+              {
+                echo "## 🚀 Production Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-  #               if [ $APP_COUNT -gt 0 ]; then
-  #                 echo "### Changed Applications:"
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "- **$app**"  
-  #                 done
-  #                 echo ""
-  #                 echo '```'
-  #                 echo ""
-  #                 echo "▶️ To apply individual applications:"
-  #                 echo ""
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "**$app**"
-  #                   echo '```'
-  #                   echo "atlantis apply -p apps-production -- $app"
-  #                   echo '```'
-  #                   echo ""
-  #                 done
-  #                 echo "⏩ To apply **all $APP_COUNT applications**:"
-  #                 echo ""
-  #                 echo '```'
-  #                   echo "atlantis apply -p apps-production"
-  #                   echo '```'
-  #               fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-production -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                    echo "atlantis apply -p apps-production"
+                    echo '```'
+                fi
                 
-  #               echo "🔁 To re-plan:"
-  #               echo ""
-  #               echo '```'
-  #               echo "atlantis plan -p apps-production"
-  #               echo ""
-  #             } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-production"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-  #             cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-  #           else
-  #             echo "## ✅ No Infrastructure Changes"
-  #             echo "No changes detected in any application. Your infrastructure matches the configuration."
-  #             echo ""
-  #             echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-  #           fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
-  #   apply:
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="production"
-  #           echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-  #           chmod +x ./scripts/apply-plans.sh
-  #           ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
+    apply:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="production"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
 
-  # helia-workflow:
-  #   plan:
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: 
-  #           command: |
-  #             set -euo pipefail
-  #             ENV="helia"
-  #             echo "🚀 Initializing Terraform for $ENV environment..."
-  #             chmod +x ./scripts/init-terraform.sh
-  #             ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
-  #       - run: 
-  #           command: |
-  #             set -euo pipefail
-  #             ENV="helia"
-  #             PROJECT="apps-helia"
-  #             echo "📋 Planning Terraform changes for $ENV..."
-  #             chmod +x ./scripts/process-application.sh
-  #             ./scripts/process-application.sh "$ENV" "$APP_FILTER"
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="helia"
-  #           PROJECT="apps-helia"
-  #           CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
-  #           PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+  helia-workflow:
+    plan:
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="helia"
+              echo "🚀 Initializing Terraform for $ENV environment..."
+              chmod +x ./scripts/init-terraform.sh
+              ./scripts/init-terraform.sh "$ENV" "$APP_FILTER"
+        - run: 
+            command: |
+              set -euo pipefail
+              ENV="helia"
+              PROJECT="apps-helia"
+              echo "📋 Planning Terraform changes for $ENV..."
+              chmod +x ./scripts/process-application.sh
+              ./scripts/process-application.sh "$ENV" "$APP_FILTER"
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            PROJECT="apps-helia"
+            CHANGED_APPS_LIST="/tmp/atlantis_changed_apps_${ENV}.lst"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             
-  #           if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
-  #             # Read changed apps using POSIX-compliant method
-  #             CHANGED_APPS=""
-  #             APP_COUNT=0
+            if [ -f "$CHANGED_APPS_LIST" ] && [ -s "$CHANGED_APPS_LIST" ]; then
+              # Read changed apps using POSIX-compliant method
+              CHANGED_APPS=""
+              APP_COUNT=0
               
-  #             while IFS= read -r app; do
-  #               if [ -n "$app" ]; then
-  #                 CHANGED_APPS="${CHANGED_APPS} $app"
-  #                 APP_COUNT=$((APP_COUNT + 1))
-  #               fi
-  #             done < "$CHANGED_APPS_LIST"
+              while IFS= read -r app; do
+                if [ -n "$app" ]; then
+                  CHANGED_APPS="${CHANGED_APPS} $app"
+                  APP_COUNT=$((APP_COUNT + 1))
+                fi
+              done < "$CHANGED_APPS_LIST"
               
-  #             # Trim leading space
-  #             CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
+              # Trim leading space
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | sed 's/^ *//')
               
-  #             # Write custom output
-  #             CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
+              # Write custom output
+              CUSTOM_OUTPUT_FILE="/tmp/atlantis_custom_output_${PROJECT}.txt"
               
-  #             {
-  #               echo "## 🚀 Helia Environment"
-  #               echo "Plan generated for $APP_COUNT application(s) with changes"
-  #               echo ""
+              {
+                echo "## 🚀 Helia Environment"
+                echo "Plan generated for $APP_COUNT application(s) with changes"
+                echo ""
                 
-  #               if [ $APP_COUNT -gt 0 ]; then
-  #                 echo "### Changed Applications:"
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "- **$app**"  
-  #                 done
-  #                 echo ""
-  #                 echo '```'
-  #                 echo ""
-  #                 echo "▶️ To apply individual applications:"
-  #                 echo ""
-  #                 for app in $CHANGED_APPS; do
-  #                   echo "**$app**"
-  #                   echo '```'
-  #                   echo "atlantis apply -p apps-helia -- $app"
-  #                   echo '```'
-  #                   echo ""
-  #                 done
-  #                 echo "⏩ To apply **all $APP_COUNT applications**:"
-  #                 echo ""
-  #                 echo '```'
-  #                 echo "atlantis apply -p apps-helia"
-  #                 echo '```'
-  #               fi
+                if [ $APP_COUNT -gt 0 ]; then
+                  echo "### Changed Applications:"
+                  for app in $CHANGED_APPS; do
+                    echo "- **$app**"  
+                  done
+                  echo ""
+                  echo '```'
+                  echo ""
+                  echo "▶️ To apply individual applications:"
+                  echo ""
+                  for app in $CHANGED_APPS; do
+                    echo "**$app**"
+                    echo '```'
+                    echo "atlantis apply -p apps-helia -- $app"
+                    echo '```'
+                    echo ""
+                  done
+                  echo "⏩ To apply **all $APP_COUNT applications**:"
+                  echo ""
+                  echo '```'
+                  echo "atlantis apply -p apps-helia"
+                  echo '```'
+                fi
                 
-  #               echo "🔁 To re-plan:"
-  #               echo ""
-  #               echo '```'
-  #               echo "atlantis plan -p apps-helia"
-  #               echo ""
-  #             } > "$CUSTOM_OUTPUT_FILE"
+                echo "🔁 To re-plan:"
+                echo ""
+                echo '```'
+                echo "atlantis plan -p apps-helia"
+                echo ""
+              } > "$CUSTOM_OUTPUT_FILE"
               
-  #             cat "$CUSTOM_OUTPUT_FILE"
+              cat "$CUSTOM_OUTPUT_FILE"
               
-  #           else
-  #             echo "## ✅ No Infrastructure Changes"
-  #             echo "No changes detected in any application. Your infrastructure matches the configuration."
-  #             echo ""
-  #             echo "If you expected changes, ensure your modifications affect the Terraform configuration."
-  #           fi
+            else
+              echo "## ✅ No Infrastructure Changes"
+              echo "No changes detected in any application. Your infrastructure matches the configuration."
+              echo ""
+              echo "If you expected changes, ensure your modifications affect the Terraform configuration."
+            fi
 
-  #   apply:      
-  #     steps:
-  #       - env:
-  #           name: APP_FILTER
-  #           command: echo "$COMMENT_ARGS" | tr -d '\\'
-  #       - run: |
-  #           set -euo pipefail
-  #           ENV="helia"
-  #           echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
-  #           chmod +x ./scripts/apply-plans.sh
-  #           ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
+    apply:      
+      steps:
+        - env:
+            name: APP_FILTER
+            command: echo "$COMMENT_ARGS" | tr -d '\\'
+        - run: |
+            set -euo pipefail
+            ENV="helia"
+            echo "Applying Atlantis plan for ENV=$ENV with APP_FILTER=$APP_FILTER"
+            chmod +x ./scripts/apply-plans.sh
+            ./scripts/apply-plans.sh "$ENV" "$APP_FILTER"
