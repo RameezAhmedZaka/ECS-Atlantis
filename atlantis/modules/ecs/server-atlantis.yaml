@@ -19,7 +19,8 @@
     apply_requirements: []
     pre_workflow_hooks:
         - run: |
-            cd /atlantis/repos/github.com/RameezAhmedZaka/ECS-Atlantis/pull/${PULL_NUM} || exit 1
-            chmod +x repo-config-generator.sh
-            ./repo-config-generator.sh
+            echo "Running config-generator from $(pwd)"
+            ls -la
+            chmod +x ./config-generator.sh || echo "Script not found or not executable"
+            ./config-generator.sh || (echo "Script failed!" && exit 1)
           description: Generating configs for   
