@@ -98,9 +98,11 @@ workflows:
       steps:
         - run: |
             PLANFILE="plan.tfplan"
-            if echo "${ATLANTIS_COMMENT_BODY:-}" | grep -iq "destroy"; then
-            echo "Destroy commands are not allowed through Atlantis!"
-            exit 1
+            if [[ "${ATLANTIS_COMMENT_ARGS[*]:-}" =~ destroy ]] || 
+               [[ "${ATLANTIS_COMMENT_BODY:-}" =~ destroy ]] || 
+               [[ "$@" =~ destroy ]]; then
+              echo "Destroy commands are not allowed through Atlantis!"
+              exit 1
             fi
 
 
