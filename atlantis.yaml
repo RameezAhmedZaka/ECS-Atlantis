@@ -9,8 +9,8 @@ projects:
       enabled: true
       when_modified:
         - "application/app1/**/*"
-        - "application/app1/config/production.tfvars"
-        - "application/app1/env/production/*"
+        # - "application/app1/config/production.tfvars"
+        # - "application/app1/env/production/*"
     terraform_version: v1.6.6
     apply_requirements:
       - approved
