@@ -1,0 +1,179 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+
+# Create dynamic atlantis.yaml
+cat > atlantis.yaml << 'EOF'
+version: 3
+automerge: false
+parallel_plan: true
+parallel_apply: true
+projects:
+EOF
+
+# Function to check if directory is a valid Terraform project
+is_terraform_project() {
+    local dir="$1"
+    [ -f "$dir/main.tf" ] && [ -f "$dir/backend.tf" ] && [ -f "$dir/providers.tf" ]
+}
+
+# Function to discover environments from config directory
+discover_environments() {
+    local dir="$1"
+    local config_dir="$dir/config"
+    if [ -d "$config_dir" ]; then
+        find "$config_dir" -name "*.tfvars" -type f | \
+        sed -E 's|.*/([^/]+)\.tfvars|\1|' | \
+        sort -u
+    else
+        echo ""
+    fi
+}
+
+# Find all directories and check if they're valid Terraform projects
+find . -type d -not -path "*/\.*" | while read -r dir; do
+    if is_terraform_project "$dir"; then
+        dir="${dir#./}"
+        environments=$(discover_environments "$dir")
+        
+        if [[ -n "$environments" ]]; then
+            # Create a project for each environment
+            for env in $environments; do
+                if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
+                    app_name="${BASH_REMATCH[1]}"
+                    project_name="${app_name}-${env}"
+                else
+                    folder_name=$(basename "$dir")
+                    project_name="${folder_name}-${env}"
+                fi
+                
+                cat >> atlantis.yaml << PROJECT_EOF
+  - name: $project_name
+    dir: $dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "$dir/**/*"
+        - "$dir/config/$env.tfvars"
+        - "$dir/env/$env/*"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+            done
+        else
+            # If no environments found, create a default project
+            if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
+                project_name="app-${BASH_REMATCH[1]}"
+            else
+                project_name=$(echo "$dir" | sed 's|/|-|g')
+            fi
+            
+            cat >> atlantis.yaml << PROJECT_EOF
+  - name: $project_name
+    dir: $dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "$dir/**/*"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+        fi
+    fi
+done
+
+# Add workflows section
+cat >> atlantis.yaml << 'EOF'
+workflows:
+  multi_env_workflow:
+    plan:
+      steps:
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            else
+              terraform init -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform plan -var-file="$VAR_FILE" -out="$PLANFILE"
+            else
+              terraform plan -out="$PLANFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Applying for environment: $ENV"
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform apply -var-file="$VAR_FILE" "$PLANFILE"
+            else
+              terraform apply "$PLANFILE"
+            fi
+EOF
+
+echo "Generated atlantis.yaml successfully"
