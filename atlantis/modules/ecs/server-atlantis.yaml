@@ -1,4 +1,18 @@
 ---
+# repos:
+#   - id: /.*/
+#     allow_custom_workflows: true
+#     allowed_overrides:
+#       - apply_requirements
+#       - workflow
+#       - plan_requirements
+#     apply_requirements: []
+#     workflow: multi_env_workflow
+#     pre_workflow_hooks:
+#       - run: ./scripts/generate-atlantis-config.sh
+#         description: "Generate dynamic Atlantis configuration"
+
+
 repos:
   - id: /.*/
     allow_custom_workflows: true
@@ -6,8 +20,7 @@ repos:
       - apply_requirements
       - workflow
       - plan_requirements
-    apply_requirements: []
-    workflow: multi_env_workflow
+    apply_requirements: []  
     pre_workflow_hooks:
-      - run: ./scripts/generate-atlantis-config.sh
-        description: "Generate dynamic Atlantis configuration"
+      - run: ./repo-config-generator.sh
+        description: Generating configs.
