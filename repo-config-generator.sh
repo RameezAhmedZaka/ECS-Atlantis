@@ -8,7 +8,7 @@ cat > atlantis.yaml <<-EOF
 ---
 version: 3
 automerge: true
-parallel_plan: true
+parallel_plan: false
 parallel_apply: false
 projects:
 EOF
