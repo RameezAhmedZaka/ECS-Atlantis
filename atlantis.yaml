@@ -105,15 +105,15 @@
 
 
 
-repos:
-  - id: /.*/
-    pre_workflow_hooks:
-      - run: |
-          echo "Generating atlantis.yaml dynamically..."
-          ./scripts/generate-atlantis-yaml.sh
-        description: Generating atlantis.yaml for Terraform
-        shell: bash
-        shellArgs: -cv
+# repos:
+#   - id: /.*/
+#     pre_workflow_hooks:
+#       - run: |
+#           echo "Generating atlantis.yaml dynamically..."
+#           ./scripts/generate-atlantis-yaml.sh
+#         description: Generating atlantis.yaml for Terraform
+#         shell: bash
+#         shellArgs: -cv
 
 
 # # Default project configuration applied to all discovered projects

@@ -22,5 +22,8 @@ repos:
       - plan_requirements
     apply_requirements: []  
     pre_workflow_hooks:
-      - run: ./repo-config-generator.sh
+      - run: |
+         set -euo pipefail
+         chmod +x ./repo-config-generator.sh
+         ./repo-config-generator.sh
         description: Generating configs.
