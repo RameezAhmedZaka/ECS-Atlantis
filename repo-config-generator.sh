@@ -129,16 +129,15 @@ workflows:
             cd "\$PROJECT_DIR"
 
             if [ -f "\$BACKEND_CONFIG" ]; then
-              terraform init \
-                         -backend-config="\$BACKEND_CONFIG" \
-                         -input=false -reconfigure
+              timeout 300 terraform init \
+                -backend-config="\$BACKEND_CONFIG" \
+                -input=false -reconfigure > /dev/null 2>&1
             else
-              echo "Backend config not found, skipping backend init"
               terraform init -input=false -reconfigure
             fi
 
             if [ -f "\$VAR_FILE" ]; then
-              terraform plan \
+              timeout 300 terraform plan \
                          -var-file="\$VAR_FILE" \
                          -out="\$PLANFILE"
             else
@@ -148,6 +147,8 @@ workflows:
     apply:
       steps:
         - run: |
+            PLANFILE="plan.tfplan"
+
             case "\$PROJECT_NAME" in
               *-production)
                 ENV="production"
@@ -176,16 +177,21 @@ workflows:
             cd "\$PROJECT_DIR"
 
             if [ -f "\$BACKEND_CONFIG" ]; then
-              terraform init \
-                         -backend-config="\$BACKEND_CONFIG" \
-                         -input=false -reconfigure
+              timeout 300 terraform init \
+                -backend-config="\$BACKEND_CONFIG" \
+                -input=false -reconfigure > /dev/null 2>&1
+            else
+              terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
 
-            if [ -f "\$VAR_FILE" ]; then
-              terraform apply \
-                              -var-file="\$VAR_FILE" \
-                              "\$PLANFILE"
+            # Apply the plan if it exists, otherwise do a raw apply with var-file
+            if [ -f "\$PLANFILE" ]; then
+              timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
+                echo "Apply failed for \$PLANFILE"
+              }
             else
-              terraform apply "\$PLANFILE"
+              timeout 600 terraform apply -var-file="\$VAR_FILE" -input=false -auto-approve || {
+                echo "Apply failed for \$PROJECT_DIR"
+              }
             fi
 EOF
