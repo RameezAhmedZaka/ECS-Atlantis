@@ -4,6 +4,19 @@ automerge: false
 parallel_plan: false
 parallel_apply: false
 projects:
+  - name: app1-helia
+    dir: application/app1
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
   - name: app1-production
     dir: application/app1
     autoplan:
@@ -17,8 +30,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: app1-helia
+  - name: app1-staging
     dir: application/app1
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/staging/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: app2-helia
+    dir: application/app2
     autoplan:
       enabled: true
       when_modified:
@@ -43,8 +69,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: app2-helia
+  - name: app2-staging
     dir: application/app2
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/staging/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: app3-helia
+    dir: application/app3
     autoplan:
       enabled: true
       when_modified:
@@ -69,8 +108,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: app3-helia
+  - name: app3-staging
     dir: application/app3
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/staging/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: app4-helia
+    dir: application/app4
     autoplan:
       enabled: true
       when_modified:
@@ -95,8 +147,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: app4-helia
+  - name: app4-staging
     dir: application/app4
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/staging/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: network-helia
+    dir: application/network
     autoplan:
       enabled: true
       when_modified:
@@ -121,8 +186,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: network-helia
+  - name: network-staging
     dir: application/network
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/staging/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: rdot-helia
+    dir: application/rdot
     autoplan:
       enabled: true
       when_modified:
@@ -147,14 +225,14 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: rdot-helia
+  - name: rdot-staging
     dir: application/rdot
     autoplan:
       enabled: true
       when_modified:
         - "*.tf"
         - "config/*.tfvars"
-        - "env/helia/*"
+        - "env/staging/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:

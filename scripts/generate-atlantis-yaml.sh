@@ -23,8 +23,12 @@ is_terraform_project() {
 get_environments() {
     local app_dir="$1"
     local envs=()
-    for env in production staging helia; do
-        if [ -f "$app_dir/config/$env.tfvars" ] && [ -d "$app_dir/env/$env" ]; then
+    declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
+
+    for env in "${!env_map[@]}"; do
+        tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
+        env_dir="$app_dir/env/$env"
+        if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
             envs+=("$env")
         fi
     done
