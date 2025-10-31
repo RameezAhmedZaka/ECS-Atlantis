@@ -1,7 +1,7 @@
 ---
 version: 3
 automerge: false
-parallel_plan: false
+parallel_plan: true
 parallel_apply: false
 projects:
   - name: app1-production
@@ -197,18 +197,14 @@ workflows:
             cd "$PROJECT_DIR"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init \
-                         -backend-config="$BACKEND_CONFIG" \
-                         -input=false -reconfigure
+              terraform init                          -backend-config="$BACKEND_CONFIG"                          -input=false -reconfigure
             else
               echo "Backend config not found, skipping backend init"
               terraform init -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform plan \
-                         -var-file="$VAR_FILE" \
-                         -out="$PLANFILE"
+              terraform plan                          -var-file="$VAR_FILE"                          -out="$PLANFILE"
             else
               terraform plan -out="$PLANFILE"
             fi
@@ -244,15 +240,11 @@ workflows:
             cd "$PROJECT_DIR"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init \
-                         -backend-config="$BACKEND_CONFIG" \
-                         -input=false -reconfigure
+              terraform init                          -backend-config="$BACKEND_CONFIG"                          -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform apply \
-                              -var-file="$VAR_FILE" \
-                              "$PLANFILE"
+              terraform apply                               -var-file="$VAR_FILE"                               "$PLANFILE"
             else
               terraform apply "$PLANFILE"
             fi

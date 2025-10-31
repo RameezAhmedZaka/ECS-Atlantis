@@ -1,0 +1,90 @@
+version: 3
+automerge: false
+parallel_plan: true
+parallel_apply: true
+projects:
+workflows:
+  multi_env_workflow:
+    plan:
+      steps:
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            else
+              terraform init -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform plan -var-file="$VAR_FILE" -out="$PLANFILE"
+            else
+              terraform plan -out="$PLANFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Applying for environment: $ENV"
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform apply -var-file="$VAR_FILE" "$PLANFILE"
+            else
+              terraform apply "$PLANFILE"
+            fi

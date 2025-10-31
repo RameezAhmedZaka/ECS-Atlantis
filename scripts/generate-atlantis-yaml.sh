@@ -4,7 +4,7 @@ set -euo pipefail
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
 # Create base atlantis.yaml with document start
-cat > atlantis.yaml << 'EOF'
+cat > atlantis.yaml <<-EOF
 ---
 version: 3
 automerge: false
@@ -41,7 +41,7 @@ if [ -d "application" ]; then
 
             if [ -z "$envs" ]; then
                 # Default project if no env detected
-                cat >> atlantis.yaml << PROJECT_EOF
+                cat >> atlantis.yaml <<-PROJECT_EOF
   - name: ${app_name}-default
     dir: $app_dir
     autoplan:
@@ -59,7 +59,7 @@ PROJECT_EOF
             else
                 # Create project for each environment
                 for env in $envs; do
-                    cat >> atlantis.yaml << PROJECT_EOF
+                    cat >> atlantis.yaml <<-PROJECT_EOF
   - name: ${app_name}-${env}
     dir: $app_dir
     autoplan:
@@ -81,7 +81,7 @@ PROJECT_EOF
 fi
 
 # Workflows section
-cat >> atlantis.yaml << 'EOF'
+cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
     plan:
@@ -89,7 +89,7 @@ workflows:
         - run: |
             PLANFILE="plan.tfplan"
 
-            case "$PROJECT_NAME" in
+            case "\$PROJECT_NAME" in
               *-production)
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
@@ -112,31 +112,33 @@ workflows:
                 ;;
             esac
 
-            echo "Planning for environment: $ENV"
-            echo "Using backend config: $BACKEND_CONFIG"
-            echo "Using var file: $VAR_FILE"
+            echo "Planning for environment: \$ENV"
+            echo "Using backend config: \$BACKEND_CONFIG"
+            echo "Using var file: \$VAR_FILE"
 
-            if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$PROJECT_DIR" \
-                             -backend-config="$BACKEND_CONFIG" \
-                             -input=false -reconfigure
+            cd "\$PROJECT_DIR"
+
+            if [ -f "\$BACKEND_CONFIG" ]; then
+              terraform init \
+                         -backend-config="\$BACKEND_CONFIG" \
+                         -input=false -reconfigure
             else
               echo "Backend config not found, skipping backend init"
-              terraform init -chdir="$PROJECT_DIR" -input=false -reconfigure
+              terraform init -input=false -reconfigure
             fi
 
-            if [ -f "$VAR_FILE" ]; then
-              terraform plan -chdir="$PROJECT_DIR" \
-                             -var-file="$VAR_FILE" \
-                             -out="$PLANFILE"
+            if [ -f "\$VAR_FILE" ]; then
+              terraform plan \
+                         -var-file="\$VAR_FILE" \
+                         -out="\$PLANFILE"
             else
-              terraform plan -chdir="$PROJECT_DIR" -out="$PLANFILE"
+              terraform plan -out="\$PLANFILE"
             fi
 
     apply:
       steps:
         - run: |
-            case "$PROJECT_NAME" in
+            case "\$PROJECT_NAME" in
               *-production)
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
@@ -159,21 +161,21 @@ workflows:
                 ;;
             esac
 
-            echo "Applying for environment: $ENV"
+            echo "Applying for environment: \$ENV"
 
-            if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$PROJECT_DIR" \
-                             -backend-config="$BACKEND_CONFIG" \
-                             -input=false -reconfigure
+            cd "\$PROJECT_DIR"
+
+            if [ -f "\$BACKEND_CONFIG" ]; then
+              terraform init \
+                         -backend-config="\$BACKEND_CONFIG" \
+                         -input=false -reconfigure
             fi
 
-            if [ -f "$VAR_FILE" ]; then
-              terraform apply -chdir="$PROJECT_DIR" \
-                              -var-file="$VAR_FILE" \
-                              "$PLANFILE"
+            if [ -f "\$VAR_FILE" ]; then
+              terraform apply \
+                              -var-file="\$VAR_FILE" \
+                              "\$PLANFILE"
             else
-              terraform apply -chdir="$PROJECT_DIR" "$PLANFILE"
+              terraform apply "\$PLANFILE"
             fi
 EOF
-
-echo "Generated atlantis.yaml successfully!"
