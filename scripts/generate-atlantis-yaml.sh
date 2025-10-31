@@ -1,87 +1,179 @@
----
-repos:
-  - id: /.*/
-    allow_custom_workflows: true
-    allowed_overrides:
-      - apply_requirements
-      - workflow
-      - plan_requirements
-    apply_requirements: []
-    workflow: default
-    pre_workflow_hooks:
-      - run: |
-          echo "Generating dynamic atlantis.yaml for $(basename $REPO_ROOT)"
+#!/bin/bash
+set -euo pipefail
 
-          cat > atlantis.yaml <<'INIT_EOF'
+echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+
+# Create dynamic atlantis.yaml
+cat > atlantis.yaml << 'EOF'
 version: 3
 automerge: false
 parallel_plan: true
 parallel_apply: true
-
 projects:
-INIT_EOF
+EOF
 
-          is_terraform_project() {
-            local dir="$1"
-            [ -f "$dir/main.tf" ] && [ -f "$dir/backend.tf" ] && [ -f "$dir/providers.tf" ]
-          }
+# Function to check if directory is a valid Terraform project
+is_terraform_project() {
+    local dir="$1"
+    [ -f "$dir/main.tf" ] && [ -f "$dir/backend.tf" ] && [ -f "$dir/providers.tf" ]
+}
 
-          discover_environments() {
-            local dir="$1"
-            local config_dir="$dir/config"
-            if [ -d "$config_dir" ]; then
-              find "$config_dir" -name "*.tfvars" -type f | sed -E 's|.*/([^/]+)\.tfvars|\1|' | sort -u
-            else
-              echo ""
-            fi
-          }
+# Function to discover environments from config directory
+discover_environments() {
+    local dir="$1"
+    local config_dir="$dir/config"
+    if [ -d "$config_dir" ]; then
+        find "$config_dir" -name "*.tfvars" -type f | \
+        sed -E 's|.*/([^/]+)\.tfvars|\1|' | \
+        sort -u
+    else
+        echo ""
+    fi
+}
 
-          find . -type d -not -path "*/\.*" | while read dir; do
-            if is_terraform_project "$dir"; then
-              dir="${dir#./}"
-              environments=$(discover_environments "$dir")
-
-              if [[ -n "$environments" ]]; then
-                for env in $environments; do
-                  if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
+# Find all directories and check if they're valid Terraform projects
+find . -type d -not -path "*/\.*" | while read -r dir; do
+    if is_terraform_project "$dir"; then
+        dir="${dir#./}"
+        environments=$(discover_environments "$dir")
+        
+        if [[ -n "$environments" ]]; then
+            # Create a project for each environment
+            for env in $environments; do
+                if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
                     app_name="${BASH_REMATCH[1]}"
                     project_name="${app_name}-${env}"
-                  else
+                else
                     folder_name=$(basename "$dir")
                     project_name="${folder_name}-${env}"
-                  fi
-
-                  # Use printf to avoid heredoc indentation issues
-                  printf '  - name: %s\n    dir: %s\n    autoplan:\n      enabled: true\n      when_modified:\n        - "%s/**/*"\n        - "%s/config/%s.tfvars"\n        - "%s/env/%s/*"\n    terraform_version: v1.5.0\n    apply_requirements:\n      - approved\n      - mergeable\n' \
-                    "$project_name" "$dir" "$dir" "$dir" "$env" "$dir" "$env" >> atlantis.yaml
-                done
-              else
-                if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
-                  project_name="app-${BASH_REMATCH[1]}"
-                else
-                  project_name=$(echo "$dir" | sed 's|/|-|g')
                 fi
-
-                # Use printf for default projects too
-                printf '  - name: %s\n    dir: %s\n    autoplan:\n      enabled: true\n      when_modified:\n        - "%s/**/*"\n    terraform_version: v1.5.0\n    apply_requirements:\n      - approved\n      - mergeable\n' \
-                  "$project_name" "$dir" "$dir" >> atlantis.yaml
-              fi
+                
+                cat >> atlantis.yaml << PROJECT_EOF
+  - name: $project_name
+    dir: $dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "$dir/**/*"
+        - "$dir/config/$env.tfvars"
+        - "$dir/env/$env/*"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+            done
+        else
+            # If no environments found, create a default project
+            if [[ "$dir" =~ ^application/([^/]+)$ ]]; then
+                project_name="app-${BASH_REMATCH[1]}"
+            else
+                project_name=$(echo "$dir" | sed 's|/|-|g')
             fi
-          done
+            
+            cat >> atlantis.yaml << PROJECT_EOF
+  - name: $project_name
+    dir: $dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "$dir/**/*"
+    terraform_version: v1.5.0
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+        fi
+    fi
+done
 
-          # Add the workflow section
-          cat >> atlantis.yaml <<'WORKFLOW_EOF'
-
+# Add workflows section
+cat >> atlantis.yaml << 'EOF'
 workflows:
-  default:
+  multi_env_workflow:
     plan:
       steps:
-        - init
-        - plan
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            else
+              terraform init -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform plan -var-file="$VAR_FILE" -out="$PLANFILE"
+            else
+              terraform plan -out="$PLANFILE"
+            fi
     apply:
       steps:
-        - apply
-WORKFLOW_EOF
+        - run: |
+            if [[ "$PROJECT_NAME" =~ -(production|staging|helia)$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              case "$ENV" in
+                production)
+                  BACKEND_CONFIG="env/production/prod.conf"
+                  VAR_FILE="config/production.tfvars"
+                  ;;
+                staging)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+                helia)
+                  BACKEND_CONFIG="env/helia/helia.conf"
+                  VAR_FILE="config/helia.tfvars"
+                  ;;
+                *)
+                  BACKEND_CONFIG="env/staging/stage.conf"
+                  VAR_FILE="config/stage.tfvars"
+                  ;;
+              esac
+            else
+              ENV="staging"
+              BACKEND_CONFIG="env/staging/stage.conf"
+              VAR_FILE="config/stage.tfvars"
+            fi
+            
+            echo "Applying for environment: $ENV"
+            if [ -f "$BACKEND_CONFIG" ]; then
+              terraform init -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+            fi
+            
+            if [ -f "$VAR_FILE" ]; then
+              terraform apply -var-file="$VAR_FILE" "$PLANFILE"
+            else
+              terraform apply "$PLANFILE"
+            fi
+EOF
 
-          echo "Generated atlantis.yaml with dynamic projects"
-        description: "Generate dynamic atlantis configuration"
+echo "Generated atlantis.yaml successfully"
