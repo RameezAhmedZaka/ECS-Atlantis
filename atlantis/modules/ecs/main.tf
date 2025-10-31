@@ -28,8 +28,6 @@ resource "aws_ecs_service" "atlantis_service" {
     assign_public_ip = var.assign_public_ip
   }
 
-  enable_execute_command = true
-
   load_balancer {
     container_name   = var.container_name
     container_port   = var.container_port
@@ -92,6 +90,10 @@ resource "aws_ecs_task_definition" "backend_task" {
         {
         name : "ATLANTIS_REPO_CONFIG_JSON",
         value : jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
+        },
+        {
+        name: "ATLANTIS_ALLOW_COMMANDS"
+        value: "version,plan,apply,unlock,approve_policies"
         },
         # {
         #   name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"

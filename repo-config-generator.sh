@@ -7,8 +7,8 @@ echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 cat > atlantis.yaml <<-EOF
 ---
 version: 3
-automerge: false
-parallel_plan: false
+automerge: true
+parallel_plan: true
 parallel_apply: false
 projects:
 EOF
