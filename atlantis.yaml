@@ -1,3 +1,4 @@
+---
 version: 3
 automerge: false
 parallel_plan: false
@@ -8,9 +9,9 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-      - "*.tf"
-      - "config/*.tfvars"
-      - "env/*/*"      
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -21,9 +22,9 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app1/**/*"
-        - "application/app1/config/helia.tfvars"
-        - "application/app1/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -34,9 +35,9 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app2/**/*"
-        - "application/app2/config/production.tfvars"
-        - "application/app2/env/production/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -47,9 +48,9 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app2/**/*"
-        - "application/app2/config/helia.tfvars"
-        - "application/app2/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -60,10 +61,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app3/**/*"
-        - "application/app3/config/production.tfvars"
-        - "application/app3/env/production/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -72,10 +74,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app3/**/*"
-        - "application/app3/config/helia.tfvars"
-        - "application/app3/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -84,10 +87,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app4/**/*"
-        - "application/app4/config/production.tfvars"
-        - "application/app4/env/production/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -96,10 +100,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/app4/**/*"
-        - "application/app4/config/helia.tfvars"
-        - "application/app4/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -108,10 +113,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/network/**/*"
-        - "application/network/config/production.tfvars"
-        - "application/network/env/production/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -120,10 +126,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/network/**/*"
-        - "application/network/config/helia.tfvars"
-        - "application/network/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -132,10 +139,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/**/*"
-        - "application/rdot/config/production.tfvars"
-        - "application/rdot/env/production/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/production/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -144,10 +152,11 @@ projects:
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/**/*"
-        - "application/rdot/config/helia.tfvars"
-        - "application/rdot/env/helia/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/helia/*"
     terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -186,20 +195,20 @@ workflows:
             echo "Using var file: $VAR_FILE"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$dir" \
+              terraform init -chdir="$PROJECT_DIR" \
                              -backend-config="$BACKEND_CONFIG" \
                              -input=false -reconfigure
             else
-              echo "Backend config not found, skipping init"
-              terraform init -chdir="$dir" -input=false -reconfigure
+              echo "Backend config not found, skipping backend init"
+              terraform init -chdir="$PROJECT_DIR" -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform plan -chdir="$dir" \
+              terraform plan -chdir="$PROJECT_DIR" \
                              -var-file="$VAR_FILE" \
                              -out="$PLANFILE"
             else
-              terraform plan -chdir="$dir" -out="$PLANFILE"
+              terraform plan -chdir="$PROJECT_DIR" -out="$PLANFILE"
             fi
 
     apply:
@@ -231,15 +240,15 @@ workflows:
             echo "Applying for environment: $ENV"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$dir" \
+              terraform init -chdir="$PROJECT_DIR" \
                              -backend-config="$BACKEND_CONFIG" \
                              -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform apply -chdir="$dir" \
+              terraform apply -chdir="$PROJECT_DIR" \
                               -var-file="$VAR_FILE" \
                               "$PLANFILE"
             else
-              terraform apply -chdir="$dir" "$PLANFILE"
+              terraform apply -chdir="$PROJECT_DIR" "$PLANFILE"
             fi

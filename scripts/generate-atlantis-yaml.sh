@@ -47,8 +47,11 @@ if [ -d "application" ]; then
     autoplan:
       enabled: true
       when_modified:
-        - "$app_dir/**/*"
-    terraform_version: v1.5.0
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -62,10 +65,11 @@ PROJECT_EOF
     autoplan:
       enabled: true
       when_modified:
-        - "$app_dir/**/*"
-        - "$app_dir/config/$env.tfvars"
-        - "$app_dir/env/$env/*"
-    terraform_version: v1.5.0
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/$env/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -113,20 +117,20 @@ workflows:
             echo "Using var file: $VAR_FILE"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$dir" \
+              terraform init -chdir="$PROJECT_DIR" \
                              -backend-config="$BACKEND_CONFIG" \
                              -input=false -reconfigure
             else
-              echo "Backend config not found, skipping init"
-              terraform init -chdir="$dir" -input=false -reconfigure
+              echo "Backend config not found, skipping backend init"
+              terraform init -chdir="$PROJECT_DIR" -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform plan -chdir="$dir" \
+              terraform plan -chdir="$PROJECT_DIR" \
                              -var-file="$VAR_FILE" \
                              -out="$PLANFILE"
             else
-              terraform plan -chdir="$dir" -out="$PLANFILE"
+              terraform plan -chdir="$PROJECT_DIR" -out="$PLANFILE"
             fi
 
     apply:
@@ -158,17 +162,17 @@ workflows:
             echo "Applying for environment: $ENV"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$dir" \
+              terraform init -chdir="$PROJECT_DIR" \
                              -backend-config="$BACKEND_CONFIG" \
                              -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              terraform apply -chdir="$dir" \
+              terraform apply -chdir="$PROJECT_DIR" \
                               -var-file="$VAR_FILE" \
                               "$PLANFILE"
             else
-              terraform apply -chdir="$dir" "$PLANFILE"
+              terraform apply -chdir="$PROJECT_DIR" "$PLANFILE"
             fi
 EOF
 
