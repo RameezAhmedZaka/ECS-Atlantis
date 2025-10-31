@@ -28,6 +28,8 @@ resource "aws_ecs_service" "atlantis_service" {
     assign_public_ip = var.assign_public_ip
   }
 
+  enable_execute_command = true
+
   load_balancer {
     container_name   = var.container_name
     container_port   = var.container_port
