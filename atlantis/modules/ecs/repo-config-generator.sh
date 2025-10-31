@@ -82,6 +82,7 @@ workflows:
     plan:
       steps:
         - run: |
+            PLANFILE="plan.tfplan"  
             case "$PROJECT_NAME" in
               *-production)
                 ENV="production"
@@ -110,9 +111,9 @@ workflows:
             echo "Using var file: $VAR_FILE"
 
             if [ -f "$BACKEND_CONFIG" ]; then
-              terraform init -chdir="$d" -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
+              terraform init -chdir="$dir" -backend-config="$BACKEND_CONFIG" -input=false -reconfigure
             else
-              Not found
+              echo "Backend config not found, skipping init"
             fi
 
             if [ -f "$VAR_FILE" ]; then
