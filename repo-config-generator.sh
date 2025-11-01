@@ -102,7 +102,7 @@ workflows:
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              timeout 300 terraform plan $DESTROY_FLAG \
+              timeout 300 terraform plan -lock-timeout=5m  \
                          -var-file="$VAR_FILE" \
                          -out="$PLANFILE"
             else
@@ -151,7 +151,7 @@ workflows:
             # fi
 
             if [ -f "$PLANFILE" ]; then
-              timeout 600 terraform apply -input=false -auto-approve "$PLANFILE" || {
+              timeout 600 terraform apply -input=false -lock-timeout=5m  -auto-approve "$PLANFILE" || {
                 echo "Apply failed for $PLANFILE"
               }
             else
