@@ -95,6 +95,10 @@ resource "aws_ecs_task_definition" "backend_task" {
         name: "ATLANTIS_ALLOW_COMMANDS"
         value: "version,plan,apply,unlock,approve_policies"
         },
+        {
+          name: "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
+          value: "true"
+        },
         # {
         #   name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
         #   value = "1"  
