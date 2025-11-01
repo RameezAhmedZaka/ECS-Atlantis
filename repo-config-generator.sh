@@ -100,7 +100,7 @@ workflows:
   multi_env_workflow:
     env:
     - name: ATLANTIS_COMMENT_ARGS
-      value: ${ATLANTIS_COMMENT_ARGS}
+      value: ${ATLANTIS_COMMENT_ARGS:-}
     plan:
       steps:
         - run: |
