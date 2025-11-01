@@ -189,7 +189,6 @@ get_environments() {
     local app_dir="$1"
     local envs=()
     declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
-
     for env in "${!env_map[@]}"; do
         tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
         env_dir="$app_dir/env/$env"
