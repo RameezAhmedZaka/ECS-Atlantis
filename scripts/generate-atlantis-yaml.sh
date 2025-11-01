@@ -13,30 +13,35 @@ parallel_apply: false
 projects:
 EOF
 
-# Check if a directory is a Terraform project
+# Function to check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
-# Loop through top-level dirs (apps)
-for base_dir in */; do
+# Loop through apps
+for base_dir in application/*/; do
     [ -d "$base_dir" ] || continue
-    for app_dir in "$base_dir"*/; do
-        [ -d "$app_dir" ] || continue
-        if is_terraform_project "$app_dir"; then
-            app_name="$(basename "$app_dir")"
+    app_name="$(basename "$base_dir")"
 
-            # Create ONE project per app
+    # Loop through environments under each app
+    for env_dir in "$base_dir"env/*/; do
+        [ -d "$env_dir" ] || continue
+        env_name="$(basename "$env_dir")"
+
+        # Skip if not Terraform project (we check two dirs up, since env dirs only hold confs)
+        if is_terraform_project "$base_dir"; then
+            project_name="${app_name}-${env_name}"
+
             cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}
-    dir: $app_dir
+  - name: ${project_name}
+    dir: ${env_dir}
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -47,7 +52,7 @@ PROJECT_EOF
     done
 done
 
-# Workflows section (keep your case logic unchanged)
+# Workflows section
 cat >> atlantis.yaml << 'EOF'
 workflows:
   multi_env_workflow:
@@ -82,9 +87,9 @@ workflows:
             echo "Planning for environment: $ENV"
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
-            echo "Destroy flag: $DESTROY_FLAG"
 
-            cd "$PROJECT_DIR"
+            # Move two directories up to main Terraform project
+            cd "$(dirname "$PROJECT_DIR")/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
@@ -132,7 +137,8 @@ workflows:
 
             echo "Applying for environment: $ENV"
 
-            cd "$PROJECT_DIR"
+            # Move two directories up to main Terraform project
+            cd "$(dirname "$PROJECT_DIR")/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
