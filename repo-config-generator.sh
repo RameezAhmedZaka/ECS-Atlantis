@@ -163,7 +163,6 @@
 
 
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -204,11 +203,11 @@ get_environments() {
 # Array to track project names
 declare -a project_names=()
 
-# Loop through all top-level directories (e.g., application, db, network)
+# Loop through all top-level directories (e.g., application, db, network, etc.)
 for base_dir in */; do
     [ -d "$base_dir" ] || continue
 
-    # Loop through each subdirectory
+    # Loop through each subdirectory (e.g., application/app1, db/mysql)
     for sub_dir in "$base_dir"*/; do
         [ -d "$sub_dir" ] || continue
 
@@ -217,7 +216,6 @@ for base_dir in */; do
             envs=$(get_environments "$sub_dir")
 
             if [ -z "$envs" ]; then
-                # Single project without environments
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-default
     dir: $sub_dir
@@ -235,7 +233,6 @@ for base_dir in */; do
 PROJECT_EOF
                 project_names+=("${base_dir%/}-${app_name}-default")
             else
-                # Multiple environments, keep dir as actual TF folder
                 for env in $envs; do
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
@@ -244,7 +241,7 @@ PROJECT_EOF
       enabled: true
       when_modified:
         - "*.tf"
-        - "config/${env}.tfvars"
+        - "config/*.tfvars"
         - "env/$env/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
@@ -269,7 +266,7 @@ workflows:
     plan:
       steps:  
         - run: |
-            PLANFILE="plan_\${PROJECT_NAME}.tfplan"
+            PLANFILE="plan.tfplan"
 
             case "\$PROJECT_NAME" in
               *-production)
@@ -288,9 +285,9 @@ workflows:
                 VAR_FILE="config/helia.tfvars"
                 ;;
               *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
                 ;;
             esac
 
@@ -320,7 +317,7 @@ workflows:
     apply:
       steps:
         - run: |
-            PLANFILE="plan_\${PROJECT_NAME}.tfplan"
+            PLANFILE="plan.tfplan"
 
             case "\$PROJECT_NAME" in
               *-production)
@@ -339,9 +336,9 @@ workflows:
                 VAR_FILE="config/helia.tfvars"
                 ;;
               *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
                 ;;
             esac
 
@@ -357,6 +354,7 @@ workflows:
               terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
 
+            # Apply the plan if it exists, otherwise do a raw apply with var-file
             if [ -f "\$PLANFILE" ]; then
               timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
                 echo "Apply failed for \$PLANFILE"
@@ -367,6 +365,3 @@ workflows:
               }
             fi
 EOF
-
-
-
