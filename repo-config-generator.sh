@@ -216,6 +216,7 @@ workflows:
     plan:
       steps:
         - run: |
+            bash -c '
             # Determine which environments to apply based on changed files
             ENVS=()
 
