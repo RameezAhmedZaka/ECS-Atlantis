@@ -98,11 +98,11 @@ echo "Project names: ${project_names[*]}"
 cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
-    env:
-    - name: ATLANTIS_COMMENT_ARGS
-      value: ${ATLANTIS_COMMENT_ARGS:-}
     plan:
       steps:
+        - env:
+            name: ATLANTIS_COMMENT_ARGS
+            value: ${ATLANTIS_COMMENT_ARGS:-}   
         - run: |
             PLANFILE="plan.tfplan"
             DESTROY_FLAG=""
