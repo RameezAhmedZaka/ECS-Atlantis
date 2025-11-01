@@ -54,13 +54,13 @@ for base_dir in */; do
                 # Single project without environments
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-default
-    dir: $sub_dir
+    dir: .
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/*/*"
+        - "$sub_dir/*.tf"
+        - "$sub_dir/config/*.tfvars"
+        - "$sub_dir/env/*/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -73,13 +73,13 @@ PROJECT_EOF
                 for env in $envs; do
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: $sub_dir
+    dir: .
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/${env}.tfvars"
-        - "env/$env/*"
+        - "$sub_dir/*.tf"
+        - "$sub_dir/config/${env}.tfvars"
+        - "$sub_dir/env/$env/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
