@@ -91,6 +91,8 @@ workflows:
             # Move two directories up to main Terraform project
             cd "$(dirname "$PROJECT_DIR")/../.."
 
+            rm -rf .terraform
+
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
                 -backend-config="$BACKEND_CONFIG" \
