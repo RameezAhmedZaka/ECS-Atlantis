@@ -87,9 +87,9 @@ workflows:
             echo "Planning for environment: $ENV"
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
-            echo "Destroy flag: $DESTROY_FLAG"
 
-            cd "$PROJECT_DIR/../.."
+            # Move two directories up to main Terraform project
+            cd "$(dirname "$PROJECT_DIR")/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
@@ -137,7 +137,8 @@ workflows:
 
             echo "Applying for environment: $ENV"
 
-            cd "$PROJECT_DIR/../.."
+            # Move two directories up to main Terraform project
+            cd "$(dirname "$PROJECT_DIR")/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \

@@ -1,142 +1,159 @@
 #!/bin/bash
 set -euo pipefail
-ENV="$1"
-RAW_FILTER="${2:-}"
 
-echo "=== INITIALIZING TERRAFORM for $ENV at $(date) ==="
+echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Parse arguments for filter only (destroy is disabled)
-APP_FILTER=""
+# Start atlantis.yaml
+cat > atlantis.yaml <<-EOF
+---
+version: 3
+automerge: true
+parallel_plan: false
+parallel_apply: false
+projects:
+EOF
 
-# Use POSIX-compliant way to split by comma
-OLD_IFS="$IFS"
-IFS=','
-set -- $RAW_FILTER
-IFS="$OLD_IFS"
+# Check if a directory is a Terraform project
+is_terraform_project() {
+    local dir="$1"
+    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
+}
 
-for arg; do
-    arg_clean=$(echo "$arg" | xargs)
-    case "$arg_clean" in
-        -destroy|--destroy)
-            echo "❌ You cannot perform this action. Destroy is disabled and cannot be run."
-            exit 1
-            ;;
-        --)
-            ;;
-        *)
-            if [ -n "$arg_clean" ]; then
-                APP_FILTER="$arg_clean"
+# Loop through top-level dirs (apps)
+for base_dir in */; do
+    [ -d "$base_dir" ] || continue
+    for app_dir in "$base_dir"*/; do
+        [ -d "$app_dir" ] || continue
+        if is_terraform_project "$app_dir"; then
+            app_name="$(basename "$app_dir")"
+
+            # Add project entries for each environment
+            for env in helia staging production; do
+                env_path="${app_dir}env/${env}"
+                [ -d "$env_path" ] || continue
+
+                cat >> atlantis.yaml << PROJECT_EOF
+  - name: ${base_dir%/}-${app_name}-${env}
+    dir: $env_path
+    autoplan:
+      enabled: true
+      when_modified:
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+            done
+        fi
+    done
+done
+
+# Workflows section (unchanged)
+cat >> atlantis.yaml << 'EOF'
+workflows:
+  multi_env_workflow:
+    plan:
+      steps:
+        - run: |
+            PLANFILE="plan_${PROJECT_NAME}.tfplan"
+
+            case "$PROJECT_NAME" in
+              *-production)
+                ENV="production"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
+                ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+              *-helia)
+                ENV="helia"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
+                ;;
+              *)
+                ENV="default"
+                BACKEND_CONFIG=""
+                VAR_FILE=""
+                ;;
+            esac
+
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            echo "Destroy flag: $DESTROY_FLAG"
+
+            cd "$PROJECT_DIR/../.."
+
+            if [ -f "$BACKEND_CONFIG" ]; then
+              timeout 300 terraform init \
+                -backend-config="$BACKEND_CONFIG" \
+                -input=false -reconfigure > /dev/null 2>&1
+            else
+              terraform init -input=false -reconfigure
             fi
-            ;;
-    esac
-done
 
-echo "App filter: $APP_FILTER"
+            if [ -f "$VAR_FILE" ]; then
+              timeout 300 terraform plan $DESTROY_FLAG \
+                         -var-file="$VAR_FILE" \
+                         -out="$PLANFILE"
+            else
+              terraform plan $DESTROY_FLAG -out="$PLANFILE"
+            fi
 
-# Find application directories using POSIX-compliant method
-dirs=$(find application -type f -name "main.tf" | sed 's|/main.tf||' | sort -u)
-if [ -z "$dirs" ]; then
-  echo "No applications found!"
-  exit 1
-fi
+    apply:
+      steps:
+        - run: |
+            PLANFILE="plan_${PROJECT_NAME}.tfplan"
 
-echo "Found applications:"
-echo "$dirs"
+            case "$PROJECT_NAME" in
+              *-production)
+                ENV="production"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
+                ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+              *-helia)
+                ENV="helia"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
+                ;;
+              *)
+                ENV="default"
+                BACKEND_CONFIG=""
+                VAR_FILE=""
+                ;;
+            esac
 
-# Create init status file
-INIT_STATUS_FILE="/tmp/atlantis_init_status_${ENV}.lst"
-: > "$INIT_STATUS_FILE"
+            echo "Applying for environment: $ENV"
 
-init_count=0
+            cd "$PROJECT_DIR/../.."
 
-# Initialize each directory using while-read loop (POSIX-compliant)
-echo "$dirs" | while IFS= read -r d; do
-  if [ -f "$d/main.tf" ]; then
-    APP_NAME=$(basename "$d")
+            if [ -f "$BACKEND_CONFIG" ]; then
+              timeout 300 terraform init \
+                -backend-config="$BACKEND_CONFIG" \
+                -input=false -reconfigure > /dev/null 2>&1
+            else
+              terraform init -input=false -reconfigure > /dev/null 2>&1
+            fi
 
-    if [ -n "$APP_FILTER" ] && [ "$APP_NAME" != "$APP_FILTER" ]; then
-      echo "=== Skipping $APP_NAME initialization (does not match filter: $APP_FILTER) ==="
-      continue
-    fi
-
-    echo "=== Initializing $APP_NAME ($ENV) ==="
-    
-    # Determine backend config and var file based on environment
-    case "$ENV" in
-      "production")
-        BACKEND_CONFIG="env/production/prod.conf"
-        VAR_FILE="config/production.tfvars"
-        ;;
-      "staging")
-        BACKEND_CONFIG="env/staging/stage.conf"   
-        VAR_FILE="config/stage.tfvars"            
-        ;;
-      "helia")
-        BACKEND_CONFIG="env/helia/helia.conf"
-        VAR_FILE="config/helia.tfvars"                   
-        ;;
-    esac
-    
-    echo "Directory: $d"
-    echo "Backend config: $BACKEND_CONFIG"
-    echo "Var file: $VAR_FILE"
-    
-    # Check if files exist
-    if [ ! -f "$d/$BACKEND_CONFIG" ]; then
-      echo "❌ Backend config not found: $d/$BACKEND_CONFIG"
-      echo "$APP_NAME|FAILED|Backend config missing: $BACKEND_CONFIG" >> "$INIT_STATUS_FILE"
-      continue
-    fi
-    
-    if [ ! -f "$d/$VAR_FILE" ]; then
-      echo "❌ Var file not found: $d/$VAR_FILE"
-      echo "$APP_NAME|FAILED|Var file missing: $VAR_FILE" >> "$INIT_STATUS_FILE"
-      continue
-    fi
-    
-    # Clean up existing .terraform directory
-    rm -rf "$d/.terraform"
-    
-    # Initialize with backend config
-    echo "Step 1: Initializing Terraform..."
-    if timeout 120 terraform -chdir="$d" init -upgrade \
-      -backend-config="$BACKEND_CONFIG" \
-      -reconfigure \
-      -input=false; then
-      
-      echo "✅ Successfully initialized $APP_NAME"
-      echo "$APP_NAME|SUCCESS" >> "$INIT_STATUS_FILE"
-      init_count=$((init_count + 1))
-    else
-      echo "❌ Init failed for $APP_NAME"
-      echo "$APP_NAME|FAILED|Terraform init command failed" >> "$INIT_STATUS_FILE"
-    fi
-    
-  else
-    echo "Skipping $d (main.tf missing)"
-  fi
-done
-
-# Summary
-echo "=== INITIALIZATION COMPLETED for $ENV at $(date) ==="
-echo "Successfully initialized $init_count application(s)"
-
-if [ -n "$APP_FILTER" ] && [ "$init_count" -eq 0 ]; then
-  echo "⚠️  No applications matched filter: $APP_FILTER"
-  echo "Available applications:"
-  echo "$dirs" | while IFS= read -r d; do
-    if [ -f "$d/main.tf" ]; then
-      echo "  - $(basename "$d")"
-    fi
-  done
-fi
-
-# Display init status
-echo "Initialization Status:"
-cat "$INIT_STATUS_FILE" | while IFS='|' read -r app status message; do
-  if [ "$status" = "SUCCESS" ]; then
-    echo "  ✅ $app: Success"
-  else
-    echo "  ❌ $app: Failed - ${message:-Unknown error}"
-  fi
-done
+            if [ -f "$PLANFILE" ]; then
+              timeout 600 terraform apply -input=false -auto-approve "$PLANFILE" || {
+                echo "Apply failed for $PLANFILE"
+              }
+            else
+              timeout 600 terraform apply -var-file="$VAR_FILE" -input=false -auto-approve || {
+                echo "Apply failed for $PROJECT_DIR"
+              }
+            fi
+EOF

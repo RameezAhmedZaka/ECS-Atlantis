@@ -4,8 +4,8 @@ automerge: true
 parallel_plan: false
 parallel_apply: false
 projects:
-  - name: rdot-helia
-    dir: application/rdot/env/helia/
+  - name: application-rdot-helia
+    dir: application/rdot/env/helia
     autoplan:
       enabled: true
       when_modified:
@@ -17,8 +17,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: rdot-production
-    dir: application/rdot/env/production/
+  - name: application-rdot-staging
+    dir: application/rdot/env/staging
     autoplan:
       enabled: true
       when_modified:
@@ -30,8 +30,21 @@ projects:
     apply_requirements:
       - approved
       - mergeable
-  - name: rdot-staging
-    dir: application/rdot/env/staging/
+  - name: application-rdot-production
+    dir: application/rdot/env/production
+    autoplan:
+      enabled: true
+      when_modified:
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1-production
+    dir: db/db1/env/production
     autoplan:
       enabled: true
       when_modified:
@@ -76,9 +89,9 @@ workflows:
             echo "Planning for environment: $ENV"
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
+            echo "Destroy flag: $DESTROY_FLAG"
 
-            # Move two directories up to main Terraform project
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            cd "$PROJECT_DIR/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
@@ -126,8 +139,7 @@ workflows:
 
             echo "Applying for environment: $ENV"
 
-            # Move two directories up to main Terraform project
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            cd "$PROJECT_DIR/../.."
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
