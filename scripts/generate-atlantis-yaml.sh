@@ -103,9 +103,11 @@ workflows:
         - run: |
             PLANFILE="plan.tfplan"
             DESTROY_FLAG=""
-            if echo "${COMMENT_ARGS:-}" | grep -q "\-destroy"; then
-              echo "Destroy is disabled"
+            if [[ "${COMMENT_ARGS:-}" =~ -destroy ]]; then
+              echo "Destroy IS DIABLED"
               DESTROY_FLAG="-destroy"
+            else
+              echo "Normal plan"
             fi
 
             case "\$PROJECT_NAME" in
