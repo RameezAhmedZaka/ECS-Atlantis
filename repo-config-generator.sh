@@ -31,8 +31,6 @@ for base_dir in */; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
 
-                echo "Found project: ${base_dir%/}-${app_name}-${env} at ${app_dir}"
-                
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
     dir: ${app_dir}
@@ -53,7 +51,7 @@ PROJECT_EOF
     done
 done
 
-# Create separate workflows for each environment with better error handling
+# Create separate workflows with -reconfigure flag
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
@@ -62,15 +60,10 @@ workflows:
         - run: |
             echo "=== PRODUCTION WORKFLOW STARTED ==="
             echo "Project: $PROJECT_NAME"
-            echo "Directory: $(pwd)"
-            echo "Files in current directory:"
-            ls -la
-            echo "Files in env/production:"
-            ls -la env/production/ || echo "env/production directory not found"
-            echo "Files in config:"
-            ls -la config/ || echo "config directory not found"
+            # Clean up any existing terraform initialization
+            rm -rf .terraform
         - init:
-            extra_args: [-backend-config=env/production/prod.conf]
+            extra_args: [-backend-config=env/production/prod.conf, -reconfigure, -input=false]
         - run: echo "Init completed successfully"
         - plan:
             extra_args: [-var-file=config/production.tfvars, -lock-timeout=10m, -out=$PLANFILE]
@@ -87,10 +80,9 @@ workflows:
         - run: |
             echo "=== STAGING WORKFLOW STARTED ==="
             echo "Project: $PROJECT_NAME"
-            echo "Files in env/staging:"
-            ls -la env/staging/ || echo "env/staging directory not found"
+            rm -rf .terraform
         - init:
-            extra_args: [-backend-config=env/staging/stage.conf]
+            extra_args: [-backend-config=env/staging/stage.conf, -reconfigure, -input=false]
         - plan:
             extra_args: [-var-file=config/stage.tfvars, -lock-timeout=10m, -out=$PLANFILE]
     apply:
@@ -104,10 +96,9 @@ workflows:
         - run: |
             echo "=== HELIA WORKFLOW STARTED ==="
             echo "Project: $PROJECT_NAME"
-            echo "Files in env/helia:"
-            ls -la env/helia/ || echo "env/helia directory not found"
+            rm -rf .terraform
         - init:
-            extra_args: [-backend-config=env/helia/helia.conf]
+            extra_args: [-backend-config=env/helia/helia.conf, -reconfigure, -input=false]
         - plan:
             extra_args: [-var-file=config/helia.tfvars, -lock-timeout=10m, -out=$PLANFILE]
     apply:
@@ -115,8 +106,6 @@ workflows:
         - apply:
             extra_args: [-lock-timeout=10m]
 EOF
-
-
 
 
 # #!/bin/bash
