@@ -100,5 +100,3 @@ if [ -z "$APP_FILTER" ] && [ -z "$PLANNED_FILTER" ]; then
 else
   echo "Preserving plan files for filtered apply"
 fi
-
-echo "=== APPLY COMPLETED for $ENV at $(date) ==="
