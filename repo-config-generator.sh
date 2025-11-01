@@ -140,13 +140,13 @@ workflows:
             # Move two directories up to main Terraform project
             cd "$(dirname "$PROJECT_DIR")/../.."
 
-            if [ -f "$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init \
-                -backend-config="$BACKEND_CONFIG" \
-                -input=false -reconfigure > /dev/null 2>&1
-            else
-              terraform init -input=false -reconfigure > /dev/null 2>&1
-            fi
+            # if [ -f "$BACKEND_CONFIG" ]; then
+            #   timeout 300 terraform init \
+            #     -backend-config="$BACKEND_CONFIG" \
+            #     -input=false -reconfigure > /dev/null 2>&1
+            # else
+            #   terraform init -input=false -reconfigure > /dev/null 2>&1
+            # fi
 
             if [ -f "$PLANFILE" ]; then
               timeout 600 terraform apply -input=false -auto-approve "$PLANFILE" || {
