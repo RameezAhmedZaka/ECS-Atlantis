@@ -100,8 +100,8 @@ resource "aws_ecs_task_definition" "backend_task" {
           value: "true"
         },
         {
-        name: "ATLANTIS_DISABLE_REPO_LOCKING"
-        value: "true"
+          name: "ATLANTIS_DISABLE_REPO_LOCKING"
+          value: "true"
         },
         {
           name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
