@@ -213,4 +213,4 @@ workflows:
                 echo "Apply failed for \$PROJECT_DIR"
               }
             fi
-EOFcommand: echo "$COMMENT_ARGS" | tr -d '\\'
+EOF
