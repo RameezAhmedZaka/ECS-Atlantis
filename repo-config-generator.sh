@@ -100,9 +100,9 @@ workflows:
   multi_env_workflow:
     plan:
       steps:
-        - env:
-            name: ATLANTIS_COMMENT_ARGS
-            value: ${ATLANTIS_COMMENT_ARGS:-}   
+        # - env:
+        #     name: ATLANTIS_COMMENT_ARGS
+        #     value: ${ATLANTIS_COMMENT_ARGS:-}   
         - run: |
             PLANFILE="plan.tfplan"
             DESTROY_FLAG=""
