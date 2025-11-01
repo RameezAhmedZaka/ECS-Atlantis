@@ -36,7 +36,7 @@ for base_dir in */; do
   - name: ${base_dir%/}-${app_name}-${env}
     dir: $env_path
     autoplan:
-      enabled: false  # Disable autoplan to prevent conflicts
+      enabled: true # Disable autoplan to prevent conflicts
       when_modified:
         - "../../*.tf"
         - "../../config/*.tfvars"
