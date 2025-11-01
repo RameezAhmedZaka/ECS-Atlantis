@@ -101,32 +101,15 @@ cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
     plan:
-      steps:  
+      steps:
         - run: |
-            PLANFILE="plan.tfplan"
+            # Unique plan file per project
+            PLANFILE="plan_\${PROJECT_NAME}.tfplan"
 
-            case "\$PROJECT_NAME" in
-              *-production)
-                ENV="production"
-                BACKEND_CONFIG="env/production/prod.conf"
-                VAR_FILE="config/production.tfvars"
-                ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
-                ;;
-              *-helia)
-                ENV="helia"
-                BACKEND_CONFIG="env/helia/helia.conf"
-                VAR_FILE="config/helia.tfvars"
-                ;;
-              *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
-                ;;
-            esac
+            # Extract env from project name
+            ENV=\$(echo "\$PROJECT_NAME" | awk -F'-' '{print \$NF}')
+            BACKEND_CONFIG="env/\$ENV/\$ENV.conf"
+            VAR_FILE="config/\$ENV.tfvars"
 
             echo "Planning for environment: \$ENV"
             echo "Using backend config: \$BACKEND_CONFIG"
@@ -136,57 +119,32 @@ workflows:
             cd "\$PROJECT_DIR"
 
             if [ -f "\$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init \
-                -backend-config="\$BACKEND_CONFIG" \
-                -input=false -reconfigure > /dev/null 2>&1
+              timeout 300 terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure > /dev/null 2>&1
             else
               terraform init -input=false -reconfigure
             fi
 
             if [ -f "\$VAR_FILE" ]; then
-              timeout 300 terraform plan \$DESTROY_FLAG \
-                         -var-file="\$VAR_FILE" \
-                         -out="\$PLANFILE"
+              timeout 300 terraform plan \$DESTROY_FLAG -var-file="\$VAR_FILE" -out="\$PLANFILE"
             else
-              terraform plan \$DESTROY_FLAG -out="\$PLANFILE"
+              timeout 300 terraform plan \$DESTROY_FLAG -out="\$PLANFILE"
             fi
 
     apply:
       steps:
         - run: |
-            PLANFILE="plan.tfplan"
+            PLANFILE="plan_\${PROJECT_NAME}.tfplan"
 
-            case "\$PROJECT_NAME" in
-              *-production)
-                ENV="production"
-                BACKEND_CONFIG="env/production/prod.conf"
-                VAR_FILE="config/production.tfvars"
-                ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
-                ;;
-              *-helia)
-                ENV="helia"
-                BACKEND_CONFIG="env/helia/helia.conf"
-                VAR_FILE="config/helia.tfvars"
-                ;;
-              *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
-                ;;
-            esac
+            ENV=\$(echo "\$PROJECT_NAME" | awk -F'-' '{print \$NF}')
+            BACKEND_CONFIG="env/\$ENV/\$ENV.conf"
+            VAR_FILE="config/\$ENV.tfvars"
 
             echo "Applying for environment: \$ENV"
 
             cd "\$PROJECT_DIR"
 
             if [ -f "\$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init \
-                -backend-config="\$BACKEND_CONFIG" \
-                -input=false -reconfigure > /dev/null 2>&1
+              timeout 300 terraform init -backend-config="\$BACKEND_CONFIG" -input=false -reconfigure > /dev/null 2>&1
             else
               terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
