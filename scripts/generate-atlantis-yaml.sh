@@ -1,5 +1,3 @@
-atlantis plan -p rdot-staging -- -destroy
-
 #!/bin/bash
 set -euo pipefail
 
@@ -40,18 +38,22 @@ get_environments() {
 # Array to track project names
 declare -a project_names=()
 
-# Loop through application apps
-if [ -d "application" ]; then
-    for app_dir in application/*; do
-        [ -d "$app_dir" ] || continue
-        if is_terraform_project "$app_dir"; then
-            app_name=$(basename "$app_dir")
-            envs=$(get_environments "$app_dir")
+# Loop through all top-level directories (e.g., application, db, network, etc.)
+for base_dir in */; do
+    [ -d "$base_dir" ] || continue
+
+    # Loop through each subdirectory (e.g., application/app1, db/mysql)
+    for sub_dir in "$base_dir"*/; do
+        [ -d "$sub_dir" ] || continue
+
+        if is_terraform_project "$sub_dir"; then
+            app_name="$(basename "$sub_dir")"
+            envs=$(get_environments "$sub_dir")
 
             if [ -z "$envs" ]; then
                 cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${app_name}-default
-    dir: $app_dir
+  - name: ${base_dir%/}-${app_name}-default
+    dir: $sub_dir
     autoplan:
       enabled: true
       when_modified:
@@ -64,12 +66,12 @@ if [ -d "application" ]; then
       - approved
       - mergeable
 PROJECT_EOF
-                project_names+=("${app_name}-default")
+                project_names+=("${base_dir%/}-${app_name}-default")
             else
                 for env in $envs; do
                     cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${app_name}-${env}
-    dir: $app_dir
+  - name: ${base_dir%/}-${app_name}-${env}
+    dir: $sub_dir
     autoplan:
       enabled: true
       when_modified:
@@ -82,12 +84,12 @@ PROJECT_EOF
       - approved
       - mergeable
 PROJECT_EOF
-                    project_names+=("${app_name}-${env}")
+                    project_names+=("${base_dir%/}-${app_name}-${env}")
                 done
             fi
         fi
     done
-fi
+done
 
 echo "Total projects configured: ${#project_names[@]}"
 echo "Project names: ${project_names[*]}"
