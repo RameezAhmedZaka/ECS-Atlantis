@@ -153,7 +153,7 @@ workflows:
                 echo "Apply failed for $PLANFILE"
               }
             else
-              timeout 600 terraform apply -var-file="$VAR_FILE" -input=false -auto-approve || {
+              {
                 echo "Apply failed for $PROJECT_DIR"
               }
             fi
