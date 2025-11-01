@@ -99,23 +99,14 @@ cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
     plan:
-      steps:
+      steps:  
         - run: |
             PLANFILE="plan.tfplan"
             DESTROY_FLAG=""
-            for arg in ${COMMENT_ARGS:-}; do
-                arg_clean=$(echo "$arg" | xargs)
-                case "$arg_clean" in
-                    -destroy|--destroy)
-                        echo "❌ You cannot perform this action. Destroy is disabled and cannot be run."
-                        exit 1
-                        ;;
-                    --)
-                        ;;
-                    *)
-                        ;;
-                esac
-            done
+            if echo "${COMMENT_ARGS:-}" | grep -q "\-destroy"; then
+              echo "Destroy is disabled"
+              DESTROY_FLAG="-destroy"
+            fi
 
             case "\$PROJECT_NAME" in
               *-production)

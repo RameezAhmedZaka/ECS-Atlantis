@@ -16,7 +16,7 @@ EOF
 # Function to check if directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
-    [ -f "$dir/main.tf" ] && [ -f "$dir/backend.tf" ] && [ -f "$dir/providers.tf" ]
+    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
 # Function to get environments for an app
@@ -99,12 +99,12 @@ cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
     plan:
-      steps:
+      steps:  
         - run: |
             PLANFILE="plan.tfplan"
             DESTROY_FLAG=""
-            if echo "${ATLANTIS_COMMENT_ARGS:-}" | grep -q "\-destroy"; then
-              echo "Destroy plan requested"
+            if echo "${COMMENT_ARGS:-}" | grep -q "\-destroy"; then
+              echo "Destroy is disabled"
               DESTROY_FLAG="-destroy"
             fi
 
