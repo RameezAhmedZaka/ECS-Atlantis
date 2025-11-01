@@ -69,17 +69,17 @@ for base_dir in */; do
 PROJECT_EOF
                 project_names+=("${base_dir%/}-${app_name}-default")
             else
-                # Multiple environments, create unique dir per env (virtual)
+                # Multiple environments, keep dir as actual TF folder
                 for env in $envs; do
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: $sub_dir/env/$env
+    dir: $sub_dir
     autoplan:
       enabled: true
       when_modified:
-        - "../../*.tf"
-        - "../../config/${env}.tfvars"
-        - "*"
+        - "*.tf"
+        - "config/${env}.tfvars"
+        - "env/$env/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -105,22 +105,21 @@ workflows:
         - run: |
             PLANFILE="plan.tfplan"
 
-            # Determine env from PROJECT_NAME
             case "\$PROJECT_NAME" in
               *-production)
                 ENV="production"
-                BACKEND_CONFIG="../../env/production/prod.conf"
-                VAR_FILE="../../config/production.tfvars"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
                 ;;
               *-staging)
                 ENV="staging"
-                BACKEND_CONFIG="../../env/staging/stage.conf"
-                VAR_FILE="../../config/stage.tfvars"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
                 ;;
               *-helia)
                 ENV="helia"
-                BACKEND_CONFIG="../../env/helia/helia.conf"
-                VAR_FILE="../../config/helia.tfvars"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
                 ;;
               *)
                 ENV="default"
@@ -160,18 +159,18 @@ workflows:
             case "\$PROJECT_NAME" in
               *-production)
                 ENV="production"
-                BACKEND_CONFIG="../../env/production/prod.conf"
-                VAR_FILE="../../config/production.tfvars"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
                 ;;
               *-staging)
                 ENV="staging"
-                BACKEND_CONFIG="../../env/staging/stage.conf"
-                VAR_FILE="../../config/stage.tfvars"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
                 ;;
               *-helia)
                 ENV="helia"
-                BACKEND_CONFIG="../../env/helia/helia.conf"
-                VAR_FILE="../../config/helia.tfvars"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
                 ;;
               *)
                 ENV="default"
@@ -192,7 +191,6 @@ workflows:
               terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
 
-            # Apply the plan if it exists, otherwise do a raw apply with var-file
             if [ -f "\$PLANFILE" ]; then
               timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
                 echo "Apply failed for \$PLANFILE"
