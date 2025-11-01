@@ -3,7 +3,6 @@ set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Start atlantis.yaml
 cat > atlantis.yaml <<-EOF
 ---
 version: 3
@@ -34,7 +33,7 @@ for base_dir in */; do
 
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: ${app_dir}  # Point to main Terraform directory, not env subdirectory
+    dir: ${app_dir}
     autoplan:
       enabled: true
       when_modified:
@@ -42,7 +41,7 @@ for base_dir in */; do
         - "config/*.tfvars"
         - "env/*/*"
     terraform_version: v1.6.6
-    workflow: multi_env_workflow
+    workflow: ${env}_workflow
     apply_requirements:
       - approved
       - mergeable
@@ -52,122 +51,44 @@ PROJECT_EOF
     done
 done
 
-# Workflows section with proper directory handling
+# Create separate workflows for each environment using Atlantis native steps
 cat >> atlantis.yaml << 'EOF'
 workflows:
-  multi_env_workflow:
+  production_workflow:
     plan:
       steps:
-        - run: |
-            # Create unique working directory for this project/environment
-            WORK_DIR="/tmp/atlantis_${PROJECT_NAME}_${PULL_NUM}"
-            mkdir -p "$WORK_DIR"
-            
-            # Copy the entire Terraform project to temp directory
-            cp -r . "$WORK_DIR/"
-            cd "$WORK_DIR"
-
-            PLANFILE="plan_${PROJECT_NAME}.tfplan"
-
-            case "$PROJECT_NAME" in
-              *-production)
-                ENV="production"
-                BACKEND_CONFIG="env/production/prod.conf"
-                VAR_FILE="config/production.tfvars"
-                ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
-                ;;
-              *-helia)
-                ENV="helia"
-                BACKEND_CONFIG="env/helia/helia.conf"
-                VAR_FILE="config/helia.tfvars"
-                ;;
-              *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
-                ;;
-            esac
-
-            echo "Planning for environment: $ENV"
-            echo "Using backend config: $BACKEND_CONFIG"
-            echo "Using var file: $VAR_FILE"
-            echo "Current directory: $(pwd)"
-            echo "Directory contents:"
-            ls -la
-
-            rm -rf .terraform
-
-            if [ -f "$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init \
-                -backend-config="$BACKEND_CONFIG" \
-                -input=false -reconfigure
-            else
-              terraform init -input=false -reconfigure
-            fi
-
-            if [ -f "$VAR_FILE" ]; then
-              timeout 300 terraform plan -lock-timeout=10m \
-                         -var-file="$VAR_FILE" \
-                         -out="$PLANFILE"
-            else
-              terraform plan -lock-timeout=10m -out="$PLANFILE"
-            fi
-
-            # Copy plan file back to original location for Atlantis to find it
-            cp "$PLANFILE" "$PROJECT_DIR/"
-
+        - init:
+            extra_args: [-backend-config=env/production/prod.conf]
+        - plan:
+            extra_args: [-var-file=config/production.tfvars, -lock-timeout=10m, -out=$PLANFILE]
     apply:
       steps:
-        - run: |
-            PLANFILE="plan_${PROJECT_NAME}.tfplan"
+        - apply:
+            extra_args: [-lock-timeout=10m]
 
-            case "$PROJECT_NAME" in
-              *-production)
-                ENV="production"
-                BACKEND_CONFIG="env/production/prod.conf"
-                VAR_FILE="config/production.tfvars"
-                ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
-                ;;
-              *-helia)
-                ENV="helia"
-                BACKEND_CONFIG="env/helia/helia.conf"
-                VAR_FILE="config/helia.tfvars"
-                ;;
-              *)
-                ENV="default"
-                BACKEND_CONFIG=""
-                VAR_FILE=""
-                ;;
-            esac
+  staging_workflow:
+    plan:
+      steps:
+        - init:
+            extra_args: [-backend-config=env/staging/stage.conf]
+        - plan:
+            extra_args: [-var-file=config/stage.tfvars, -lock-timeout=10m, -out=$PLANFILE]
+    apply:
+      steps:
+        - apply:
+            extra_args: [-lock-timeout=10m]
 
-            echo "Applying for environment: $ENV"
-
-            # Create working directory again for apply
-            WORK_DIR="/tmp/atlantis_${PROJECT_NAME}_${PULL_NUM}"
-            mkdir -p "$WORK_DIR"
-            cp -r . "$WORK_DIR/"
-            cd "$WORK_DIR"
-
-            # Copy the plan file from original location to working directory
-            cp "$PROJECT_DIR/$PLANFILE" .
-
-            if [ -f "$PLANFILE" ]; then
-              timeout 600 terraform apply -input=false -lock-timeout=10m -auto-approve "$PLANFILE" || {
-                echo "Apply failed for $PLANFILE"
-                exit 1
-              }
-            else
-              echo "Plan file $PLANFILE not found"
-              exit 1
-            fi
+  helia_workflow:
+    plan:
+      steps:
+        - init:
+            extra_args: [-backend-config=env/helia/helia.conf]
+        - plan:
+            extra_args: [-var-file=config/helia.tfvars, -lock-timeout=10m, -out=$PLANFILE]
+    apply:
+      steps:
+        - apply:
+            extra_args: [-lock-timeout=10m]
 EOF
 
 
