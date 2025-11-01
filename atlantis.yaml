@@ -4,8 +4,21 @@ automerge: true
 parallel_plan: false
 parallel_apply: false
 projects:
-  - name: application/rdot-rdot
+  - name: application-rdot
     dir: application/rdot/
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1
+    dir: db/db1/
     autoplan:
       enabled: true
       when_modified:
@@ -22,27 +35,27 @@ workflows:
     plan:
       steps:
         - run: |
-            # Determine which environments to apply based on changed files
-            ENVS=()
+            # POSIX-compatible approach: use space-separated string instead of arrays
+            ENVS=""
 
             if echo "$CHANGED_FILES" | grep -q "env/production/"; then
-                ENVS+=("production")
+                ENVS="$ENVS production"
             fi
             if echo "$CHANGED_FILES" | grep -q "env/staging/"; then
-                ENVS+=("staging")
+                ENVS="$ENVS staging"
             fi
             if echo "$CHANGED_FILES" | grep -q "env/helia/"; then
-                ENVS+=("helia")
+                ENVS="$ENVS helia"
             fi
 
             # If main Terraform files or config changed, apply to all
             if echo "$CHANGED_FILES" | grep -qE ".*\.tf|config/.*\.tfvars"; then
-                ENVS=("production" "staging" "helia")
+                ENVS="production staging helia"
             fi
 
-            echo "Environments to apply: ${ENVS[*]}"
+            echo "Environments to apply: $ENVS"
 
-            for ENV in "${ENVS[@]}"; do
+            for ENV in $ENVS; do
                 case "$ENV" in
                     production)
                         BACKEND_CONFIG="env/production/prod.conf"
@@ -83,27 +96,25 @@ workflows:
     apply:
       steps:
         - run: |
-            # Determine which environments to apply based on changed files
-            ENVS=()
+            ENVS=""
 
             if echo "$CHANGED_FILES" | grep -q "env/production/"; then
-                ENVS+=("production")
+                ENVS="$ENVS production"
             fi
             if echo "$CHANGED_FILES" | grep -q "env/staging/"; then
-                ENVS+=("staging")
+                ENVS="$ENVS staging"
             fi
             if echo "$CHANGED_FILES" | grep -q "env/helia/"; then
-                ENVS+=("helia")
+                ENVS="$ENVS helia"
             fi
 
-            # If main Terraform files or config changed, apply to all
             if echo "$CHANGED_FILES" | grep -qE ".*\.tf|config/.*\.tfvars"; then
-                ENVS=("production" "staging" "helia")
+                ENVS="production staging helia"
             fi
 
-            echo "Environments to apply: ${ENVS[*]}"
+            echo "Environments to apply: $ENVS"
 
-            for ENV in "${ENVS[@]}"; do
+            for ENV in $ENVS; do
                 case "$ENV" in
                     production)
                         BACKEND_CONFIG="env/production/prod.conf"

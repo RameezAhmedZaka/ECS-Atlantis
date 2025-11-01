@@ -1,6 +1,5 @@
 #!/bin/sh
-set -euo pipefail
-
+set -euo 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
 # Start atlantis.yaml
