@@ -23,9 +23,9 @@ is_terraform_project() {
 get_environments() {
     local app_dir="$1"
     local envs=()
-    declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
+    declare -A env_map=( ["staging"]="stage" ["helia"]="helia" ["production"]="production" )
 
-    for env in "${!env_map[@]}"; do
+    for env in staging helia production; do
         tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
         env_dir="$app_dir/env/$env"
         if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
@@ -68,9 +68,12 @@ for base_dir in */; do
 PROJECT_EOF
                 project_names+=("${base_dir%/}-${app_name}-default")
             else
+                prev_env=""
                 for env in $envs; do
+                    project_full_name="${base_dir%/}-${app_name}-${env}"
+
                     cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}-${env}
+  - name: $project_full_name
     dir: $sub_dir
     autoplan:
       enabled: true
@@ -84,7 +87,15 @@ PROJECT_EOF
       - approved
       - mergeable
 PROJECT_EOF
-                    project_names+=("${base_dir%/}-${app_name}-${env}")
+
+                    # Add depends_on if there is a previous environment
+                    if [ -n "$prev_env" ]; then
+                        echo "    depends_on:" >> atlantis.yaml
+                        echo "      - ${base_dir%/}-${app_name}-$prev_env" >> atlantis.yaml
+                    fi
+
+                    project_names+=("$project_full_name")
+                    prev_env="$env"
                 done
             fi
         fi
@@ -99,16 +110,9 @@ cat >> atlantis.yaml <<-EOF
 workflows:
   multi_env_workflow:
     plan:
-      steps:  
+      steps:
         - run: |
             PLANFILE="plan.tfplan"
-            DESTROY_FLAG=""
-            if [[ "${COMMENT_ARGS:-}" =~ -destroy ]]; then
-              echo "Destroy IS DIABLED"
-              DESTROY_FLAG="-destroy"
-            else
-              echo "Normal plan"
-            fi
 
             case "\$PROJECT_NAME" in
               *-production)
@@ -196,7 +200,6 @@ workflows:
               terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
 
-            # Apply the plan if it exists, otherwise do a raw apply with var-file
             if [ -f "\$PLANFILE" ]; then
               timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
                 echo "Apply failed for \$PLANFILE"
