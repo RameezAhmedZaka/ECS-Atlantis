@@ -102,13 +102,6 @@ workflows:
       steps:  
         - run: |
             PLANFILE="plan.tfplan"
-            DESTROY_FLAG=""
-            if [[ "${COMMENT_ARGS:-}" =~ -destroy ]]; then
-              echo "Destroy IS DIABLED"
-              DESTROY_FLAG="-destroy"
-            else
-              echo "Normal plan"
-            fi
 
             case "\$PROJECT_NAME" in
               *-production)
