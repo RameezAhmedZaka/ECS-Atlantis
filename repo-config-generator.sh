@@ -103,7 +103,7 @@ workflows:
     plan:
       steps:  
         - run: |
-            PLANFILE="plan_${PROJECT_NAME}.tfplan"
+            PLANFILE="plan.tfplan"
 
             case "\$PROJECT_NAME" in
               *-production)
