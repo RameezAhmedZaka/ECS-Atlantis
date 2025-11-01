@@ -8,8 +8,8 @@ cat > atlantis.yaml <<-EOF
 ---
 version: 3
 automerge: true
-parallel_plan: false
-parallel_apply: false
+parallel_plan: true
+parallel_apply: false  # Keep serial for now until we debug
 projects:
 EOF
 
@@ -52,7 +52,7 @@ PROJECT_EOF
     done
 done
 
-# Workflows section (unchanged)
+# Workflows section with improved locking
 cat >> atlantis.yaml << 'EOF'
 workflows:
   multi_env_workflow:
@@ -91,22 +91,24 @@ workflows:
             # Move two directories up to main Terraform project
             cd "$(dirname "$PROJECT_DIR")/../.."
 
+            # Clean up any existing terraform state
             rm -rf .terraform
+            rm -f .terraform.lock.hcl
 
             if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init \
                 -backend-config="$BACKEND_CONFIG" \
-                -input=false -reconfigure > /dev/null 2>&1
+                -input=false -reconfigure
             else
               terraform init -input=false -reconfigure
             fi
 
             if [ -f "$VAR_FILE" ]; then
-              timeout 300 terraform plan -lock-timeout=5m  \
+              timeout 300 terraform plan -lock-timeout=10m \
                          -var-file="$VAR_FILE" \
                          -out="$PLANFILE"
             else
-              terraform plan $DESTROY_FLAG -out="$PLANFILE"
+              terraform plan -lock-timeout=10m -out="$PLANFILE"
             fi
 
     apply:
@@ -142,24 +144,200 @@ workflows:
             # Move two directories up to main Terraform project
             cd "$(dirname "$PROJECT_DIR")/../.."
 
-            # if [ -f "$BACKEND_CONFIG" ]; then
-            #   timeout 300 terraform init \
-            #     -backend-config="$BACKEND_CONFIG" \
-            #     -input=false -reconfigure > /dev/null 2>&1
-            # else
-            #   terraform init -input=false -reconfigure > /dev/null 2>&1
-            # fi
+            # Reinitialize to ensure clean state
+            rm -rf .terraform
+            rm -f .terraform.lock.hcl
+
+            if [ -f "$BACKEND_CONFIG" ]; then
+              timeout 300 terraform init \
+                -backend-config="$BACKEND_CONFIG" \
+                -input=false -reconfigure
+            else
+              terraform init -input=false -reconfigure
+            fi
 
             if [ -f "$PLANFILE" ]; then
-              timeout 600 terraform apply -input=false -lock-timeout=5m  -auto-approve "$PLANFILE" || {
+              timeout 600 terraform apply \
+                -input=false \
+                -lock-timeout=15m \
+                -auto-approve "$PLANFILE" || {
                 echo "Apply failed for $PLANFILE"
+                exit 1
               }
+              
+              # Clean up plan file after successful apply
+              rm -f "$PLANFILE"
             else
-              {
-                echo "Apply failed for $PROJECT_DIR"
-              }
+              echo "Error: Plan file $PLANFILE not found"
+              exit 1
             fi
 EOF
+
+
+
+
+# #!/bin/bash
+# set -euo pipefail
+
+# echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+
+# # Start atlantis.yaml
+# cat > atlantis.yaml <<-EOF
+# ---
+# version: 3
+# automerge: true
+# parallel_plan: false
+# parallel_apply: false
+# projects:
+# EOF
+
+# # Check if a directory is a Terraform project
+# is_terraform_project() {
+#     local dir="$1"
+#     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
+# }
+
+# # Loop through top-level dirs (apps)
+# for base_dir in */; do
+#     [ -d "$base_dir" ] || continue
+#     for app_dir in "$base_dir"*/; do
+#         [ -d "$app_dir" ] || continue
+#         if is_terraform_project "$app_dir"; then
+#             app_name="$(basename "$app_dir")"
+
+#             # Add project entries for each environment
+#             for env in helia staging production; do
+#                 env_path="${app_dir}env/${env}"
+#                 [ -d "$env_path" ] || continue
+
+#                 cat >> atlantis.yaml << PROJECT_EOF
+#   - name: ${base_dir%/}-${app_name}-${env}
+#     dir: $env_path
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "../../*.tf"
+#         - "../../config/*.tfvars"
+#         - "../../env/*/*"
+#     terraform_version: v1.6.6
+#     workflow: multi_env_workflow
+#     apply_requirements:
+#       - approved
+#       - mergeable
+# PROJECT_EOF
+#             done
+#         fi
+#     done
+# done
+
+# # Workflows section (unchanged)
+# cat >> atlantis.yaml << 'EOF'
+# workflows:
+#   multi_env_workflow:
+#     plan:
+#       steps:
+#         - run: |
+#             PLANFILE="plan_${PROJECT_NAME}.tfplan"
+
+#             case "$PROJECT_NAME" in
+#               *-production)
+#                 ENV="production"
+#                 BACKEND_CONFIG="env/production/prod.conf"
+#                 VAR_FILE="config/production.tfvars"
+#                 ;;
+#               *-staging)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#               *-helia)
+#                 ENV="helia"
+#                 BACKEND_CONFIG="env/helia/helia.conf"
+#                 VAR_FILE="config/helia.tfvars"
+#                 ;;
+#               *)
+#                 ENV="default"
+#                 BACKEND_CONFIG=""
+#                 VAR_FILE=""
+#                 ;;
+#             esac
+
+#             echo "Planning for environment: $ENV"
+#             echo "Using backend config: $BACKEND_CONFIG"
+#             echo "Using var file: $VAR_FILE"
+
+#             # Move two directories up to main Terraform project
+#             cd "$(dirname "$PROJECT_DIR")/../.."
+
+#             rm -rf .terraform
+
+#             if [ -f "$BACKEND_CONFIG" ]; then
+#               timeout 300 terraform init \
+#                 -backend-config="$BACKEND_CONFIG" \
+#                 -input=false -reconfigure > /dev/null 2>&1
+#             else
+#               terraform init -input=false -reconfigure
+#             fi
+
+#             if [ -f "$VAR_FILE" ]; then
+#               timeout 300 terraform plan -lock-timeout=5m  \
+#                          -var-file="$VAR_FILE" \
+#                          -out="$PLANFILE"
+#             else
+#               terraform plan $DESTROY_FLAG -out="$PLANFILE"
+#             fi
+
+#     apply:
+#       steps:
+#         - run: |
+#             PLANFILE="plan_${PROJECT_NAME}.tfplan"
+
+#             case "$PROJECT_NAME" in
+#               *-production)
+#                 ENV="production"
+#                 BACKEND_CONFIG="env/production/prod.conf"
+#                 VAR_FILE="config/production.tfvars"
+#                 ;;
+#               *-staging)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#               *-helia)
+#                 ENV="helia"
+#                 BACKEND_CONFIG="env/helia/helia.conf"
+#                 VAR_FILE="config/helia.tfvars"
+#                 ;;
+#               *)
+#                 ENV="default"
+#                 BACKEND_CONFIG=""
+#                 VAR_FILE=""
+#                 ;;
+#             esac
+
+#             echo "Applying for environment: $ENV"
+
+#             # Move two directories up to main Terraform project
+#             cd "$(dirname "$PROJECT_DIR")/../.."
+
+#             # if [ -f "$BACKEND_CONFIG" ]; then
+#             #   timeout 300 terraform init \
+#             #     -backend-config="$BACKEND_CONFIG" \
+#             #     -input=false -reconfigure > /dev/null 2>&1
+#             # else
+#             #   terraform init -input=false -reconfigure > /dev/null 2>&1
+#             # fi
+
+#             if [ -f "$PLANFILE" ]; then
+#               timeout 600 terraform apply -input=false -lock-timeout=5m  -auto-approve "$PLANFILE" || {
+#                 echo "Apply failed for $PLANFILE"
+#               }
+#             else
+#               {
+#                 echo "Apply failed for $PROJECT_DIR"
+#               }
+#             fi
+# EOF
 
 
 
