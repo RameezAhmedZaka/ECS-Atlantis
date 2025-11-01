@@ -68,17 +68,17 @@ workflows:
             case "$PROJECT_NAME" in
               *-production)
                 ENV="production"
-                BACKEND_CONFIG="../../env/production/prod.conf"
+                BACKEND_CONFIG=prod.conf"
                 VAR_FILE="../../config/production.tfvars"
                 ;;
               *-staging)
                 ENV="staging"
-                BACKEND_CONFIG="../../env/staging/stage.conf"
+                BACKEND_CONFIG="stage.conf"
                 VAR_FILE="../../config/stage.tfvars"
                 ;;
               *-helia)
                 ENV="helia"
-                BACKEND_CONFIG="../../env/helia/helia.conf"
+                BACKEND_CONFIG="helia.conf"
                 VAR_FILE="../../config/helia.tfvars"
                 ;;
               *)
