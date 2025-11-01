@@ -1,40 +1,11 @@
-#!/bin/bash
-set -euo pipefail
-
-echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
-
-# Start atlantis.yaml
-cat > atlantis.yaml <<-EOF
 ---
 version: 3
 automerge: true
 parallel_plan: false
 parallel_apply: false
 projects:
-EOF
-
-# Check if a directory is a Terraform project
-is_terraform_project() {
-    local dir="$1"
-    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
-}
-
-# Loop through top-level dirs (apps)
-for base_dir in */; do
-    [ -d "$base_dir" ] || continue
-    for app_dir in "$base_dir"*/; do
-        [ -d "$app_dir" ] || continue
-        if is_terraform_project "$app_dir"; then
-            app_name="$(basename "$app_dir")"
-
-            # Add project entries for each environment
-            for env in helia staging production; do
-                env_path="${app_dir}env/${env}"
-                [ -d "$env_path" ] || continue
-
-                cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}-${env}
-    dir: $env_path
+  - name: application-rdot-helia
+    dir: application/rdot/env/helia
     autoplan:
       enabled: true
       when_modified:
@@ -46,14 +17,45 @@ for base_dir in */; do
     apply_requirements:
       - approved
       - mergeable
-PROJECT_EOF
-            done
-        fi
-    done
-done
-
-# Workflows section with improved locking
-cat >> atlantis.yaml << 'EOF'
+  - name: application-rdot-production
+    dir: application/rdot/env/production
+    autoplan:
+      enabled: true
+      when_modified:
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1-staging
+    dir: db/db1/env/staging
+    autoplan:
+      enabled: true
+      when_modified:
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1-production
+    dir: db/db1/env/production
+    autoplan:
+      enabled: true
+      when_modified:
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
 workflows:
   multi_env_workflow:
     plan:
@@ -160,7 +162,3 @@ workflows:
               echo "Plan file $PLANFILE not found"
               exit 1
             fi
-EOF
-
-
-

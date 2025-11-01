@@ -34,13 +34,13 @@ for base_dir in */; do
 
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: $env_path
+    dir: ${app_dir}  # Point to main Terraform directory, not env subdirectory
     autoplan:
       enabled: true
       when_modified:
-        - "../../*.tf"
-        - "../../config/*.tfvars"
-        - "../../env/*/*"
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/*/*"
     terraform_version: v1.6.6
     workflow: multi_env_workflow
     apply_requirements:
@@ -52,7 +52,7 @@ PROJECT_EOF
     done
 done
 
-# Workflows section with improved locking
+# Workflows section with proper directory handling
 cat >> atlantis.yaml << 'EOF'
 workflows:
   multi_env_workflow:
@@ -62,6 +62,8 @@ workflows:
             # Create unique working directory for this project/environment
             WORK_DIR="/tmp/atlantis_${PROJECT_NAME}_${PULL_NUM}"
             mkdir -p "$WORK_DIR"
+            
+            # Copy the entire Terraform project to temp directory
             cp -r . "$WORK_DIR/"
             cd "$WORK_DIR"
 
@@ -93,9 +95,9 @@ workflows:
             echo "Planning for environment: $ENV"
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
-
-            # Navigate to the specific environment directory
-            cd "$PROJECT_DIR"
+            echo "Current directory: $(pwd)"
+            echo "Directory contents:"
+            ls -la
 
             rm -rf .terraform
 
@@ -115,8 +117,8 @@ workflows:
               terraform plan -lock-timeout=10m -out="$PLANFILE"
             fi
 
-            # Copy plan file back to original location if needed
-            cp "$PLANFILE" "../$PLANFILE"
+            # Copy plan file back to original location for Atlantis to find it
+            cp "$PLANFILE" "$PROJECT_DIR/"
 
     apply:
       steps:
@@ -148,8 +150,14 @@ workflows:
 
             echo "Applying for environment: $ENV"
 
-            # Navigate to the specific environment directory
-            cd "$PROJECT_DIR"
+            # Create working directory again for apply
+            WORK_DIR="/tmp/atlantis_${PROJECT_NAME}_${PULL_NUM}"
+            mkdir -p "$WORK_DIR"
+            cp -r . "$WORK_DIR/"
+            cd "$WORK_DIR"
+
+            # Copy the plan file from original location to working directory
+            cp "$PROJECT_DIR/$PLANFILE" .
 
             if [ -f "$PLANFILE" ]; then
               timeout 600 terraform apply -input=false -lock-timeout=10m -auto-approve "$PLANFILE" || {
@@ -161,7 +169,6 @@ workflows:
               exit 1
             fi
 EOF
-
 
 
 
