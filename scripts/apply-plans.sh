@@ -54,6 +54,8 @@ while IFS='|' read -r d PLAN; do
     continue
   fi
 
+  
+
   if [ -f "$PLAN" ]; then  
     echo "=== Applying $PLAN for directory $d ==="
     
@@ -100,5 +102,3 @@ if [ -z "$APP_FILTER" ] && [ -z "$PLANNED_FILTER" ]; then
 else
   echo "Preserving plan files for filtered apply"
 fi
-
-echo "=== APPLY COMPLETED for $ENV at $(date) ==="

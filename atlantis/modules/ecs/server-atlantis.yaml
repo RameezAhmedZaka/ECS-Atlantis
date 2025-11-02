@@ -1,9 +1,26 @@
-repos:
-  - id: /.*/
+# repos:
+#   - id: /.*/
+#     allow_custom_workflows: true
+#     allowed_overrides:
+#       - apply_requirements
+#       - workflow
+#       - plan_requirements
+#     apply_requirements: []
+
+    
+
+ repos:
+  - id: github.com/RameezAhmedZaka/ECS-Atlantis
     allow_custom_workflows: true
     allowed_overrides:
       - apply_requirements
       - workflow
       - plan_requirements
     apply_requirements: []
-    workflow: default
+    pre_workflow_hooks:
+        - run: |
+            echo "Running config-generator from $(pwd)"
+            ls -la
+            chmod +x ./repo-config-generator.sh || echo "Script not found or not executable"
+            ./repo-config-generator.sh || (echo "Script failed !" && exit 1)
+          description: Generating configs
