@@ -60,7 +60,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"  # just filename inside $APP_DIR
+            PLANFILE="tfplan"  
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
             terraform -chdir="$APP_DIR" init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
@@ -69,7 +69,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
+            PLANFILE="tfplan"
             echo "Applying project: $PROJECT_NAME in $APP_DIR"
             timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 
@@ -78,7 +78,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
+            PLANFILE="tfplan"
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
             terraform -chdir="$APP_DIR" init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
@@ -87,7 +87,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
+            PLANFILE="tfplan"
             echo "Applying project: $PROJECT_NAME in $APP_DIR"
             timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 
@@ -96,7 +96,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
+            PLANFILE="tfplan"
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
             terraform -chdir="$APP_DIR" init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
@@ -105,7 +105,7 @@ workflows:
       steps:
         - run: |
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
+            PLANFILE="tfplan"
             echo "Applying project: $PROJECT_NAME in $APP_DIR"
             timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 EOF
