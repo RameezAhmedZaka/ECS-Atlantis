@@ -3,6 +3,7 @@ set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
+# Start atlantis.yaml
 cat > atlantis.yaml <<-EOF
 ---
 version: 3
@@ -33,13 +34,13 @@ for base_dir in */; do
 
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: ${app_dir}
+    dir: $env_path
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: ${env}_workflow
     apply_requirements:
