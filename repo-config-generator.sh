@@ -34,7 +34,7 @@ for base_dir in */; do
 
                 cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: .
+    dir: ${app_dir}
     autoplan:
       enabled: true
       when_modified:
@@ -42,7 +42,7 @@ for base_dir in */; do
         - "${base_dir}${app_name}/config/*.tfvars"
         - "${base_dir}${app_name}/env/*/*"
     terraform_version: v1.6.6
-    workflow: ${env}_workflow
+    workflow: ${env}
     apply_requirements:
       - approved
       - mergeable
@@ -52,67 +52,45 @@ PROJECT_EOF
     done
 done
 
-# Corrected workflows with proper plan file persistence
+# Corrected workflows with proper directory handling
 cat >> atlantis.yaml << 'EOF'
 workflows:
-  production_workflow:
+  production:
     plan:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR"  
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+        - init:
+            extra_args: ["-backend-config=env/production/prod.conf", "-reconfigure", "-lock=false", "-input=false"]
+        - plan:
+            extra_args: ["-var-file=config/production.tfvars", "-lock-timeout=10m"]
     apply:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+        - apply:
+            extra_args: ["-auto-approve"]
 
-  staging_workflow:
+  staging:
     plan:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+        - init:
+            extra_args: ["-backend-config=env/staging/stage.conf", "-reconfigure", "-lock=false", "-input=false"]
+        - plan:
+            extra_args: ["-var-file=config/stage.tfvars", "-lock-timeout=10m"]
     apply:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR"
-            terraform apply -auto-approve $PLANFILE
+        - apply:
+            extra_args: ["-auto-approve"]
 
-  helia_workflow:
+  helia:
     plan:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+        - init:
+            extra_args: ["-backend-config=env/helia/helia.conf", "-reconfigure", "-lock=false", "-input=false"]
+        - plan:
+            extra_args: ["-var-file=config/helia.tfvars", "-lock-timeout=10m"]
     apply:
       steps:
-        - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+        - apply:
+            extra_args: ["-auto-approve"]
 EOF
-
 
 
 
