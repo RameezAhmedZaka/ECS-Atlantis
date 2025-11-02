@@ -3,6 +3,210 @@
 
 # echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
+# # Create base atlantis.yaml with document start
+# cat > atlantis.yaml <<-EOF
+# ---
+# version: 3
+# automerge: true
+# parallel_plan: false
+# parallel_apply: false
+# projects:
+# EOF
+
+# # Function to check if directory is a Terraform project
+# is_terraform_project() {
+#     local dir="$1"
+#     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
+# }
+
+# # Function to get environments for an app
+# get_environments() {
+#     local app_dir="$1"
+#     local envs=()
+#     declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
+
+#     for env in "${!env_map[@]}"; do
+#         tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
+#         env_dir="$app_dir/env/$env"
+#         if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
+#             envs+=("$env")
+#         fi
+#     done
+#     echo "${envs[@]}"
+# }
+
+# # Array to track project names
+# declare -a project_names=()
+
+# # Loop through all top-level directories (e.g., application, db, network, etc.)
+# for base_dir in */; do
+#     [ -d "$base_dir" ] || continue
+
+#     # Loop through each subdirectory (e.g., application/app1, db/mysql)
+#     for sub_dir in "$base_dir"*/; do
+#         [ -d "$sub_dir" ] || continue
+
+#         if is_terraform_project "$sub_dir"; then
+#             app_name="$(basename "$sub_dir")"
+#             envs=$(get_environments "$sub_dir")
+
+#             if [ -z "$envs" ]; then
+#                 cat >> atlantis.yaml << PROJECT_EOF
+#   - name: ${base_dir%/}-${app_name}-default
+#     dir: $sub_dir
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "*.tf"
+#         - "config/*.tfvars"
+#         - "env/*/*"
+#     terraform_version: v1.6.6
+#     workflow: multi_env_workflow
+#     apply_requirements:
+#       - approved
+#       - mergeable
+# PROJECT_EOF
+#                 project_names+=("${base_dir%/}-${app_name}-default")
+#             else
+#                 for env in $envs; do
+#                     cat >> atlantis.yaml << PROJECT_EOF
+#   - name: ${base_dir%/}-${app_name}-${env}
+#     dir: $sub_dir
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "*.tf"
+#         - "config/*.tfvars"
+#         - "env/$env/*"
+#     terraform_version: v1.6.6
+#     workflow: multi_env_workflow
+#     apply_requirements:
+#       - approved
+#       - mergeable
+# PROJECT_EOF
+#                     project_names+=("${base_dir%/}-${app_name}-${env}")
+#                 done
+#             fi
+#         fi
+#     done
+# done
+
+# echo "Total projects configured: ${#project_names[@]}"
+# echo "Project names: ${project_names[*]}"
+
+# # Workflows section
+# cat >> atlantis.yaml <<-EOF
+# workflows:
+#   multi_env_workflow:
+#     plan:
+#       steps:  
+#         - run: |
+#             PLANFILE="plan.tfplan"
+
+#             case "\$PROJECT_NAME" in
+#               *-production)
+#                 ENV="production"
+#                 BACKEND_CONFIG="env/production/prod.conf"
+#                 VAR_FILE="config/production.tfvars"
+#                 ;;
+#               *-staging)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#               *-helia)
+#                 ENV="helia"
+#                 BACKEND_CONFIG="env/helia/helia.conf"
+#                 VAR_FILE="config/helia.tfvars"
+#                 ;;
+#               *)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#             esac
+
+#             echo "Planning for environment: \$ENV"
+#             echo "Using backend config: \$BACKEND_CONFIG"
+#             echo "Using var file: \$VAR_FILE"
+#             echo "Destroy flag: \$DESTROY_FLAG"
+
+#             cd "\$PROJECT_DIR"
+
+#             if [ -f "\$BACKEND_CONFIG" ]; then
+#               timeout 300 terraform init -lock=false \
+#                 -backend-config="\$BACKEND_CONFIG" \
+#                 -input=false -reconfigure > /dev/null 2>&1
+#             else
+#               terraform init -input=false -reconfigure
+#             fi
+
+#             if [ -f "\$VAR_FILE" ]; then
+#               timeout 300 terraform plan -lock=false \
+#                          -var-file="\$VAR_FILE" \
+#                          -out="\$PLANFILE"
+#             else
+#               terraform plan \$DESTROY_FLAG -out="\$PLANFILE"
+#             fi
+
+#     apply:
+#       steps:
+#         - run: |
+#             PLANFILE="plan.tfplan"
+
+#             case "\$PROJECT_NAME" in
+#               *-production)
+#                 ENV="production"
+#                 BACKEND_CONFIG="env/production/prod.conf"
+#                 VAR_FILE="config/production.tfvars"
+#                 ;;
+#               *-staging)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#               *-helia)
+#                 ENV="helia"
+#                 BACKEND_CONFIG="env/helia/helia.conf"
+#                 VAR_FILE="config/helia.tfvars"
+#                 ;;
+#               *)
+#                 ENV="staging"
+#                 BACKEND_CONFIG="env/staging/stage.conf"
+#                 VAR_FILE="config/stage.tfvars"
+#                 ;;
+#             esac
+
+#             echo "Applying for environment: \$ENV"
+
+#             cd "\$PROJECT_DIR"
+
+#             if [ -f "\$BACKEND_CONFIG" ]; then
+#               timeout 300 terraform init -lock=false \
+#                 -backend-config="\$BACKEND_CONFIG" \
+#                 -input=false -reconfigure > /dev/null 2>&1
+#             else
+#               terraform init -input=false -reconfigure > /dev/null 2>&1
+#             fi
+
+#             # Apply the plan if it exists, otherwise do a raw apply with var-file
+#             if [ -f "\$PLANFILE" ]; then
+#               timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
+#                 echo "Apply failed for \$PLANFILE"
+#               }
+#             else
+#               timeout 600 terraform apply -var-file="\$VAR_FILE" -input=false -auto-approve || {
+#                 echo "Apply failed for \$PROJECT_DIR"
+#               }
+#             fi
+# EOF
+
+
+# #!/bin/bash
+# set -euo pipefail
+
+# echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+
 # # Start atlantis.yaml
 # cat > atlantis.yaml <<-EOF
 # ---
@@ -118,103 +322,103 @@
 
 
 
-#!/bin/bash
-set -euo pipefail
+# #!/bin/bash
+# set -euo pipefail
 
-echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+# echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Start atlantis.yaml
-cat > atlantis.yaml <<-EOF
----
-version: 3
-automerge: true
-parallel_plan: false
-parallel_apply: false
-projects:
-EOF
+# # Start atlantis.yaml
+# cat > atlantis.yaml <<-EOF
+# ---
+# version: 3
+# automerge: true
+# parallel_plan: false
+# parallel_apply: false
+# projects:
+# EOF
 
-# Check if a directory is a Terraform project
-is_terraform_project() {
-    local dir="$1"
-    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
-}
+# # Check if a directory is a Terraform project
+# is_terraform_project() {
+#     local dir="$1"
+#     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
+# }
 
-# Loop through top-level dirs (apps)
-for base_dir in */; do
-    [ -d "$base_dir" ] || continue
-    for app_dir in "$base_dir"*/; do
-        [ -d "$app_dir" ] || continue
-        if is_terraform_project "$app_dir"; then
-            app_name="$(basename "$app_dir")"
+# # Loop through top-level dirs (apps)
+# for base_dir in */; do
+#     [ -d "$base_dir" ] || continue
+#     for app_dir in "$base_dir"*/; do
+#         [ -d "$app_dir" ] || continue
+#         if is_terraform_project "$app_dir"; then
+#             app_name="$(basename "$app_dir")"
 
-            # Add project entries for each environment
-            for env in helia staging production; do
-                env_path="${app_dir}env/${env}"
-                [ -d "$env_path" ] || continue
+#             # Add project entries for each environment
+#             for env in helia staging production; do
+#                 env_path="${app_dir}env/${env}"
+#                 [ -d "$env_path" ] || continue
 
-                cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}-${env}
-    dir: $env_path
-    autoplan:
-      enabled: true
-      when_modified:
-        - "../../*.tf"
-        - "../../config/*.tfvars"
-        - "../../env/*/*"
-    terraform_version: v1.6.6
-    workflow: ${env}_workflow
-    apply_requirements:
-      - approved
-      - mergeable
-PROJECT_EOF
-            done
-        fi
-    done
-done
+#                 cat >> atlantis.yaml << PROJECT_EOF
+#   - name: ${base_dir%/}-${app_name}-${env}
+#     dir: $env_path
+#     autoplan:
+#       enabled: true
+#       when_modified:
+#         - "../../*.tf"
+#         - "../../config/*.tfvars"
+#         - "../../env/*/*"
+#     terraform_version: v1.6.6
+#     workflow: ${env}_workflow
+#     apply_requirements:
+#       - approved
+#       - mergeable
+# PROJECT_EOF
+#             done
+#         fi
+#     done
+# done
 
-# Fixed workflows using only run steps (everything else unchanged)
-cat >> atlantis.yaml << 'EOF'
-workflows:
-  production_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: terraform apply -auto-approve $PLANFILE
+# # Fixed workflows using only run steps (everything else unchanged)
+# cat >> atlantis.yaml << 'EOF'
+# workflows:
+#   production_workflow:
+#     plan:
+#       steps:
+#         - run: |
+#             echo "Project: $PROJECT_NAME"
+#             cd "$(dirname "$PROJECT_DIR")/../.."
+#             rm -rf .terraform .terraform.lock.hcl
+#             terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
+#             terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+#     apply:
+#       steps:
+#         - run: terraform apply -auto-approve $PLANFILE
 
-  staging_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
+#   staging_workflow:
+#     plan:
+#       steps:
+#         - run: |
+#             echo "Project: $PROJECT_NAME"
+#             cd "$(dirname "$PROJECT_DIR")/../.."
+#             rm -rf .terraform .terraform.lock.hcl
 
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: terraform apply -auto-approve $PLANFILE
+#             terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
+#             terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+#     apply:
+#       steps:
+#         - run: terraform apply -auto-approve $PLANFILE
 
-  helia_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: terraform apply -auto-approve $PLANFILE
-EOF
+#   helia_workflow:
+#     plan:
+#       steps:
+#         - run: |
+#             echo "Project: $PROJECT_NAME"
+#             cd "$(dirname "$PROJECT_DIR")/../.."
+#             rm -rf .terraform .terraform.lock.hcl
+#             terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
+#             terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+#     apply:
+#       steps:
+#         - run: terraform apply -auto-approve $PLANFILE
+# EOF
 
 
 
@@ -384,206 +588,256 @@ EOF
 
 
 
+#!/bin/bash
+set -euo pipefail
 
+echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# #!/bin/bash
-# set -euo pipefail
+# Create base atlantis.yaml with document start
+cat > atlantis.yaml <<-EOF
+---
+version: 3
+automerge: true
+parallel_plan: false
+parallel_apply: false
+projects:
+EOF
 
-# echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+# Function to check if directory is a Terraform project
+is_terraform_project() {
+    local dir="$1"
+    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
+}
 
-# # Create base atlantis.yaml with document start
-# cat > atlantis.yaml <<-EOF
-# ---
-# version: 3
-# automerge: true
-# parallel_plan: false
-# parallel_apply: false
-# projects:
-# EOF
+# Function to get environments for an app
+get_environments() {
+    local app_dir="$1"
+    local envs=()
+    declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
+    for env in "${!env_map[@]}"; do
+        tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
+        env_dir="$app_dir/env/$env"
+        if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
+            envs+=("$env")
+        fi
+    done
+    echo "${envs[@]}"
+}
 
-# # Function to check if directory is a Terraform project
-# is_terraform_project() {
-#     local dir="$1"
-#     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
-# }
+# Array to track project names
+declare -a project_names=()
 
-# # Function to get environments for an app
-# get_environments() {
-#     local app_dir="$1"
-#     local envs=()
-#     declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
-#     for env in "${!env_map[@]}"; do
-#         tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
-#         env_dir="$app_dir/env/$env"
-#         if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
-#             envs+=("$env")
-#         fi
-#     done
-#     echo "${envs[@]}"
-# }
+# Loop through all top-level directories (e.g., application, db, network, etc.)
+for base_dir in */; do
+    [ -d "$base_dir" ] || continue
 
-# # Array to track project names
-# declare -a project_names=()
+    # Loop through each subdirectory (e.g., application/app1, db/mysql)
+    for sub_dir in "$base_dir"*/; do
+        [ -d "$sub_dir" ] || continue
 
-# # Loop through all top-level directories (e.g., application, db, network, etc.)
-# for base_dir in */; do
-#     [ -d "$base_dir" ] || continue
+        if is_terraform_project "$sub_dir"; then
+            app_name="$(basename "$sub_dir")"
+            envs=$(get_environments "$sub_dir")
 
-#     # Loop through each subdirectory (e.g., application/app1, db/mysql)
-#     for sub_dir in "$base_dir"*/; do
-#         [ -d "$sub_dir" ] || continue
+            if [ -z "$envs" ]; then
+                cat >> atlantis.yaml << PROJECT_EOF
+  - name: ${base_dir%/}-${app_name}-default
+    dir: $sub_dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/*/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+                project_names+=("${base_dir%/}-${app_name}-default")
+            else
+                for env in $envs; do
+                    cat >> atlantis.yaml << PROJECT_EOF
+  - name: ${base_dir%/}-${app_name}-${env}
+    dir: $sub_dir
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "config/*.tfvars"
+        - "env/$env/*"
+    terraform_version: v1.6.6
+    workflow: multi_env_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+PROJECT_EOF
+                    project_names+=("${base_dir%/}-${app_name}-${env}")
+                done
+            fi
+        fi
+    done
+done
 
-#         if is_terraform_project "$sub_dir"; then
-#             app_name="$(basename "$sub_dir")"
-#             envs=$(get_environments "$sub_dir")
+echo "Total projects configured: ${#project_names[@]}"
+echo "Project names: ${project_names[*]}"
 
-#             if [ -z "$envs" ]; then
-#                 cat >> atlantis.yaml << PROJECT_EOF
-#   - name: ${base_dir%/}-${app_name}-default
-#     dir: $sub_dir
-#     autoplan:
-#       enabled: true
-#       when_modified:
-#         - "*.tf"
-#         - "config/*.tfvars"
-#         - "env/*/*"
-#     terraform_version: v1.6.6
-#     workflow: multi_env_workflow
-#     apply_requirements:
-#       - approved
-#       - mergeable
-# PROJECT_EOF
-#                 project_names+=("${base_dir%/}-${app_name}-default")
-#             else
-#                 for env in $envs; do
-#                     cat >> atlantis.yaml << PROJECT_EOF
-#   - name: ${base_dir%/}-${app_name}-${env}
-#     dir: $sub_dir
-#     autoplan:
-#       enabled: true
-#       when_modified:
-#         - "*.tf"
-#         - "config/*.tfvars"
-#         - "env/$env/*"
-#     terraform_version: v1.6.6
-#     workflow: multi_env_workflow
-#     apply_requirements:
-#       - approved
-#       - mergeable
-# PROJECT_EOF
-#                     project_names+=("${base_dir%/}-${app_name}-${env}")
-#                 done
-#             fi
-#         fi
-#     done
-# done
+# Workflows section (single-quoted EOF to preserve $PROJECT_NAME at runtime)
+cat >> atlantis.yaml << 'EOF'
+workflows:
+  multi_env_workflow:
+    plan:
+      steps:  
+        - run: |
+            PLANFILE="plan_${PROJECT_NAME}.tfplan"
 
-# echo "Total projects configured: ${#project_names[@]}"
-# echo "Project names: ${project_names[*]}"
+            case "$PROJECT_NAME" in
+              *-production)
+                ENV="production"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
+                ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+              *-helia)
+                ENV="helia"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
+                ;;
+              *)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+            esac
 
-# # Workflows section (single-quoted EOF to preserve $PROJECT_NAME at runtime)
-# cat >> atlantis.yaml << 'EOF'
-# workflows:
-#   multi_env_workflow:
-#     plan:
-#       steps:  
-#         - run: |
-#             PLANFILE="plan_${PROJECT_NAME}.tfplan"
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            echo "Destroy flag: $DESTROY_FLAG"
 
-#             case "$PROJECT_NAME" in
-#               *-production)
-#                 ENV="production"
-#                 BACKEND_CONFIG="env/production/prod.conf"
-#                 VAR_FILE="config/production.tfvars"
-#                 ;;
-#               *-staging)
-#                 ENV="staging"
-#                 BACKEND_CONFIG="env/staging/stage.conf"
-#                 VAR_FILE="config/stage.tfvars"
-#                 ;;
-#               *-helia)
-#                 ENV="helia"
-#                 BACKEND_CONFIG="env/helia/helia.conf"
-#                 VAR_FILE="config/helia.tfvars"
-#                 ;;
-#               *)
-#                 ENV="staging"
-#                 BACKEND_CONFIG="env/staging/stage.conf"
-#                 VAR_FILE="config/stage.tfvars"
-#                 ;;
-#             esac
+            cd "$PROJECT_DIR"
 
-#             echo "Planning for environment: $ENV"
-#             echo "Using backend config: $BACKEND_CONFIG"
-#             echo "Using var file: $VAR_FILE"
-#             echo "Destroy flag: $DESTROY_FLAG"
+            # Clean up any existing terraform files to ensure fresh state
+            echo "Cleaning up previous Terraform state..."
+            rm -rf .terraform
+            rm -f .terraform.lock.hcl
+            rm -f plan_*.tfplan
 
-#             cd "$PROJECT_DIR"
+            # Initialize with upgrade to ensure latest providers and consistent lock file
+            echo "Initializing Terraform with provider upgrades..."
+            if [ -f "$BACKEND_CONFIG" ]; then
+              timeout 300 terraform init -upgrade -input=false -reconfigure \
+                -backend-config="$BACKEND_CONFIG"
+            else
+              timeout 300 terraform init -upgrade -input=false -reconfigure
+            fi
 
-#             if [ -f "$BACKEND_CONFIG" ]; then
-#               timeout 300 terraform init -lock=false\
-#                 -backend-config="$BACKEND_CONFIG" \
-#                 -input=false -reconfigure > /dev/null 2>&1
-#             else
-#               terraform init -input=false -reconfigure
-#             fi
+            # Generate provider lock file for consistent environments
+            echo "Generating provider lock file..."
+            terraform providers lock \
+              -platform=linux_amd64 \
+              -platform=darwin_amd64 \
+              -platform=darwin_arm64 \
+              -platform=windows_amd64
 
-#             if [ -f "$VAR_FILE" ]; then
-#               timeout 300 terraform plan -lock=false \
-#                          -var-file="$VAR_FILE" \
-#                          -out="$PLANFILE"
-#             else
-#               terraform plan $DESTROY_FLAG -out="$PLANFILE"
-#             fi
+            # Create plan with detailed output
+            echo "Creating Terraform plan..."
+            if [ -f "$VAR_FILE" ]; then
+              timeout 300 terraform plan -detailed-exitcode -lock=false \
+                         -var-file="$VAR_FILE" \
+                         -out="$PLANFILE"
+            else
+              timeout 300 terraform plan -detailed-exitcode -lock=false \
+                         -out="$PLANFILE"
+            fi
 
-#     apply:
-#       steps:
-#         - run: |
-#             PLANFILE="plan_${PROJECT_NAME}.tfplan"
+            PLAN_EXIT_CODE=$?
+            if [ $PLAN_EXIT_CODE -eq 1 ]; then
+              echo "Error: Terraform plan failed"
+              exit 1
+            elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+              echo "Plan created successfully with changes"
+            else
+              echo "Plan created successfully with no changes"
+            fi
 
-#             case "$PROJECT_NAME" in
-#               *-production)
-#                 ENV="production"
-#                 BACKEND_CONFIG="env/production/prod.conf"
-#                 VAR_FILE="config/production.tfvars"
-#                 ;;
-#               *-staging)
-#                 ENV="staging"
-#                 BACKEND_CONFIG="env/staging/stage.conf"
-#                 VAR_FILE="config/stage.tfvars"
-#                 ;;
-#               *-helia)
-#                 ENV="helia"
-#                 BACKEND_CONFIG="env/helia/helia.conf"
-#                 VAR_FILE="config/helia.tfvars"
-#                 ;;
-#               *)
-#                 ENV="staging"
-#                 BACKEND_CONFIG="env/staging/stage.conf"
-#                 VAR_FILE="config/stage.tfvars"
-#                 ;;
-#             esac
+    apply:
+      steps:
+        - run: |
+            PLANFILE="plan_${PROJECT_NAME}.tfplan"
 
-#             echo "Applying for environment: $ENV"
+            case "$PROJECT_NAME" in
+              *-production)
+                ENV="production"
+                BACKEND_CONFIG="env/production/prod.conf"
+                VAR_FILE="config/production.tfvars"
+                ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+              *-helia)
+                ENV="helia"
+                BACKEND_CONFIG="env/helia/helia.conf"
+                VAR_FILE="config/helia.tfvars"
+                ;;
+              *)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
+            esac
 
-#             cd "$PROJECT_DIR"
+            echo "Applying for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
 
-#             if [ -f "$BACKEND_CONFIG" ]; then
-#               timeout 300 terraform init -lock=false\
-#                 -backend-config="$BACKEND_CONFIG" \
-#                 -input=false -reconfigure > /dev/null 2>&1
-#             else
-#               terraform init -input=false -reconfigure > /dev/null 2>&1
-#             fi
+            cd "$PROJECT_DIR"
 
-#             # Apply the plan if it exists, otherwise do a raw apply with var-file
-#             if [ -f "$PLANFILE" ]; then
-#               timeout 600 terraform apply -input=false -auto-approve "$PLANFILE" || {
-#                 echo "Apply failed for $PLANFILE"
-#               }
-#             else
-#               timeout 600 terraform apply -var-file="$VAR_FILE" -input=false -auto-approve || {
-#                 echo "Apply failed for $PROJECT_DIR"
-#               }
-#             fi
-# EOF
+            # Re-initialize to ensure consistency between plan and apply
+            echo "Re-initializing Terraform for apply..."
+            if [ -f "$BACKEND_CONFIG" ]; then
+              timeout 300 terraform init -input=false -reconfigure \
+                -backend-config="$BACKEND_CONFIG"
+            else
+              timeout 300 terraform init -input=false -reconfigure
+            fi
+
+            # Verify the plan file exists and is consistent
+            if [ ! -f "$PLANFILE" ]; then
+              echo "Error: Plan file $PLANFILE not found. Cannot apply."
+              exit 1
+            fi
+
+            echo "Verifying plan consistency..."
+            terraform show -json "$PLANFILE" > /dev/null 2>&1 || {
+              echo "Error: Plan file is invalid or corrupted"
+              exit 1
+            }
+
+            # Apply the plan with auto-approve
+            echo "Applying Terraform plan..."
+            timeout 600 terraform apply -input=false -auto-approve "$PLANFILE"
+
+            APPLY_EXIT_CODE=$?
+            if [ $APPLY_EXIT_CODE -eq 0 ]; then
+              echo "Apply completed successfully"
+              
+              # Clean up plan file after successful apply
+              rm -f "$PLANFILE"
+              
+              # Show final state
+              echo "Current state:"
+              terraform show
+            else
+              echo "Error: Apply failed with exit code $APPLY_EXIT_CODE"
+              exit $APPLY_EXIT_CODE
+            fi
+            rm -f "$DESTROY_PLAN"
+EOF
