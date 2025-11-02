@@ -54,6 +54,8 @@ while IFS='|' read -r d PLAN; do
     continue
   fi
 
+  
+
   if [ -f "$PLAN" ]; then  
     echo "=== Applying $PLAN for directory $d ==="
     
