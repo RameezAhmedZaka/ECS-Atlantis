@@ -61,12 +61,12 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform
+            rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=env/production/prod.conf -reconfigure -input=false
             terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
+        - run: terraform apply -auto-approve $PLANFILE
 
   staging_workflow:
     plan:
@@ -74,12 +74,13 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform
+            rm -rf .terraform .terraform.lock.hcl
+
             terraform init -backend-config=env/staging/stage.conf -reconfigure -input=false
             terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
+        - run: terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
     plan:
@@ -87,12 +88,12 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform
+            rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=env/helia/helia.conf -reconfigure -input=false
             terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
+        - run: terraform apply -auto-approve $PLANFILE
 EOF
 
 
