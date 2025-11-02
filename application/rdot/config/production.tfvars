@@ -1,3 +1,3 @@
 region      = "us-east-1"
 environment = "production"
-bucket_name = "rdot-prod-bucket"
+bucket_name = "rdot-prod-bucket-518"
