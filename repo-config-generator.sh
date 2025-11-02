@@ -60,7 +60,7 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            # Clean up any existing terraform initialization
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/production/prod.conf, -reconfigure, -input=false]
@@ -78,6 +78,7 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/staging/stage.conf, -reconfigure, -input=false]
@@ -94,6 +95,7 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/helia/helia.conf, -reconfigure, -input=false]
