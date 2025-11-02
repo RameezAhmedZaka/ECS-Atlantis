@@ -588,7 +588,6 @@
 
 
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -699,11 +698,6 @@ workflows:
                 BACKEND_CONFIG="env/production/prod.conf"
                 VAR_FILE="config/production.tfvars"
                 ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
-                ;;
               *-helia)
                 ENV="helia"
                 BACKEND_CONFIG="env/helia/helia.conf"
@@ -722,7 +716,7 @@ workflows:
 
             cd "$PROJECT_DIR"
 
-            # Clean up previous state to avoid lock file conflicts
+            # Clean up any previous state to avoid conflicts
             rm -rf .terraform
             rm -f .terraform.lock.hcl
 
@@ -751,11 +745,6 @@ workflows:
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
                 VAR_FILE="config/production.tfvars"
-                ;;
-              *-staging)
-                ENV="staging"
-                BACKEND_CONFIG="env/staging/stage.conf"
-                VAR_FILE="config/stage.tfvars"
                 ;;
               *-helia)
                 ENV="helia"
