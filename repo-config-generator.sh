@@ -190,9 +190,6 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
             terraform apply -auto-approve $PLANFILE
 
   staging_workflow:
@@ -210,9 +207,6 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
             terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
@@ -229,9 +223,6 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
             terraform apply -auto-approve $PLANFILE
 EOF
 
