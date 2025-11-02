@@ -7,9 +7,9 @@ echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 cat > atlantis.yaml <<-EOF
 ---
 version: 3
-automerge: false
+automerge: true
 parallel_plan: false
-parallel_apply: true
+parallel_apply: false
 projects:
 EOF
 
@@ -63,7 +63,7 @@ workflows:
             PLANFILE="tfplan"  
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
-            terraform -chdir="$APP_DIR" init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" init -backend-config=env/production/prod.conf -reconfigure -input=false
             terraform -chdir="$APP_DIR" plan -var-file=config/production.tfvars -lock-timeout=10m -out="$PLANFILE"
     apply:
       steps:
@@ -81,7 +81,7 @@ workflows:
             PLANFILE="tfplan"
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
-            terraform -chdir="$APP_DIR" init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" init -backend-config=env/staging/stage.conf -reconfigure -input=false
             terraform -chdir="$APP_DIR" plan -var-file=config/stage.tfvars -lock-timeout=10m -out="$PLANFILE"
     apply:
       steps:
@@ -99,7 +99,7 @@ workflows:
             PLANFILE="tfplan"
             echo "Planning project: $PROJECT_NAME in $APP_DIR"
             rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
-            terraform -chdir="$APP_DIR" init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" init -backend-config=env/helia/helia.conf -reconfigure -input=false
             terraform -chdir="$APP_DIR" plan -var-file=config/helia.tfvars -lock-timeout=10m -out="$PLANFILE"
     apply:
       steps:
