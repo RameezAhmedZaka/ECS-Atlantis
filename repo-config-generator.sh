@@ -13,24 +13,26 @@ parallel_apply: false
 projects:
 EOF
 
-# Check if a directory is a Terraform project
+# Function to check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
-# Loop through top-level dirs (apps)
+# Loop through top-level directories (apps)
 for app_dir in */; do
     [ -d "$app_dir" ] || continue
     if is_terraform_project "$app_dir"; then
         app_name="$(basename "$app_dir")"
+
+        # Add project entries for each environment
         for env in helia staging production; do
             env_path="${app_dir}env/${env}"
             [ -d "$env_path" ] || continue
 
             cat >> atlantis.yaml << PROJECT_EOF
   - name: ${app_name}-${env}
-    dir: ${env_path}
+    dir: .
     autoplan:
       enabled: true
       when_modified:
@@ -47,65 +49,56 @@ PROJECT_EOF
     fi
 done
 
-# Corrected workflows with proper plan file persistence
+# Workflows using repo root and APP_DIR for environment
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
     plan:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR"  
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-production$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/production"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=prod.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/production.tfvars -lock-timeout=10m -out=tfplan
     apply:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-production$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/production"
+            terraform apply -auto-approve tfplan
 
   staging_workflow:
     plan:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-staging$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/staging"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=stage.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/stage.tfvars -lock-timeout=10m -out=tfplan
     apply:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR"
-            terraform apply -auto-approve $PLANFILE
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-staging$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/staging"
+            terraform apply -auto-approve tfplan
 
   helia_workflow:
     plan:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            echo "Project: $PROJECT_NAME"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-helia$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/helia"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=helia.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/helia.tfvars -lock-timeout=10m -out=tfplan
     apply:
       steps:
         - run: |
-            PLANFILE="tfplan-${PROJECT_NAME}.out"
-            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            APP_DIR=$(echo "$PROJECT_NAME" | sed 's/-helia$//')
+            cd "$ATLANTIS_REPO_DIR/$APP_DIR/env/helia"
+            terraform apply -auto-approve tfplan
 EOF
 
 
