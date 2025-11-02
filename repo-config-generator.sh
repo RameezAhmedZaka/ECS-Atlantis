@@ -386,7 +386,6 @@
 
 
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -482,8 +481,8 @@ done
 echo "Total projects configured: ${#project_names[@]}"
 echo "Project names: ${project_names[*]}"
 
-# Workflows section
-cat >> atlantis.yaml <<-EOF
+# Workflows section (single-quoted EOF to preserve $PROJECT_NAME at runtime)
+cat >> atlantis.yaml << 'EOF'
 workflows:
   multi_env_workflow:
     plan:
@@ -491,7 +490,7 @@ workflows:
         - run: |
             PLANFILE="plan_${PROJECT_NAME}.tfplan"
 
-            case "\$PROJECT_NAME" in
+            case "$PROJECT_NAME" in
               *-production)
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
@@ -514,27 +513,27 @@ workflows:
                 ;;
             esac
 
-            echo "Planning for environment: \$ENV"
-            echo "Using backend config: \$BACKEND_CONFIG"
-            echo "Using var file: \$VAR_FILE"
-            echo "Destroy flag: \$DESTROY_FLAG"
+            echo "Planning for environment: $ENV"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
+            echo "Destroy flag: $DESTROY_FLAG"
 
-            cd "\$PROJECT_DIR"
+            cd "$PROJECT_DIR"
 
-            if [ -f "\$BACKEND_CONFIG" ]; then
+            if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init -lock=false\
-                -backend-config="\$BACKEND_CONFIG" \
+                -backend-config="$BACKEND_CONFIG" \
                 -input=false -reconfigure > /dev/null 2>&1
             else
               terraform init -input=false -reconfigure
             fi
 
-            if [ -f "\$VAR_FILE" ]; then
+            if [ -f "$VAR_FILE" ]; then
               timeout 300 terraform plan -lock=false \
-                         -var-file="\$VAR_FILE" \
-                         -out="\$PLANFILE"
+                         -var-file="$VAR_FILE" \
+                         -out="$PLANFILE"
             else
-              terraform plan \$DESTROY_FLAG -out="\$PLANFILE"
+              terraform plan $DESTROY_FLAG -out="$PLANFILE"
             fi
 
     apply:
@@ -542,7 +541,7 @@ workflows:
         - run: |
             PLANFILE="plan_${PROJECT_NAME}.tfplan"
 
-            case "\$PROJECT_NAME" in
+            case "$PROJECT_NAME" in
               *-production)
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
@@ -565,26 +564,26 @@ workflows:
                 ;;
             esac
 
-            echo "Applying for environment: \$ENV"
+            echo "Applying for environment: $ENV"
 
-            cd "\$PROJECT_DIR"
+            cd "$PROJECT_DIR"
 
-            if [ -f "\$BACKEND_CONFIG" ]; then
+            if [ -f "$BACKEND_CONFIG" ]; then
               timeout 300 terraform init -lock=false\
-                -backend-config="\$BACKEND_CONFIG" \
+                -backend-config="$BACKEND_CONFIG" \
                 -input=false -reconfigure > /dev/null 2>&1
             else
               terraform init -input=false -reconfigure > /dev/null 2>&1
             fi
 
             # Apply the plan if it exists, otherwise do a raw apply with var-file
-            if [ -f "\$PLANFILE" ]; then
-              timeout 600 terraform apply -input=false -auto-approve "\$PLANFILE" || {
-                echo "Apply failed for \$PLANFILE"
+            if [ -f "$PLANFILE" ]; then
+              timeout 600 terraform apply -input=false -auto-approve "$PLANFILE" || {
+                echo "Apply failed for $PLANFILE"
               }
             else
-              timeout 600 terraform apply -var-file="\$VAR_FILE" -input=false -auto-approve || {
-                echo "Apply failed for \$PROJECT_DIR"
+              timeout 600 terraform apply -var-file="$VAR_FILE" -input=false -auto-approve || {
+                echo "Apply failed for $PROJECT_DIR"
               }
             fi
 EOF
