@@ -62,7 +62,7 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -input=false
+            terraform init -backend-config=env/production/prod.conf -reconfigure -lockfile=readonly -input=false
             terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
@@ -76,7 +76,7 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
 
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -input=false
+            terraform init -backend-config=env/staging/stage.conf -reconfigure -lockfile=readonly -input=false
             terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
@@ -89,7 +89,7 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -input=false
+            terraform init -backend-config=env/helia/helia.conf -reconfigure -lockfile=readonly -input=false
             terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
