@@ -71,8 +71,7 @@ workflows:
         - run: |
             PLANFILE="tfplan-${PROJECT_NAME}.out"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 
   staging_workflow:
     plan:
@@ -90,8 +89,8 @@ workflows:
         - run: |
             PLANFILE="tfplan-${PROJECT_NAME}.out"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR"
-            terraform apply -auto-approve $PLANFILE
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE" 
+            # terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
     plan:
@@ -109,8 +108,7 @@ workflows:
         - run: |
             PLANFILE="tfplan-${PROJECT_NAME}.out"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 EOF
 
 
