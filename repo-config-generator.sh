@@ -64,14 +64,17 @@ workflows:
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/production/prod.conf, -reconfigure, -input=false]
+            dir: "$PROJECT_DIR"
         - run: echo "Init completed successfully"
         - plan:
             extra_args: [-var-file=config/production.tfvars, -lock-timeout=10m, -out=$PLANFILE]
+            dir: "$PROJECT_DIR"
         - run: echo "Plan completed successfully"
     apply:
       steps:
         - apply:
             extra_args: [-lock-timeout=10m]
+            dir: "$PROJECT_DIR"
 
   staging_workflow:
     plan:
@@ -82,13 +85,16 @@ workflows:
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/staging/stage.conf, -reconfigure, -input=false]
+            dir: "$PROJECT_DIR"
         - run: echo "Init completed successfully"    
         - plan:
             extra_args: [-var-file=config/stage.tfvars, -lock-timeout=10m, -out=$PLANFILE]
+            dir: "$PROJECT_DIR"
     apply:
       steps:
         - apply:
             extra_args: [-lock-timeout=10m]
+            dir: "$PROJECT_DIR"
 
   helia_workflow:
     plan:
@@ -99,16 +105,17 @@ workflows:
             rm -rf .terraform
         - init:
             extra_args: [-backend-config=env/helia/helia.conf, -reconfigure, -input=false]
+            dir: "$PROJECT_DIR"
         - run: echo "Init completed successfully"      
         - plan:
             extra_args: [-var-file=config/helia.tfvars, -lock-timeout=10m, -out=$PLANFILE]
+            dir: "$PROJECT_DIR"
     apply:
       steps:
         - apply:
             extra_args: [-lock-timeout=10m]
+            dir: "$PROJECT_DIR"
 EOF
-
-
 
 
 
