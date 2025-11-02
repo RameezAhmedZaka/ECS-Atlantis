@@ -52,7 +52,7 @@ PROJECT_EOF
     done
 done
 
-# Create separate workflows with -reconfigure flag
+# Fixed workflows using only run steps (everything else unchanged)
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
@@ -62,19 +62,11 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
-        - init:
-            extra_args: [-backend-config=env/production/prod.conf, -reconfigure, -input=false]
-            dir: "$PROJECT_DIR"
-        - run: echo "Init completed successfully"
-        - plan:
-            extra_args: [-var-file=config/production.tfvars, -lock-timeout=10m, -out=$PLANFILE]
-            dir: "$PROJECT_DIR"
-        - run: echo "Plan completed successfully"
+            terraform init -backend-config=env/production/prod.conf -reconfigure -input=false
+            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - apply:
-            extra_args: [-lock-timeout=10m]
-            dir: "$PROJECT_DIR"
+        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
 
   staging_workflow:
     plan:
@@ -83,18 +75,11 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
-        - init:
-            extra_args: [-backend-config=env/staging/stage.conf, -reconfigure, -input=false]
-            dir: "$PROJECT_DIR"
-        - run: echo "Init completed successfully"    
-        - plan:
-            extra_args: [-var-file=config/stage.tfvars, -lock-timeout=10m, -out=$PLANFILE]
-            dir: "$PROJECT_DIR"
+            terraform init -backend-config=env/staging/stage.conf -reconfigure -input=false
+            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - apply:
-            extra_args: [-lock-timeout=10m]
-            dir: "$PROJECT_DIR"
+        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
 
   helia_workflow:
     plan:
@@ -103,20 +88,12 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform
-        - init:
-            extra_args: [-backend-config=env/helia/helia.conf, -reconfigure, -input=false]
-            dir: "$PROJECT_DIR"
-        - run: echo "Init completed successfully"      
-        - plan:
-            extra_args: [-var-file=config/helia.tfvars, -lock-timeout=10m, -out=$PLANFILE]
-            dir: "$PROJECT_DIR"
+            terraform init -backend-config=env/helia/helia.conf -reconfigure -input=false
+            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
-        - apply:
-            extra_args: [-lock-timeout=10m]
-            dir: "$PROJECT_DIR"
+        - run: terraform apply -lock-timeout=10m -auto-approve $PLANFILE
 EOF
-
 
 
 
