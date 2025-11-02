@@ -4,87 +4,109 @@ automerge: true
 parallel_plan: false
 parallel_apply: false
 projects:
-
+  - name: application-rdot-helia
+    dir: .
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/rdot/*.tf"
+        - "application/rdot/config/*.tfvars"
+        - "application/rdot/env/*/*"
+    terraform_version: v1.6.6
+    workflow: helia_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: application-rdot-production
+    dir: .
+    autoplan:
+      enabled: true
+      when_modified:
+        - "application/rdot/*.tf"
+        - "application/rdot/config/*.tfvars"
+        - "application/rdot/env/*/*"
+    terraform_version: v1.6.6
+    workflow: production_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1-staging
+    dir: .
+    autoplan:
+      enabled: true
+      when_modified:
+        - "db/db1/*.tf"
+        - "db/db1/config/*.tfvars"
+        - "db/db1/env/*/*"
+    terraform_version: v1.6.6
+    workflow: staging_workflow
+    apply_requirements:
+      - approved
+      - mergeable
+  - name: db-db1-production
+    dir: .
+    autoplan:
+      enabled: true
+      when_modified:
+        - "db/db1/*.tf"
+        - "db/db1/config/*.tfvars"
+        - "db/db1/env/*/*"
+    terraform_version: v1.6.6
+    workflow: production_workflow
+    apply_requirements:
+      - approved
+      - mergeable
 workflows:
-  dynamic_environment:
+  production_workflow:
     plan:
       steps:
         - run: |
-            echo "Detecting environment for project: $PROJECT_NAME"
-            
-            # Get the app directory from project name
-            APP_DIR="$DIR"
-            
-            # Check which files were modified to determine environment
-            if [ -n "$(git diff --name-only HEAD~1 HEAD -- "${APP_DIR}/env/production/" 2>/dev/null || true)" ]; then
-              ENV="production"
-              BACKEND_CONFIG="env/production/prod.conf"
-              VAR_FILE="config/production.tfvars"
-            elif [ -n "$(git diff --name-only HEAD~1 HEAD -- "${APP_DIR}/env/staging/" 2>/dev/null || true)" ]; then
-              ENV="staging"
-              BACKEND_CONFIG="env/staging/stage.conf"
-              VAR_FILE="config/stage.tfvars"
-            elif [ -n "$(git diff --name-only HEAD~1 HEAD -- "${APP_DIR}/env/helia/" 2>/dev/null || true)" ]; then
-              ENV="helia"
-              BACKEND_CONFIG="env/helia/helia.conf"
-              VAR_FILE="config/helia.tfvars"
-            else
-              # If no specific environment changed, plan for all environments or use default
-              ENV="all"
-              BACKEND_CONFIG="env/production/prod.conf"
-              VAR_FILE="config/production.tfvars"
-            fi
-            
-            echo "Selected environment: $ENV"
-            echo "backend_config: $BACKEND_CONFIG"
-            echo "var_file: $VAR_FILE"
-            
-            # Store environment in file for apply phase
-            echo "$ENV" > /tmp/current_env.txt
-            echo "$BACKEND_CONFIG" > /tmp/backend_config.txt
-            echo "$VAR_FILE" > /tmp/var_file.txt
-            
-            # Initialize and plan
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -lock=false -input=false
-            terraform plan -var-file="$VAR_FILE" -lock-timeout=10m -out=tfplan.out
-            
-        - run: |
-            # Copy plan file with environment context
-            ENV=$(cat /tmp/current_env.txt)
-            cp tfplan.out "../${PROJECT_NAME}-${ENV}-tfplan.out"
-            echo "Plan file saved as: ${PROJECT_NAME}-${ENV}-tfplan.out"
-
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"  
+            echo "Planning project: $PROJECT_NAME in $APP_DIR"
+            rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
+            terraform -chdir="$APP_DIR" init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" plan -var-file=config/production.tfvars -lock-timeout=10m -out="$PLANFILE"
     apply:
       steps:
         - run: |
-            echo "Applying changes for project: $PROJECT_NAME"
-            
-            # Find the correct plan file based on environment
-            APP_DIR="$DIR"
-            ENV=$(cat /tmp/current_env.txt 2>/dev/null || echo "production")
-            BACKEND_CONFIG=$(cat /tmp/backend_config.txt 2>/dev/null || echo "env/production/prod.conf")
-            VAR_FILE=$(cat /tmp/var_file.txt 2>/dev/null || echo "config/production.tfvars")
-            
-            PLAN_FILE="../${PROJECT_NAME}-${ENV}-tfplan.out"
-            
-            if [ ! -f "$PLAN_FILE" ]; then
-              echo "Error: Plan file not found: $PLAN_FILE"
-              echo "Available plan files:"
-              ls -la ../*.out 2>/dev/null || echo "No plan files found"
-              exit 1
-            fi
-            
-            echo "Using plan file: $PLAN_FILE"
-            echo "Environment: $ENV"
-            
-            # Initialize with same backend config
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -lock=false -input=false
-            
-            # Apply the plan
-            terraform apply -auto-approve "$PLAN_FILE"
-            
-            # Cleanup
-            rm -f "$PLAN_FILE"
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"
+            echo "Applying project: $PROJECT_NAME in $APP_DIR"
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
 
+  staging_workflow:
+    plan:
+      steps:
+        - run: |
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"
+            echo "Planning project: $PROJECT_NAME in $APP_DIR"
+            rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
+            terraform -chdir="$APP_DIR" init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" plan -var-file=config/stage.tfvars -lock-timeout=10m -out="$PLANFILE"
+    apply:
+      steps:
+        - run: |
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"
+            echo "Applying project: $PROJECT_NAME in $APP_DIR"
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
+
+  helia_workflow:
+    plan:
+      steps:
+        - run: |
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"
+            echo "Planning project: $PROJECT_NAME in $APP_DIR"
+            rm -rf "$APP_DIR/.terraform" "$APP_DIR/.terraform.lock.hcl"
+            terraform -chdir="$APP_DIR" init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
+            terraform -chdir="$APP_DIR" plan -var-file=config/helia.tfvars -lock-timeout=10m -out="$PLANFILE"
+    apply:
+      steps:
+        - run: |
+            APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
+            PLANFILE="tfplan"
+            echo "Applying project: $PROJECT_NAME in $APP_DIR"
+            timeout 600 terraform -chdir="$APP_DIR" apply -input=false -auto-approve "$PLANFILE"
