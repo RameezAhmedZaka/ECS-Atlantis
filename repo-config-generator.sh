@@ -587,7 +587,6 @@
 
 
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -613,19 +612,21 @@ is_terraform_project() {
 get_environments() {
     local app_dir="$1"
     local envs=()
-    declare -A env_map=( ["production"]="production" ["staging"]="stage" ["helia"]="helia" )
-    for env in "${!env_map[@]}"; do
-        tfvars_file="$app_dir/config/${env_map[$env]}.tfvars"
-        env_dir="$app_dir/env/$env"
-        if [ -f "$tfvars_file" ] && [ -d "$env_dir" ]; then
-            envs+=("$env")
-        fi
-    done
+    # Use simpler array assignment without associative array for better compatibility
+    if [ -f "$app_dir/config/production.tfvars" ] && [ -d "$app_dir/env/production" ]; then
+        envs+=("production")
+    fi
+    if [ -f "$app_dir/config/stage.tfvars" ] && [ -d "$app_dir/env/staging" ]; then
+        envs+=("staging")
+    fi
+    if [ -f "$app_dir/config/helia.tfvars" ] && [ -d "$app_dir/env/helia" ]; then
+        envs+=("helia")
+    fi
     echo "${envs[@]}"
 }
 
 # Array to track project names
-declare -a project_names=()
+project_names=()
 
 # Loop through all top-level directories (e.g., application, db, network, etc.)
 for base_dir in */; do
@@ -698,6 +699,11 @@ workflows:
                 BACKEND_CONFIG="env/production/prod.conf"
                 VAR_FILE="config/production.tfvars"
                 ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
+                ;;
               *-helia)
                 ENV="helia"
                 BACKEND_CONFIG="env/helia/helia.conf"
@@ -745,6 +751,11 @@ workflows:
                 ENV="production"
                 BACKEND_CONFIG="env/production/prod.conf"
                 VAR_FILE="config/production.tfvars"
+                ;;
+              *-staging)
+                ENV="staging"
+                BACKEND_CONFIG="env/staging/stage.conf"
+                VAR_FILE="config/stage.tfvars"
                 ;;
               *-helia)
                 ENV="helia"
