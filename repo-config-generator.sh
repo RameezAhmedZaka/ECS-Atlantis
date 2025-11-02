@@ -52,62 +52,129 @@ PROJECT_EOF
     done
 done
 
-# Fixed workflows with correct paths
+# Modified workflows with plan file list approach
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
     plan:
       steps:
         - run: |
+            ENV="production"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            PLANFILE="/tmp/tfplan-${PROJECT_NAME}-${ENV}.out"
             echo "Project: $PROJECT_NAME"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
             cd "$APP_DIR"  
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
             terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+            # Register plan file in the list
+            echo "$PLANFILE" >> $PLANLIST
+            echo "Plan file registered: $PLANFILE"
     apply:
       steps:
         - run: |
+            ENV="production"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
-            cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            cd "$APP_DIR"
+            # Find the plan file for this project
+            if [ -f "$PLANLIST" ]; then
+              PLANFILE=$(grep "$PROJECT_NAME" "$PLANLIST" | head -1)
+              if [ -n "$PLANFILE" ] && [ -f "$PLANFILE" ]; then
+                echo "Applying plan file: $PLANFILE"
+                terraform apply -auto-approve $PLANFILE
+                # Remove from list after successful apply
+                grep -v "$PLANFILE" "$PLANLIST" > "${PLANLIST}.tmp" && mv "${PLANLIST}.tmp" "$PLANLIST"
+              else
+                echo "Error: Plan file not found for project $PROJECT_NAME"
+                exit 1
+              fi
+            else
+              echo "Error: Plan list file not found: $PLANLIST"
+              exit 1
+            fi
 
   staging_workflow:
     plan:
       steps:
         - run: |
+            ENV="staging"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            PLANFILE="/tmp/tfplan-${PROJECT_NAME}-${ENV}.out"
             echo "Project: $PROJECT_NAME"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
             cd "$APP_DIR" 
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
             terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+            # Register plan file in the list
+            echo "$PLANFILE" >> $PLANLIST
+            echo "Plan file registered: $PLANFILE"
     apply:
       steps:
         - run: |
+            ENV="staging"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
             cd "$APP_DIR"
-            terraform apply -auto-approve $PLANFILE
+            # Find the plan file for this project
+            if [ -f "$PLANLIST" ]; then
+              PLANFILE=$(grep "$PROJECT_NAME" "$PLANLIST" | head -1)
+              if [ -n "$PLANFILE" ] && [ -f "$PLANFILE" ]; then
+                echo "Applying plan file: $PLANFILE"
+                terraform apply -auto-approve $PLANFILE
+                # Remove from list after successful apply
+                grep -v "$PLANFILE" "$PLANLIST" > "${PLANLIST}.tmp" && mv "${PLANLIST}.tmp" "$PLANLIST"
+              else
+                echo "Error: Plan file not found for project $PROJECT_NAME"
+                exit 1
+              fi
+            else
+              echo "Error: Plan list file not found: $PLANLIST"
+              exit 1
+            fi
 
   helia_workflow:
     plan:
       steps:
         - run: |
+            ENV="helia"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
+            PLANFILE="/tmp/tfplan-${PROJECT_NAME}-${ENV}.out"
             echo "Project: $PROJECT_NAME"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
             cd "$APP_DIR" 
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
             terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+            # Register plan file in the list
+            echo "$PLANFILE" >> $PLANLIST
+            echo "Plan file registered: $PLANFILE"
     apply:
       steps:
         - run: |
+            ENV="helia"
+            PLANLIST="/tmp/atlantis_planfiles_${ENV}.lst"
             APP_DIR=$(echo "$PROJECT_NAME" | awk -F'-' '{print $1"/"$2}')
             cd "$APP_DIR" 
-            terraform apply -auto-approve $PLANFILE
+            # Find the plan file for this project
+            if [ -f "$PLANLIST" ]; then
+              PLANFILE=$(grep "$PROJECT_NAME" "$PLANLIST" | head -1)
+              if [ -n "$PLANFILE" ] && [ -f "$PLANFILE" ]; then
+                echo "Applying plan file: $PLANFILE"
+                terraform apply -auto-approve $PLANFILE
+                # Remove from list after successful apply
+                grep -v "$PLANFILE" "$PLANLIST" > "${PLANLIST}.tmp" && mv "${PLANLIST}.tmp" "$PLANLIST"
+              else
+                echo "Error: Plan file not found for project $PROJECT_NAME"
+                exit 1
+              fi
+            else
+              echo "Error: Plan list file not found: $PLANLIST"
+              exit 1
+            fi
 EOF
-
-
 
 
 
