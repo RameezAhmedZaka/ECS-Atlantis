@@ -588,6 +588,7 @@
 
 
 
+
 #!/bin/bash
 set -euo pipefail
 
@@ -718,52 +719,26 @@ workflows:
             echo "Planning for environment: $ENV"
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
-            echo "Destroy flag: $DESTROY_FLAG"
 
             cd "$PROJECT_DIR"
 
-            # Clean up any existing terraform files to ensure fresh state
-            echo "Cleaning up previous Terraform state..."
+            # Clean up previous state to avoid lock file conflicts
             rm -rf .terraform
             rm -f .terraform.lock.hcl
-            rm -f plan_*.tfplan
 
-            # Initialize with upgrade to ensure latest providers and consistent lock file
-            echo "Initializing Terraform with provider upgrades..."
+            # Initialize with upgrade to ensure consistent providers
             if [ -f "$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init -upgrade -input=false -reconfigure \
+              terraform init -upgrade -input=false -reconfigure \
                 -backend-config="$BACKEND_CONFIG"
             else
-              timeout 300 terraform init -upgrade -input=false -reconfigure
+              terraform init -upgrade -input=false -reconfigure
             fi
 
-            # Generate provider lock file for consistent environments
-            echo "Generating provider lock file..."
-            terraform providers lock \
-              -platform=linux_amd64 \
-              -platform=darwin_amd64 \
-              -platform=darwin_arm64 \
-              -platform=windows_amd64
-
-            # Create plan with detailed output
-            echo "Creating Terraform plan..."
+            # Create plan
             if [ -f "$VAR_FILE" ]; then
-              timeout 300 terraform plan -detailed-exitcode -lock=false \
-                         -var-file="$VAR_FILE" \
-                         -out="$PLANFILE"
+              terraform plan -var-file="$VAR_FILE" -out="$PLANFILE"
             else
-              timeout 300 terraform plan -detailed-exitcode -lock=false \
-                         -out="$PLANFILE"
-            fi
-
-            PLAN_EXIT_CODE=$?
-            if [ $PLAN_EXIT_CODE -eq 1 ]; then
-              echo "Error: Terraform plan failed"
-              exit 1
-            elif [ $PLAN_EXIT_CODE -eq 2 ]; then
-              echo "Plan created successfully with changes"
-            else
-              echo "Plan created successfully with no changes"
+              terraform plan -out="$PLANFILE"
             fi
 
     apply:
@@ -795,49 +770,17 @@ workflows:
             esac
 
             echo "Applying for environment: $ENV"
-            echo "Using backend config: $BACKEND_CONFIG"
-            echo "Using var file: $VAR_FILE"
 
             cd "$PROJECT_DIR"
 
-            # Re-initialize to ensure consistency between plan and apply
-            echo "Re-initializing Terraform for apply..."
+            # Re-initialize with same configuration as plan
             if [ -f "$BACKEND_CONFIG" ]; then
-              timeout 300 terraform init -input=false -reconfigure \
+              terraform init -input=false -reconfigure \
                 -backend-config="$BACKEND_CONFIG"
             else
-              timeout 300 terraform init -input=false -reconfigure
+              terraform init -input=false -reconfigure
             fi
 
-            # Verify the plan file exists and is consistent
-            if [ ! -f "$PLANFILE" ]; then
-              echo "Error: Plan file $PLANFILE not found. Cannot apply."
-              exit 1
-            fi
-
-            echo "Verifying plan consistency..."
-            terraform show -json "$PLANFILE" > /dev/null 2>&1 || {
-              echo "Error: Plan file is invalid or corrupted"
-              exit 1
-            }
-
-            # Apply the plan with auto-approve
-            echo "Applying Terraform plan..."
-            timeout 600 terraform apply -input=false -auto-approve "$PLANFILE"
-
-            APPLY_EXIT_CODE=$?
-            if [ $APPLY_EXIT_CODE -eq 0 ]; then
-              echo "Apply completed successfully"
-              
-              # Clean up plan file after successful apply
-              rm -f "$PLANFILE"
-              
-              # Show final state
-              echo "Current state:"
-              terraform show
-            else
-              echo "Error: Apply failed with exit code $APPLY_EXIT_CODE"
-              exit $APPLY_EXIT_CODE
-            fi
-            rm -f "$DESTROY_PLAN"
+            # Apply using the plan file
+            terraform apply -input=false -auto-approve "$PLANFILE"
 EOF
