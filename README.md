@@ -103,15 +103,11 @@ terraform apply -var-file="terraform.tfvars"
 ```
 ## Explanation:
 
-ATLANTIS_REPO_CONFIG_JSON: Loads server-side config from server-atlantis.yaml
-
-ATLANTIS_ALLOW_COMMANDS: Specifies allowed commands (plan, apply, etc.)
-
-ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS: Hides plan comments when nothing changes
-
-ATLANTIS_MAX_COMMENTS_PER_COMMAND: Limits comments to one per command
-
-ATLANTIS_DISABLE_REPO_LOCKING (optional): Allows multiple plans/applies simultaneously
+- ATLANTIS_REPO_CONFIG_JSON: Loads server-side config from server-atlantis.yaml
+- ATLANTIS_ALLOW_COMMANDS: Specifies allowed commands (plan, apply, etc.)
+- ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS: Hides plan comments when nothing changes
+- ATLANTIS_MAX_COMMENTS_PER_COMMAND: Limits comments to one per command
+- ATLANTIS_DISABLE_REPO_LOCKING (optional): Allows multiple plans/applies simultaneously
 
 ### 📁 Server-Side Configuration: server-atlantis.yaml
 ```
