@@ -202,15 +202,14 @@ git add .
 git commit -m "Add new resource to app1"
 git push origin feature/my-infrastructure-change
 ```
-# Create PR on GitHub for main branch
-# Atlantis automatically runs 'terraform plan' and comments results
-# Review plan in PR comments
-# Comment 'atlantis apply' to deploy changes
-4. What Happens Behind the Scenes
+Create PR on GitHub for main branch
+Atlantis automatically runs 'terraform plan' and comments results
+Review plan in PR comments
+Comment 'atlantis apply' to deploy changes
+
+## 4. What Happens Behind the Scenes
 GitHub webhook notifies Atlantis about PR
-
 Atlantis clones repository
-
 Runs repo-config-generator.sh
 Generates atlantis.yaml with project definitions
 Executes terraform plan
