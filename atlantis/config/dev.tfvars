@@ -1,6 +1,6 @@
 aws = {
   region  = "us-east-1"
-  profile = "admin"
+  profile = ""                       #mention profile
 }
 
 vpc = {
@@ -39,7 +39,7 @@ atlantis_ecs = {
   containerPort                 = 4141
   hostPort                      = 4141
   atlantis_port                 = 4141
-  atlantis_repo_allowlist       = "github.com/RameezAhmedZaka/*" #specify repo to allowlist
+  atlantis_repo_allowlist       = "github.com/<github-name>/*" #specify repo to allowlist
   atlantis_markdown_format      = "true"
   log_driver                    = "awslogs"
   log_stream_prefix             = "ecs"
@@ -57,17 +57,17 @@ atlantis_ecs = {
 }
 
 github_repositories_webhook = {
-  github_owner               = "RameezAhmedZaka" 
+  github_owner               = "" 
   github_app_key_base64      = "/github/app/key_base64"                   
   github_app_pem_file        = "/github/app/pem_file" 
   create                     = true
-  repositories               = ["ECS-Atlantis"] # repositories to add webhook to
-  webhook_secret             = "supersecret123" # add wehbook secrets
+  repositories               = [""] # repositories to add webhook to
+  webhook_secret             = ""   # add wehbook secrets
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "2153632"        #enter the app_id
-  github_app_installation_id = "91111286"       #enter the gi
+  github_app_id              = ""    #enter the app_id
+  github_app_installation_id = ""    #enter the installation id follow readme 
 } 
 
 lb = {
@@ -101,5 +101,5 @@ atlantis_api_gateway = {
   to_port                  = 4141
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
-  api_id                   = "28anxlkkc3"                          #create the api_id
+  api_id                   = ""                          #add the api_id that you created before
 }
