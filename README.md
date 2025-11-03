@@ -125,7 +125,7 @@ repos:
           echo "Running config-generator from $(pwd)"
           ls -la
           chmod +x ./repo-config-generator.sh || echo "Script not found or not executable"         
-          ./repo-config-generator.sh || (echo "Script failed !" && exit 1)
+          ./repo-config-generator.sh || (echo "Script failed !" && exit 1)                  # File must be placed at root level
         description: Generating configs
 ```
 ## Explanation:
