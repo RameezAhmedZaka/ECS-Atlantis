@@ -74,14 +74,18 @@ aws = {
   region  = "us-east-1"
   profile = ""
 }
+Clone the code 
+```
+cd atlantis
+
 
 Initialize Terraform:
 ```
-terraform init
+terraform init -backend-config=./dev/dev.conf
 ```
 Apply Infrastructure:
 ```
-terraform apply -var-file="terraform.tfvars"
+terraform apply -var-file=./config/dev.tfvars 
 ```
 ### 🚀 Atlantis Environment Configuration
 ```
