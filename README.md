@@ -20,16 +20,64 @@ Atlantis enables GitOps-style workflows by automating `terraform plan` and `appl
 - **GitHub Webhook**: Automatically created and linked to your repository  
 
 ---
-
-## 🔑 GitHub Integration
-
-Atlantis interacts with GitHub using a **GitHub App**.
-
 ### Required Permissions
 
 - Clone repositories  
 - Comment on pull requests  
-- Access GitHub APIs  
+- Access GitHub APIs
+  
+### Create the api for terraform code
+1. Create the API
+```
+aws apigateway create-rest-api \
+  --name "AtlantisAPI" \
+  --description "API for Atlantis GitHub webhooks" \
+  --region us-east-1
+```
+
+
+Note the id returned → this is your API_ID that will be used in terraform.tfvars
+
+2. Deploy the API to a stage
+```
+aws apigateway create-deployment \
+  --rest-api-id <API_ID> \       #that you created
+  --stage-name prod \
+  --description "Production deployment" \
+  --region us-east-1
+```
+
+## 🔑 GitHub Integration
+
+Atlantis interacts with GitHub using a **GitHub App**.
+- Create a GitHub App
+- Go to GitHub → Settings → Developer settings → GitHub Apps → New GitHub App.
+- Fill details:
+   - Name: <any-name>
+   - Homepage URL: your project URL (optional)
+   - Webhook URL: https://<your-api-gateway-url>/<api-stage>/atlantis/events      # api with stage that you created before
+   - Webhook Secret: random string added in terraform.tfvars
+- Click Create GitHub App.
+- Generate App Private Key
+- Download the .pem file from the GitHub App dashboard. Keep it secure.
+- Encode Private Key and than place both files in parameter store.
+
+Store the Base64 key
+```
+aws ssm put-parameter \
+  --name "/github/app/key_base64" \
+  --value "$(cat /github/app/key_base64)" \
+  --type "SecureString" \
+  --overwrite
+```
+Store the PEM file
+```
+aws ssm put-parameter \
+  --name "/github/app/pem_file" \
+  --value "$(cat /github/app/pem_file)" \
+  --type "SecureString" \
+  --overwrite
+```
 
 ### GitHub App Permissions Table
 
@@ -52,7 +100,13 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - check_run  
 - issue_comment  
 - pull_request  
-- repository  
+- repository
+
+### Install GitHub App
+- Install the App on selected repositories.
+- Ensure permissions match Atlantis requirements.
+- Get the app_id and installation_id that will be needed.
+  https://github.com/settings/installations/987654             #last numbers are installation id
 
 ### GitHub App Parameters in `terraform.tfvars`
 
@@ -69,6 +123,7 @@ atlantis_ecs = {
   atlantis_repo_allowlist = "github.com/your-org/*"
 }
 ```
+
 ### ⚙️ Terraform Configuration
 aws = {
   region  = "us-east-1"
