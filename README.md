@@ -126,6 +126,9 @@ github_repositories_webhook = {
 atlantis_ecs = {
   atlantis_repo_allowlist = "github.com/your-org/*"       add this too in terraform.tfvars
 }
+atlantis_api_gateway = {
+  api_id                   = "xyz"                          #place the api_id that you created above
+}
 ```
 
 ### ⚙️ Terraform Configuration
@@ -171,6 +174,14 @@ terraform apply -var-file=./config/dev.tfvars
 - ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS: Hides plan comments when nothing changes
 - ATLANTIS_MAX_COMMENTS_PER_COMMAND: Limits comments to one per command
 - ATLANTIS_DISABLE_REPO_LOCKING (optional): Allows multiple plans/applies simultaneously
+
+## Atlantis Permissions
+```
+resource "aws_iam_role_policy_attachment" "admin_access" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+```
 
 ## 📁 Server-Side Configuration: server-atlantis.yaml
 ```
