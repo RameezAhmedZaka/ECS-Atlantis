@@ -160,7 +160,7 @@ terraform apply -var-file=./config/dev.tfvars
   value: "1"
 }
 ```
-## Explanation:
+### Explanation:
 
 - ATLANTIS_REPO_CONFIG_JSON: Loads server-side config from server-atlantis.yaml
 - ATLANTIS_ALLOW_COMMANDS: Specifies allowed commands (plan, apply, etc.)
@@ -168,7 +168,7 @@ terraform apply -var-file=./config/dev.tfvars
 - ATLANTIS_MAX_COMMENTS_PER_COMMAND: Limits comments to one per command
 - ATLANTIS_DISABLE_REPO_LOCKING (optional): Allows multiple plans/applies simultaneously
 
-### 📁 Server-Side Configuration: server-atlantis.yaml
+## 📁 Server-Side Configuration: server-atlantis.yaml
 ```
 repos:
   - id: github.com/<org-name>/<repo-name>
@@ -186,26 +186,26 @@ repos:
           ./repo-config-generator.sh || (echo "Script failed !" && exit 1)                  # File must be placed at root level
         description: Generating configs
 ```
-## Explanation:
+### Explanation:
 - id: Repository this config applies to
 - allow_custom_workflows: Enables custom Terraform workflows
 - allowed_overrides: Permits repo-specific overrides
 - pre_workflow_hooks: Runs scripts before Terraform operations
 
-### 🪄 The Magic Script: repo-config-generator.sh
-## Functionality:
+## 🪄 The Magic Script: repo-config-generator.sh
+### Functionality:
 - Detects Terraform projects (main.tf, variables.tf, providers.tf)
 - Creates separate Atlantis projects per environment (helia, staging, production)
 - Generates custom workflows
 - Automatically runs plans on relevant changes
 
-## Key Features:
+### Key Features:
 - Dynamic project detection
 - Multi-environment support
 - Custom workflows
 - Auto-planning
 
-### 📂 Required Folder Structure
+## 📂 Required Folder Structure
 ```
 repository/
 ├── application/
@@ -234,22 +234,22 @@ repository/
 │   └── ... (more databases)
 └── repo-config-generator.sh
 ```
-### 🎯 How to Trigger Atlantis
-## 1. Pull Request Workflow (Automatic)
+## 🎯 How to Trigger Atlantis
+### 1. Pull Request Workflow (Automatic)
 - Create a PR modifying .tf files against main branch
 - Atlantis detects changes via webhook
 - Runs repo-config-generator.sh
 - Runs terraform plan per affected project/environment
 - Posts plan results in PR comments
 
-## 2. Manual Commands
+### 2. Manual Commands
 ```
 atlantis plan                 # Plan all projects
 atlantis plan -p project-name # Plan specific project
 atlantis apply                # Apply all planned changes
 atlantis apply -p project-name# Apply specific project
 ```
-## 3. Example Workflow
+### 3. Example Workflow
 ```
 git checkout -b feature/my-infrastructure-change
 vim application/app1/main.tf
@@ -262,7 +262,7 @@ git push origin feature/my-infrastructure-change
 - Review plan in PR comments
 - Comment 'atlantis apply' to deploy changes
 
-## 4. What Happens Behind the Scenes
+### 4. What Happens Behind the Scenes
 - GitHub webhook notifies Atlantis about PR
 - Atlantis clones repository
 - Runs repo-config-generator.sh
@@ -273,21 +273,21 @@ git push origin feature/my-infrastructure-change
 - After successful changes pr is merged.
 
 
-### 🔒 Security Features
+## 🔒 Security Features
 - Repository Allowlist: Only allowed repositories can use Atlantis
 - Command Restrictions: Only allowed commands are executed
 - Webhook Secret Verification: Ensures webhook authenticity
 - VPC Internal Routing: Runs inside private network
 - API Gateway Protection: Public endpoint with authentication
 
-### 🛠️ Troubleshooting
-## Common Issues:
+## 🛠️ Troubleshooting
+### Common Issues:
 - Webhook not delivered → Check GitHub App permissions and webhook secret
 - Plan not running → Verify folder structure and Terraform file requirements
 - Permission errors → Ensure GitHub App has correct access
 - Configuration not generated → Ensure repo-config-generator.sh is executable
 
-## Debugging Tips:
+### Debugging Tips:
 - Check ECS task logs in CloudWatch
 - Verify GitHub webhook deliveries in repo settings
 - Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
