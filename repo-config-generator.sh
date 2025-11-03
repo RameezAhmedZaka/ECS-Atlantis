@@ -8,7 +8,7 @@ cat > atlantis.yaml <<-EOF
 ---
 version: 3
 automerge: true
-parallel_plan: true
+parallel_plan: false
 parallel_apply: false
 projects:
 EOF
@@ -62,7 +62,7 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false
+            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
             terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
@@ -79,7 +79,7 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
 
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false
+            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
             terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
@@ -95,7 +95,7 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false
+            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
             terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
