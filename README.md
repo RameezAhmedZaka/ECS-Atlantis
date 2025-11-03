@@ -131,7 +131,7 @@ repos:
           ./repo-config-generator.sh || (echo "Script failed !" && exit 1)
         description: Generating configs
 ```
-Explanation:
+## Explanation:
 
 id: Repository this config applies to
 
@@ -142,7 +142,7 @@ allowed_overrides: Permits repo-specific overrides
 pre_workflow_hooks: Runs scripts before Terraform operations
 
 ### 🪄 The Magic Script: repo-config-generator.sh
-Functionality:
+## Functionality:
 
 Detects Terraform projects (main.tf, variables.tf, providers.tf)
 
@@ -152,7 +152,7 @@ Generates custom workflows
 
 Automatically runs plans on relevant changes
 
-Key Features:
+## Key Features:
 
 Dynamic project detection
 
@@ -192,7 +192,7 @@ repository/
 └── repo-config-generator.sh
 ```
 ### 🎯 How to Trigger Atlantis
-1. Pull Request Workflow (Automatic)
+## 1. Pull Request Workflow (Automatic)
 Create a PR modifying .tf files
 
 Atlantis detects changes via webhook
@@ -203,14 +203,14 @@ Runs terraform plan per affected project/environment
 
 Posts plan results in PR comments
 
-2. Manual Commands
+## 2. Manual Commands
 ```
 atlantis plan                 # Plan all projects
 atlantis plan -p project-name # Plan specific project
 atlantis apply                # Apply all planned changes
 atlantis apply -p project-name# Apply specific project
 ```
-3. Example Workflow
+## 3. Example Workflow
 ```
 git checkout -b feature/my-infrastructure-change
 vim application/app1/main.tf
@@ -218,7 +218,7 @@ git add .
 git commit -m "Add new resource to app1"
 git push origin feature/my-infrastructure-change
 ```
-# Create PR on GitHub
+# Create PR on GitHub for main branch
 # Atlantis automatically runs 'terraform plan' and comments results
 # Review plan in PR comments
 # Comment 'atlantis apply' to deploy changes
@@ -228,43 +228,29 @@ GitHub webhook notifies Atlantis about PR
 Atlantis clones repository
 
 Runs repo-config-generator.sh
-
 Generates atlantis.yaml with project definitions
-
 Executes terraform plan
-
 Posts formatted results to PR
+Waits for approval before applying changes 
+After successful changes pr is merged.
 
-Waits for approval before applying changes
 
 ### 🔒 Security Features
 Repository Allowlist: Only allowed repositories can use Atlantis
-
 Command Restrictions: Only allowed commands are executed
-
 Webhook Secret Verification: Ensures webhook authenticity
-
 VPC Internal Routing: Runs inside private network
-
 API Gateway Protection: Public endpoint with authentication
 
 ### 🛠️ Troubleshooting
-Common Issues:
-
+## Common Issues:
 Webhook not delivered → Check GitHub App permissions and webhook secret
-
 Plan not running → Verify folder structure and Terraform file requirements
-
 Permission errors → Ensure GitHub App has correct access
-
 Configuration not generated → Ensure repo-config-generator.sh is executable
 
-Debugging Tips:
-
+## Debugging Tips:
 Check ECS task logs in CloudWatch
-
 Verify GitHub webhook deliveries in repo settings
-
 Ensure all required Terraform files exist
-
 Ensure environment folders (production, staging, helia) exist
