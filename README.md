@@ -77,8 +77,7 @@ aws = {
 Clone the code 
 ```
 cd atlantis
-
-
+```
 Initialize Terraform:
 ```
 terraform init -backend-config=./dev/dev.conf
