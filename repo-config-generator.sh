@@ -26,8 +26,6 @@ for base_dir in */; do
         [ -d "$app_dir" ] || continue
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
-            base_clean="$(basename "$base_dir" | tr -d '[:space:]')"
-            app_clean="$(echo "$app_name" | tr -d '[:space:]')"
 
             # Add project entries for each environment
             for env in helia staging production; do
