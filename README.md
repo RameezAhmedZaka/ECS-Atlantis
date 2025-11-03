@@ -224,13 +224,13 @@ git push origin feature/my-infrastructure-change
 
 ### 🛠️ Troubleshooting
 ## Common Issues:
-Webhook not delivered → Check GitHub App permissions and webhook secret
-Plan not running → Verify folder structure and Terraform file requirements
-Permission errors → Ensure GitHub App has correct access
-Configuration not generated → Ensure repo-config-generator.sh is executable
+- Webhook not delivered → Check GitHub App permissions and webhook secret
+- Plan not running → Verify folder structure and Terraform file requirements
+- Permission errors → Ensure GitHub App has correct access
+- Configuration not generated → Ensure repo-config-generator.sh is executable
 
 ## Debugging Tips:
-Check ECS task logs in CloudWatch
-Verify GitHub webhook deliveries in repo settings
-Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
-Ensure environment folders (e.g production, staging, helia) exist
+- Check ECS task logs in CloudWatch
+- Verify GitHub webhook deliveries in repo settings
+- Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
+- Ensure environment folders (e.g production, staging, helia) exist
