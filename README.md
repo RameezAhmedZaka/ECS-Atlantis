@@ -114,15 +114,17 @@ aws ssm put-parameter \
 
 ```hcl
 github_repositories_webhook = {
-  github_owner          = "owner-of-github-app"
-  github_app_key_base64 = "github_app_key_base64" # base64 PEM file
-  github_app_pem_file   = "github_app_key_plain"  # PEM file as-is
-  repositories          = ["terraform"]           # repositories to add webhook to
-  github_app_id         = "github-app-id"
+  github_owner               = "owner-of-github-app"
+  github_app_key_base64      = "github_app_key_base64" # base64 PEM file
+  github_app_pem_file        = "github_app_key_plain"  # PEM file as-is
+  repositories               = ["terraform"]           # repositories to add webhook to
+  github_app_id              = "github-app-id"
+  github_app_installation_id = "xyz"
+  webhook_secret             = "xyz"              
 }
 
 atlantis_ecs = {
-  atlantis_repo_allowlist = "github.com/your-org/*"
+  atlantis_repo_allowlist = "github.com/your-org/*"       add this too in terraform.tfvars
 }
 ```
 
