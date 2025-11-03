@@ -74,6 +74,7 @@ aws = {
   region  = "us-east-1"
   profile = ""
 }
+
 Initialize Terraform:
 ```
 terraform init
