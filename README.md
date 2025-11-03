@@ -128,23 +128,23 @@ repos:
         description: Generating configs
 ```
 ## Explanation:
-id: Repository this config applies to
-allow_custom_workflows: Enables custom Terraform workflows
-allowed_overrides: Permits repo-specific overrides
-pre_workflow_hooks: Runs scripts before Terraform operations
+- id: Repository this config applies to
+- allow_custom_workflows: Enables custom Terraform workflows
+- allowed_overrides: Permits repo-specific overrides
+- pre_workflow_hooks: Runs scripts before Terraform operations
 
 ### 🪄 The Magic Script: repo-config-generator.sh
 ## Functionality:
-Detects Terraform projects (main.tf, variables.tf, providers.tf)
-Creates separate Atlantis projects per environment (helia, staging, production)
-Generates custom workflows
-Automatically runs plans on relevant changes
+- Detects Terraform projects (main.tf, variables.tf, providers.tf)
+- Creates separate Atlantis projects per environment (helia, staging, production)
+- Generates custom workflows
+- Automatically runs plans on relevant changes
 
 ## Key Features:
-Dynamic project detection
-Multi-environment support
-Custom workflows
-Auto-planning
+- Dynamic project detection
+- Multi-environment support
+- Custom workflows
+- Auto-planning
 
 ### 📂 Required Folder Structure
 ```
@@ -177,11 +177,11 @@ repository/
 ```
 ### 🎯 How to Trigger Atlantis
 ## 1. Pull Request Workflow (Automatic)
-Create a PR modifying .tf files against main branch
-Atlantis detects changes via webhook
-Runs repo-config-generator.sh
-Runs terraform plan per affected project/environment
-Posts plan results in PR comments
+- Create a PR modifying .tf files against main branch
+- Atlantis detects changes via webhook
+- Runs repo-config-generator.sh
+- Runs terraform plan per affected project/environment
+- Posts plan results in PR comments
 
 ## 2. Manual Commands
 ```
@@ -198,28 +198,28 @@ git add .
 git commit -m "Add new resource to app1"
 git push origin feature/my-infrastructure-change
 ```
-Create PR on GitHub for main branch
-Atlantis automatically runs 'terraform plan' and comments results
-Review plan in PR comments
-Comment 'atlantis apply' to deploy changes
+- Create PR on GitHub for main branch
+- Atlantis automatically runs 'terraform plan' and comments results
+- Review plan in PR comments
+- Comment 'atlantis apply' to deploy changes
 
 ## 4. What Happens Behind the Scenes
-GitHub webhook notifies Atlantis about PR
-Atlantis clones repository
-Runs repo-config-generator.sh
-Generates atlantis.yaml with project definitions
-Executes terraform plan
-Posts formatted results to PR
-Waits for approval before applying changes 
-After successful changes pr is merged.
+- GitHub webhook notifies Atlantis about PR
+- Atlantis clones repository
+- Runs repo-config-generator.sh
+- Generates atlantis.yaml with project definitions
+- Executes terraform plan
+- Posts formatted results to PR
+- Waits for approval before applying changes 
+- After successful changes pr is merged.
 
 
 ### 🔒 Security Features
-Repository Allowlist: Only allowed repositories can use Atlantis
-Command Restrictions: Only allowed commands are executed
-Webhook Secret Verification: Ensures webhook authenticity
-VPC Internal Routing: Runs inside private network
-API Gateway Protection: Public endpoint with authentication
+- Repository Allowlist: Only allowed repositories can use Atlantis
+- Command Restrictions: Only allowed commands are executed
+- Webhook Secret Verification: Ensures webhook authenticity
+- VPC Internal Routing: Runs inside private network
+- API Gateway Protection: Public endpoint with authentication
 
 ### 🛠️ Troubleshooting
 ## Common Issues:
@@ -231,5 +231,5 @@ Configuration not generated → Ensure repo-config-generator.sh is executable
 ## Debugging Tips:
 Check ECS task logs in CloudWatch
 Verify GitHub webhook deliveries in repo settings
-Ensure all required Terraform files exist
-Ensure environment folders (production, staging, helia) exist
+Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
+Ensure environment folders (e.g production, staging, helia) exist
