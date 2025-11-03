@@ -175,8 +175,8 @@ terraform apply -var-file=./config/dev.tfvars
 ## 📁 Server-Side Configuration: server-atlantis.yaml
 ```
 repos:
-  - id: github.com/<org-name>/<repo-name>
-    allow_custom_workflows: true
+  - id: github.com/<org-name>/<repo-name>                     #change this configuration
+    allow_custom_workflows: true 
     allowed_overrides:
       - apply_requirements
       - workflow
