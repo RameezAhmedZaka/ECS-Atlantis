@@ -29,10 +29,11 @@ Atlantis enables GitOps-style workflows by automating `terraform plan` and `appl
 ### Create the api for terraform code
 1. Create the API
 ```
-aws apigateway create-rest-api \
-  --name "AtlantisAPI" \
-  --description "API for Atlantis GitHub webhooks" \
-  --region us-east-1
+aws apigatewayv2 create-api \
+    --name atlantis-api \
+    --protocol-type HTTP \
+    --description "Atlantis HTTP API" \
+    --region us-east-1
 ```
 
 
@@ -40,11 +41,11 @@ Note the id returned → this is your API_ID that will be used in terraform.tfva
 
 2. Deploy the API to a stage
 ```
-aws apigateway create-deployment \
-  --rest-api-id <API_ID> \       #that you created
-  --stage-name prod \
-  --description "Production deployment" \
-  --region us-east-1
+aws apigatewayv2 create-stage \
+    --api-id <api-id> \
+    --stage-name prod \
+    --auto-deploy
+
 ```
 
 ## 🔑 GitHub Integration
