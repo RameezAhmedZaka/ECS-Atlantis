@@ -132,34 +132,22 @@ repos:
         description: Generating configs
 ```
 ## Explanation:
-
 id: Repository this config applies to
-
 allow_custom_workflows: Enables custom Terraform workflows
-
 allowed_overrides: Permits repo-specific overrides
-
 pre_workflow_hooks: Runs scripts before Terraform operations
 
 ### 🪄 The Magic Script: repo-config-generator.sh
 ## Functionality:
-
 Detects Terraform projects (main.tf, variables.tf, providers.tf)
-
 Creates separate Atlantis projects per environment (helia, staging, production)
-
 Generates custom workflows
-
 Automatically runs plans on relevant changes
 
 ## Key Features:
-
 Dynamic project detection
-
 Multi-environment support
-
 Custom workflows
-
 Auto-planning
 
 ### 📂 Required Folder Structure
@@ -193,14 +181,10 @@ repository/
 ```
 ### 🎯 How to Trigger Atlantis
 ## 1. Pull Request Workflow (Automatic)
-Create a PR modifying .tf files
-
+Create a PR modifying .tf files against main branch
 Atlantis detects changes via webhook
-
 Runs repo-config-generator.sh
-
 Runs terraform plan per affected project/environment
-
 Posts plan results in PR comments
 
 ## 2. Manual Commands
