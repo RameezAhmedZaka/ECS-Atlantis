@@ -221,6 +221,7 @@ get_tfvars_file_for_env() {
 }
 
 # Second pass: generate projects for all discovered Terraform projects
+# Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
 
 # Find all projects with env directories
@@ -259,14 +260,13 @@ find . -type d -name "env" | while read -r env_dir; do
                 continue
             fi
 
-            # Calculate relative paths for when_modified patterns
+            # Calculate relative paths - use project_dir instead of env_path for the main directory
             project_relative_path=$(get_relative_path "$project_dir" ".")
-            env_relative_path=$(get_relative_path "$env_path" ".")
             
-            # Write project configuration
+            # Write project configuration - dir points to project directory, not env directory
             {
             echo "  - name: ${project_name}-${env}"
-            echo "    dir: $env_relative_path"
+            echo "    dir: $project_relative_path"
             echo "    autoplan:"
             echo "      enabled: true"
             echo "      when_modified:"
