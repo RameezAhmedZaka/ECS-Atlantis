@@ -143,9 +143,9 @@ for base_dir in */; do
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/*/*"
+        - "${app_dir}/*.tf"
+        - "${app_dir}/config/*.tfvars"
+        - "${app_dir}/env/*/*"
     terraform_version: v1.6.6
     apply_requirements:
       - approved
