@@ -331,30 +331,31 @@ done
 
 # Fixed workflows using only run steps (everything else unchanged)
 cat >> atlantis.yaml << 'EOF'
-cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
     plan:
       steps:
         - run: |
+            terraform workspace select "prod-pr-$PULL_NUM" || terraform workspace new "prod-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
-            # Remove the local cache in the project dir
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            # Init is run in $PROJECT_DIR, pulling backend config from current dir
-            # and main code from two levels up (../../)
             terraform init -backend-config=prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
             terraform plan -var-file=../../config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 
   staging_workflow:
     plan:
       steps:
         - run: |
+            terraform workspace select "stage-pr-$PULL_NUM" || terraform workspace new "stage-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
             terraform plan -var-file=../../config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
@@ -368,6 +369,7 @@ workflows:
     plan:
       steps:
         - run: |
+            terraform workspace select "helia-pr-$PULL_NUM" || terraform workspace new "helia-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
@@ -378,3 +380,4 @@ workflows:
             echo "Project: $PROJECT_NAME"
             terraform apply -auto-approve $PLANFILE
 EOF
+
