@@ -321,8 +321,11 @@ for base_dir in */; do
       enabled: true
       when_modified:
         - "../../*.tf"
+        - "../../*.tfvars"
         - "../../config/*.tfvars"
-        - "../../env/*/*"
+        - "*.tf"
+        - "*.tfvars"
+        - "../../env/${env}/*"
     terraform_version: v1.6.6
     workflow: ${env}_workflow
     apply_requirements:
@@ -343,7 +346,7 @@ PROJECT_EOF
     done
 done
 
-# Fixed workflows using only run steps
+# Fixed workflows - each environment works in its own isolated directory
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
@@ -351,15 +354,16 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            echo "Working in: $PROJECT_DIR"
+            cd "$PROJECT_DIR"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=prod.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            cd "$PROJECT_DIR"
             terraform apply -auto-approve $PLANFILE
 
   staging_workflow:
@@ -367,15 +371,16 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            echo "Working in: $PROJECT_DIR"
+            cd "$PROJECT_DIR"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=stage.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            cd "$PROJECT_DIR"
             terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
@@ -383,14 +388,15 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            echo "Working in: $PROJECT_DIR"
+            cd "$PROJECT_DIR"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=helia.conf -reconfigure -lock=false -input=false
+            terraform plan -var-file=../../config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            cd "$(dirname "$PROJECT_DIR")/../.."
+            cd "$PROJECT_DIR"
             terraform apply -auto-approve $PLANFILE
 EOF
