@@ -211,7 +211,7 @@ for base_dir in */; do
                 if [ "$main_changed" = "true" ] || [ "$env_has_changes" = "true" ]; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
-    dir: $env_path
+    dir: .
     autoplan:
       enabled: true
       when_modified:
