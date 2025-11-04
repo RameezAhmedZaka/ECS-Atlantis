@@ -380,7 +380,6 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -420,6 +419,50 @@ get_first_four_chars() {
     echo "${name:0:4}" | tr '[:upper:]' '[:lower:]'
 }
 
+# Portable function to get relative path
+get_relative_path() {
+    local target="$1"
+    local base="$2"
+    
+    # Remove trailing slashes
+    target="${target%/}"
+    base="${base%/}"
+    
+    # Convert to absolute paths if needed
+    if [ "${target:0:1}" != "/" ]; then
+        target="$(pwd)/$target"
+    fi
+    if [ "${base:0:1}" != "/" ]; then
+        base="$(pwd)/$base"
+    fi
+    
+    # Find common prefix
+    common="$base"
+    while [ "${target#$common/}" = "$target" ]; do
+        common="$(dirname "$common")"
+        # Add ../ for each level we go up
+        if [ -z "$result" ]; then
+            result=".."
+        else
+            result="../$result"
+        fi
+    done
+    
+    # If no common path, return the target as is
+    if [ "$common" = "/" ]; then
+        echo "$target"
+        return
+    fi
+    
+    # Append the remaining part of target path
+    local forward_part="${target#$common/}"
+    if [ -n "$result" ]; then
+        echo "$result/$forward_part"
+    else
+        echo "$forward_part"
+    fi
+}
+
 # Function to find matching backend config file
 find_matching_backend_config() {
     local project_dir="$1"
@@ -436,7 +479,8 @@ find_matching_backend_config() {
             local config_prefix=$(get_first_four_chars "$config_name")
             
             if [ "$env_prefix" = "$config_prefix" ]; then
-                echo "$(realpath --relative-to="$project_dir" "$config_file")"
+                # Use simpler relative path calculation
+                echo "env/${env}/$(basename "$config_file")"
                 return 0
             fi
         done
@@ -445,7 +489,7 @@ find_matching_backend_config() {
     # Fallback: try to find any .conf file
     if [ -d "$env_path" ]; then
         for config_file in "${env_path}"/*.conf; do
-            [ -f "$config_file" ] && echo "$(realpath --relative-to="$project_dir" "$config_file")" && return 0
+            [ -f "$config_file" ] && echo "env/${env}/$(basename "$config_file")" && return 0
         done
     fi
     
@@ -468,7 +512,7 @@ find_matching_tfvars_file() {
             local tfvars_prefix=$(get_first_four_chars "$tfvars_name")
             
             if [ "$env_prefix" = "$tfvars_prefix" ]; then
-                echo "$(realpath --relative-to="$project_dir" "$tfvars_file")"
+                echo "config/$(basename "$tfvars_file")"
                 return 0
             fi
         done
@@ -477,7 +521,7 @@ find_matching_tfvars_file() {
     # Fallback: try to find any .tfvars file
     if [ -d "$config_path" ]; then
         for tfvars_file in "${config_path}"/*.tfvars; do
-            [ -f "$tfvars_file" ] && echo "$(realpath --relative-to="$project_dir" "$tfvars_file")" && return 0
+            [ -f "$tfvars_file" ] && echo "config/$(basename "$tfvars_file")" && return 0
         done
     fi
     
@@ -629,20 +673,16 @@ find . -type d -name "env" | while read -r env_dir; do
                 continue
             fi
 
-            # Calculate relative paths for when_modified patterns
-            project_relative_path=$(realpath --relative-to="." "$project_dir")
-            env_relative_path=$(realpath --relative-to="." "$env_path")
-            
             # Write project configuration
             {
             echo "  - name: ${project_name}-${env}"
-            echo "    dir: $env_relative_path"
+            echo "    dir: $project_dir/env/${env}"
             echo "    autoplan:"
             echo "      enabled: true"
             echo "      when_modified:"
-            echo "        - \"$project_relative_path/*.tf\""
-            echo "        - \"$project_relative_path/config/*.tfvars\""
-            echo "        - \"$project_relative_path/env/*/*\""
+            echo "        - \"$project_dir/*.tf\""
+            echo "        - \"$project_dir/config/*.tfvars\""
+            echo "        - \"$project_dir/env/*/*\""
             echo "    terraform_version: v1.6.6"
             echo "    workflow: ${env}_workflow"
             echo "    apply_requirements:"
@@ -680,7 +720,7 @@ while IFS= read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            echo \"Using backend config: $backend_config\""
     echo "            echo \"Using tfvars file: $tfvars_file\""
-    echo "            cd \"\$PROJECT_DIR\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/..\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
     echo "            terraform plan -var-file=\"$tfvars_file\" -lock-timeout=10m -out=\$PLANFILE"
@@ -689,7 +729,7 @@ while IFS= read -r env; do
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            cd \"\$PROJECT_DIR\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/..\""
     echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
 done < "$ENV_FILE"
