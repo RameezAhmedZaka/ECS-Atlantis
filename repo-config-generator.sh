@@ -381,7 +381,6 @@
 # EOF
 
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -598,8 +597,11 @@ cat >> atlantis.yaml << 'EOF'
 workflows:
 EOF
 
-# Process each environment
-echo -e "$ENVIRONMENTS" | while IFS= read -r env; do
+# Process each environment - FIXED: Use temporary file instead of pipe
+TEMP_FILE=$(mktemp)
+echo -e "$ENVIRONMENTS" > "$TEMP_FILE"
+
+while IFS= read -r env; do
     [ -z "$env" ] && continue
     
     backend_config=$(get_backend_config_for_env "$env")
@@ -631,6 +633,9 @@ echo -e "$ENVIRONMENTS" | while IFS= read -r env; do
             cd "\$(dirname "\$PROJECT_DIR")/../.."
             terraform apply -auto-approve \$PLANFILE
 WORKFLOW_EOF
-done
+done < "$TEMP_FILE"
+
+# Clean up
+rm -f "$TEMP_FILE"
 
 echo "Generated atlantis.yaml successfully"
