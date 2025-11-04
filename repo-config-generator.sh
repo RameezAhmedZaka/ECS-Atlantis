@@ -138,7 +138,7 @@ for base_dir in */; do
 
             # Create one project per app that handles all environments
             cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_name}-${app_name}
+  - name: ${base_dir%/}-${app_name}
     dir: .
     autoplan:
       enabled: true
