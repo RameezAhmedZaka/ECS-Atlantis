@@ -101,10 +101,10 @@ find_matching_tfvars_file() {
     echo ""
 }
 
-# Initialize arrays for environments and configs
-ENVIRONMENTS=""
-BACKEND_CONFIGS=""
-TFVARS_FILES=""
+# Use files to store environments and configs
+ENV_FILE=$(mktemp)
+BACKEND_FILE=$(mktemp)
+TFVARS_FILE=$(mktemp)
 
 # First pass: discover environments and their config files
 for base_dir in */; do
@@ -117,8 +117,8 @@ for base_dir in */; do
                 [ -n "$env" ] || continue
                 
                 # Add to environments list if not already present
-                if ! echo "$ENVIRONMENTS" | grep -q "^$env$"; then
-                    ENVIRONMENTS="${ENVIRONMENTS}${env}\n"
+                if ! grep -q "^$env$" "$ENV_FILE" 2>/dev/null; then
+                    echo "$env" >> "$ENV_FILE"
                 fi
                 
                 # Discover config files for this environment
@@ -126,13 +126,13 @@ for base_dir in */; do
                 tfvars_file=$(find_matching_tfvars_file "$app_dir" "$env")
                 
                 # Store configs if found and not already stored
-                if [ -n "$backend_config" ] && ! echo "$BACKEND_CONFIGS" | grep -q "^$env:"; then
-                    BACKEND_CONFIGS="${BACKEND_CONFIGS}${env}:${backend_config}\n"
+                if [ -n "$backend_config" ] && ! grep -q "^$env:" "$BACKEND_FILE" 2>/dev/null; then
+                    echo "$env:$backend_config" >> "$BACKEND_FILE"
                     echo "Found backend config for $env: $backend_config"
                 fi
                 
-                if [ -n "$tfvars_file" ] && ! echo "$TFVARS_FILES" | grep -q "^$env:"; then
-                    TFVARS_FILES="${TFVARS_FILES}${env}:${tfvars_file}\n"
+                if [ -n "$tfvars_file" ] && ! grep -q "^$env:" "$TFVARS_FILE" 2>/dev/null; then
+                    echo "$env:$tfvars_file" >> "$TFVARS_FILE"
                     echo "Found tfvars file for $env: $tfvars_file"
                 fi
             done <<< "$environments"
@@ -140,15 +140,15 @@ for base_dir in */; do
     done
 done
 
-# Function to get config from stored lists
+# Function to get config from stored files
 get_backend_config_for_env() {
     local env="$1"
-    echo -e "$BACKEND_CONFIGS" | grep "^${env}:" | cut -d: -f2-
+    grep "^${env}:" "$BACKEND_FILE" 2>/dev/null | cut -d: -f2- || echo ""
 }
 
 get_tfvars_file_for_env() {
     local env="$1"
-    echo -e "$TFVARS_FILES" | grep "^${env}:" | cut -d: -f2-
+    grep "^${env}:" "$TFVARS_FILE" 2>/dev/null | cut -d: -f2- || echo ""
 }
 
 # Second pass: generate projects
@@ -214,8 +214,8 @@ cat >> atlantis.yaml << 'EOF'
 workflows:
 EOF
 
-# Process each environment
-echo -e "$ENVIRONMENTS" | while IFS= read -r env; do
+# Process each environment from file
+while IFS= read -r env; do
     [ -z "$env" ] && continue
     
     backend_config=$(get_backend_config_for_env "$env")
@@ -247,6 +247,9 @@ echo -e "$ENVIRONMENTS" | while IFS= read -r env; do
             cd "\$(dirname "\$PROJECT_DIR")/../.."
             terraform apply -auto-approve \$PLANFILE
 WORKFLOW_EOF
-done
+done < "$ENV_FILE"
+
+# Clean up
+rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
 
 echo "Generated atlantis.yaml successfully"
