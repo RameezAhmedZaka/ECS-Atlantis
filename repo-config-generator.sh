@@ -113,21 +113,21 @@ echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 # Get the current git changes
 CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
 
+# Function to check if main Terraform files changed
+main_files_changed() {
+    if [ -z "$CHANGED_FILES" ]; then
+        return 1  # Assume no main file changes if we can't detect
+    fi
+    echo "$CHANGED_FILES" | grep -q -E "(\.tf$|\.tfvars$)" | grep -v "/env/"
+}
+
 # Function to check if any files in a directory changed
 has_changes() {
     local dir="$1"
     if [ -z "$CHANGED_FILES" ]; then
-        return 0  # If we can't detect changes, include all projects
+        return 0  # Include all if we can't detect
     fi
     echo "$CHANGED_FILES" | grep -q "^$dir"
-}
-
-# Function to check if main Terraform files changed
-main_files_changed() {
-    if [ -z "$CHANGED_FILES" ]; then
-        return 1  # If we can't detect changes, assume main files didn't change
-    fi
-    echo "$CHANGED_FILES" | grep -q -E "(\.tf$|\.tfvars$)" | grep -v "/env/"
 }
 
 # Start atlantis.yaml
@@ -153,18 +153,22 @@ for base_dir in */; do
         [ -d "$app_dir" ] || continue
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
-            
-            # Check if main files changed (triggers all environments)
-            main_changed=$(main_files_changed && echo "true" || echo "false")
-            
-            # Add project entries for each environment
+
+            # Check if main Terraform files changed
+            if main_files_changed; then
+                main_changed="true"
+            else
+                main_changed="false"
+            fi
+
+            # Loop through environments
             for env in helia staging production; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
-                
-                # Only include this environment if:
-                # 1. Main files changed, OR
-                # 2. This specific environment directory changed
+
+                # Trigger this env if:
+                # 1. Main files changed (trigger all envs)
+                # 2. Changes detected in this specific env folder
                 if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
@@ -189,7 +193,7 @@ PROJECT_EOF
     done
 done
 
-# Fixed workflows using only run steps (everything else unchanged)
+# Fixed workflows
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
