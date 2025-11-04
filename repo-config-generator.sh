@@ -244,6 +244,7 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
+
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
@@ -255,26 +256,18 @@ CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
 # Function to check if any files in a directory changed
 has_changes() {
     local dir="$1"
-    # If no changes were detected at all, assume no specific directory changes
     if [ -z "$CHANGED_FILES" ]; then
-        return 1
+        return 0  # If we can't detect changes, include all projects
     fi
-    # Check if CHANGED_FILES contains any path starting with the directory
     echo "$CHANGED_FILES" | grep -q "^$dir"
 }
 
-# Function to check if main Terraform files changed (excluding env/)
+# Function to check if main Terraform files changed
 main_files_changed() {
-    # If no changes were detected at all, return false
     if [ -z "$CHANGED_FILES" ]; then
-        return 1
+        return 1  # If we can't detect changes, assume main files didn't change
     fi
-
-    # Check for .tf or .tfvars files NOT under any directory containing "/env/"
-    echo "$CHANGED_FILES" | \
-        grep -E "(\.tf$|\.tfvars$)" | \
-        grep -v "/env/" | \
-        grep -q "."
+    echo "$CHANGED_FILES" | grep -q -E "(\.tf$|\.tfvars$)" | grep -v "/env/"
 }
 
 # Start atlantis.yaml
@@ -301,28 +294,18 @@ for base_dir in */; do
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
             
-            # Determine if a main file change occurred (triggers all environments)
-            main_changed="false"
-            if main_files_changed; then
-                main_changed="true"
-            fi
+            # Check if main files changed (triggers all environments)
+            main_changed=$(main_files_changed && echo "true" || echo "false")
             
             # Add project entries for each environment
             for env in helia staging production; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
                 
-                # Determine if this specific environment changed
-                env_changed="false"
-                if has_changes "$env_path"; then
-                    env_changed="true"
-                fi
-                
                 # Only include this environment if:
-                # 1. Main files changed ('main_changed'), OR
-                # 2. This specific environment directory changed ('env_changed')
-                if [ "$main_changed" = "true" ] || [ "$env_changed" = "true" ]; then
-                    # NOTE: Indentation fixed here to resolve YAML error
+                # 1. Main files changed, OR
+                # 2. This specific environment directory changed
+                if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
     dir: $env_path
@@ -331,8 +314,7 @@ for base_dir in */; do
       when_modified:
         - "../../*.tf"
         - "../../config/*.tfvars"
-        - "**.tf"
-        - "**.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: ${env}_workflow
     apply_requirements:
@@ -349,53 +331,50 @@ done
 
 # Fixed workflows using only run steps (everything else unchanged)
 cat >> atlantis.yaml << 'EOF'
+cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
     plan:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          # NOTE: Verify the correct path for 'cd'. This assumes the app's root is two levels up from $PROJECT_DIR.
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          rm -rf .terraform .terraform.lock.hcl
-          terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-          terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+            echo "Project: $PROJECT_NAME"
+            # Remove the local cache in the project dir
+            rm -rf .terraform .terraform.lock.hcl
+            # Init is run in $PROJECT_DIR, pulling backend config from current dir
+            # and main code from two levels up (../../)
+            terraform init -backend-config=prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=../../config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          terraform apply -auto-approve $PLANFILE
+            echo "Project: $PROJECT_NAME"
+            terraform apply -auto-approve $PLANFILE
 
   staging_workflow:
     plan:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          rm -rf .terraform .terraform.lock.hcl
-          terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-          terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+            echo "Project: $PROJECT_NAME"
+            rm -rf .terraform .terraform.lock.hcl
+            terraform init -backend-config=stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=../../config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          terraform apply -auto-approve $PLANFILE
+            echo "Project: $PROJECT_NAME"
+            terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
     plan:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          rm -rf .terraform .terraform.lock.hcl
-          terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-          terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+            echo "Project: $PROJECT_NAME"
+            rm -rf .terraform .terraform.lock.hcl
+            terraform init -backend-config=helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=../../config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
-          echo "Project: $PROJECT_NAME"
-          cd "$(dirname "$PROJECT_DIR")/../.."
-          terraform apply -auto-approve $PLANFILE
+            echo "Project: $PROJECT_NAME"
+            terraform apply -auto-approve $PLANFILE
 EOF
