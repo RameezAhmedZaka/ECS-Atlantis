@@ -244,8 +244,6 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
-
-
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
