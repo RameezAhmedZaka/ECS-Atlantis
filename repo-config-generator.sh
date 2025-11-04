@@ -105,13 +105,13 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
-#!/bin/bash
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Get the current git changes
-CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+# Compare changes against main branch
+git fetch origin main >/dev/null 2>&1 || true
+CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
 
 # Function to check if any files in a directory changed
 has_changes() {
@@ -140,7 +140,7 @@ parallel_apply: false
 projects:
 EOF
 
-# Check if a directory is a Terraform project
+# Function to check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
@@ -240,7 +240,3 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 EOF
-
-
-
-

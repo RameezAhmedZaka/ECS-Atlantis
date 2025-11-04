@@ -1,76 +1,54 @@
 ---
 version: 3
-automerge: false
+automerge: true
 parallel_plan: false
 parallel_apply: false
 projects:
 workflows:
-  default:
+  production_workflow:
     plan:
       steps:
         - run: |
-            echo "Planning for project: $PROJECT_NAME"
-            echo "Working directory: $(pwd)"
-            
-            # Determine environment and config based on project name
-            if [[ "$PROJECT_NAME" == *-production ]]; then
-              echo "Environment: Production"
-              BACKEND_CONFIG="prod.conf"
-              VAR_FILE="../../config/production.tfvars"
-            elif [[ "$PROJECT_NAME" == *-staging ]]; then
-              echo "Environment: Staging"
-              BACKEND_CONFIG="stage.conf"
-              VAR_FILE="../../config/stage.tfvars"
-            elif [[ "$PROJECT_NAME" == *-helia ]]; then
-              echo "Environment: Helia"
-              BACKEND_CONFIG="helia.conf"
-              VAR_FILE="../../config/helia.tfvars"
-            else
-              echo "Unknown environment, using defaults"
-              BACKEND_CONFIG="prod.conf"
-              VAR_FILE="../../config/production.tfvars"
-            fi
-            
-            echo "Backend config: $BACKEND_CONFIG"
-            echo "Var file: $VAR_FILE"
-            
-            # Clean up and initialize
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -input=false
-            terraform plan -var-file="$VAR_FILE" -lock-timeout=10m -out=planfile
-
-        - run: |
-            echo "--- Plan Summary ---"
-            terraform show -no-color planfile | tail -n 20
-
+            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
-            echo "Applying for project: $PROJECT_NAME"
-            echo "Working directory: $(pwd)"
-            
-            # Determine environment and config based on project name
-            if [[ "$PROJECT_NAME" == *-production ]]; then
-              echo "Environment: Production"
-              BACKEND_CONFIG="prod.conf"
-              VAR_FILE="../../config/production.tfvars"
-            elif [[ "$PROJECT_NAME" == *-staging ]]; then
-              echo "Environment: Staging"
-              BACKEND_CONFIG="stage.conf"
-              VAR_FILE="../../config/stage.tfvars"
-            elif [[ "$PROJECT_NAME" == *-helia ]]; then
-              echo "Environment: Helia"
-              BACKEND_CONFIG="helia.conf"
-              VAR_FILE="../../config/helia.tfvars"
-            else
-              echo "Unknown environment, using defaults"
-              BACKEND_CONFIG="prod.conf"
-              VAR_FILE="../../config/production.tfvars"
-            fi
-            
-            echo "Backend config: $BACKEND_CONFIG"
-            echo "Var file: $VAR_FILE"
-            
-            # Initialize and apply
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -input=false
-            terraform apply -auto-approve planfile
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
+            terraform apply -auto-approve $PLANFILE
+
+  staging_workflow:
+    plan:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
+            rm -rf .terraform .terraform.lock.hcl
+            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
+            terraform apply -auto-approve $PLANFILE
+
+  helia_workflow:
+    plan:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
+            rm -rf .terraform .terraform.lock.hcl
+            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
+            terraform apply -auto-approve $PLANFILE
