@@ -135,26 +135,54 @@ for base_dir in */; do
             app_name="$(basename "$app_dir")"
             base_name="${base_dir%/}"
 
-            # Create one project per app that handles all environments
-            cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_name}-${app_name}
-    dir: ${app_dir}
+            # Add project entries for each environment with specific when_modified patterns
+            for env in helia staging production; do
+                env_path="${app_dir}env/${env}"
+                [ -d "$env_path" ] || continue
+
+                # Set environment-specific patterns
+                case $env in
+                    "production")
+                        when_modified=(
+                          "../../*.tf"
+                          "../../config/production.tfvars"
+                          "../../env/production/*"
+                        )
+                        ;;
+                    "staging")
+                        when_modified=(
+                          "../../*.tf"
+                          "../../config/stage.tfvars"
+                          "../../env/staging/*"
+                        )
+                        ;;
+                    "helia")
+                        when_modified=(
+                          "../../*.tf"
+                          "../../config/helia.tfvars"
+                          "../../env/helia/*"
+                        )
+                        ;;
+                esac
+
+                cat >> atlantis.yaml << PROJECT_EOF
+  - name: ${base_name}-${app_name}-${env}
+    dir: $env_path
     autoplan:
       enabled: true
       when_modified:
-        - "*.tf"
-        - "config/*.tfvars"
-        - "env/*/*"
+$(printf "        - %s\n" "${when_modified[@]}")
     terraform_version: v1.6.6
     apply_requirements:
       - approved
       - mergeable
 PROJECT_EOF
+            done
         fi
     done
 done
 
-# Single workflow that detects environment based on changed files
+# Simple workflows for each environment
 cat >> atlantis.yaml << 'EOF'
 workflows:
   default:
@@ -162,36 +190,23 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
-            echo "Working directory: $PWD"
+            echo "Directory: $PWD"
             
-            # Detect environment based on changed files
-            ENVIRONMENT="production"  # default
-            BACKEND_CONFIG="env/production/prod.conf"
-            VAR_FILE="config/production.tfvars"
-            
-            # Check which environment files were modified
-            if [[ -n "$(git diff --name-only HEAD~1 | grep -E 'env/staging/|config/stage\.tfvars')" ]]; then
-              ENVIRONMENT="staging"
-              BACKEND_CONFIG="env/staging/stage.conf"
-              VAR_FILE="config/stage.tfvars"
-            elif [[ -n "$(git diff --name-only HEAD~1 | grep -E 'env/helia/|config/helia\.tfvars')" ]]; then
-              ENVIRONMENT="helia"
-              BACKEND_CONFIG="env/helia/helia.conf"
-              VAR_FILE="config/helia.tfvars"
-            elif [[ -n "$(git diff --name-only HEAD~1 | grep -E 'env/production/|config/production\.tfvars')" ]]; then
-              ENVIRONMENT="production"
-              BACKEND_CONFIG="env/production/prod.conf"
-              VAR_FILE="config/production.tfvars"
+            # Determine environment from project name
+            if [[ "$PROJECT_NAME" == *-production ]]; then
+              BACKEND_CONFIG="../../env/production/prod.conf"
+              VAR_FILE="../../config/production.tfvars"
+            elif [[ "$PROJECT_NAME" == *-staging ]]; then
+              BACKEND_CONFIG="../../env/staging/stage.conf"
+              VAR_FILE="../../config/stage.tfvars"
+            elif [[ "$PROJECT_NAME" == *-helia ]]; then
+              BACKEND_CONFIG="../../env/helia/helia.conf"
+              VAR_FILE="../../config/helia.tfvars"
             fi
             
-            echo "Detected environment: $ENVIRONMENT"
+            echo "Using backend config: $BACKEND_CONFIG"
+            echo "Using var file: $VAR_FILE"
             
-            # Store environment in file for apply phase
-            echo "$ENVIRONMENT" > /tmp/current_environment.txt
-            echo "$BACKEND_CONFIG" > /tmp/backend_config.txt
-            echo "$VAR_FILE" > /tmp/var_file.txt
-            
-            # Initialize and plan
             rm -rf .terraform .terraform.lock.hcl
             terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
             terraform plan -var-file=$VAR_FILE -lock-timeout=10m -out=$PLANFILE
@@ -199,15 +214,18 @@ workflows:
     apply:
       steps:
         - run: |
-            ENVIRONMENT=$(cat /tmp/current_environment.txt)
-            BACKEND_CONFIG=$(cat /tmp/backend_config.txt)
-            VAR_FILE=$(cat /tmp/var_file.txt)
+            # Determine environment from project name
+            if [[ "$PROJECT_NAME" == *-production ]]; then
+              BACKEND_CONFIG="../../env/production/prod.conf"
+              VAR_FILE="../../config/production.tfvars"
+            elif [[ "$PROJECT_NAME" == *-staging ]]; then
+              BACKEND_CONFIG="../../env/staging/stage.conf"
+              VAR_FILE="../../config/stage.tfvars"
+            elif [[ "$PROJECT_NAME" == *-helia ]]; then
+              BACKEND_CONFIG="../../env/helia/helia.conf"
+              VAR_FILE="../../config/helia.tfvars"
+            fi
             
-            echo "Applying changes for environment: $ENVIRONMENT"
-            echo "Using backend config: $BACKEND_CONFIG"
-            echo "Using var file: $VAR_FILE"
-            
-            # Re-initialize to ensure correct backend
             terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
             terraform apply -auto-approve $PLANFILE
 EOF
