@@ -237,3 +237,5 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 EOF
+
+
