@@ -339,8 +339,8 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=../../config/production.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/production.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -355,12 +355,13 @@ workflows:
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=../../config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=env/staging/stage.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/stage.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 
   helia_workflow:
@@ -368,13 +369,15 @@ workflows:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=../../config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=env/helia/helia.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform plan -var-file=config/helia.tfvars -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
+            cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 EOF
 
