@@ -88,20 +88,20 @@ resource "aws_ecs_task_definition" "backend_task" {
           value = var.atlantis_markdown_format
         },
         {
-        name : "ATLANTIS_REPO_CONFIG_JSON",
-        value : jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
+          name = "ATLANTIS_REPO_CONFIG_JSON",
+          value = jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
         },
         {
-        name: "ATLANTIS_ALLOW_COMMANDS"
-        value: "version,plan,apply,unlock,approve_policies"
+          name = "ATLANTIS_ALLOW_COMMANDS"
+          value = "version,plan,apply,unlock,approve_policies"
         },
         {
-          name: "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
-          value: "true"
+          name = "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
+          value = "true"
         },
         {
-          name: "ATLANTIS_DISABLE_REPO_LOCKING"
-          value: "true"
+          name = "ATLANTIS_DISABLE_REPO_LOCKING"
+          value = "true"
         },
         {
           name  = "ATLANTIS_HIDE_PREV_PLAN_COMMENTS"
