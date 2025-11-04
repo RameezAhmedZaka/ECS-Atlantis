@@ -213,6 +213,7 @@ workflows:
     plan:
       steps:
         - run: |
+            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
@@ -229,6 +230,7 @@ workflows:
     plan:
       steps:
         - run: |
+            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
