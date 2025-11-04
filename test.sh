@@ -47,7 +47,7 @@ find_matching_backend_config() {
     
     # Find all .conf files in the env directory
     if [ -d "$env_path" ]; then
-        for config_file in "$env_path"/*.conf; do
+        for config_file in "${env_path}"/*.conf; do
             [ -f "$config_file" ] || continue
             local config_name=$(basename "$config_file" .conf)
             local config_prefix=$(get_first_four_chars "$config_name")
@@ -61,7 +61,7 @@ find_matching_backend_config() {
     
     # Fallback: try to find any .conf file
     if [ -d "$env_path" ]; then
-        for config_file in "$env_path"/*.conf; do
+        for config_file in "${env_path}"/*.conf; do
             [ -f "$config_file" ] && echo "env/${env}/$(basename "$config_file")" && return 0
         done
     fi
@@ -79,7 +79,7 @@ find_matching_tfvars_file() {
     
     # Find all .tfvars files in the config directory
     if [ -d "$config_path" ]; then
-        for tfvars_file in "$config_path"/*.tfvars; do
+        for tfvars_file in "${config_path}"/*.tfvars; do
             [ -f "$tfvars_file" ] || continue
             local tfvars_name=$(basename "$tfvars_file" .tfvars)
             local tfvars_prefix=$(get_first_four_chars "$tfvars_name")
@@ -93,7 +93,7 @@ find_matching_tfvars_file() {
     
     # Fallback: try to find any .tfvars file
     if [ -d "$config_path" ]; then
-        for tfvars_file in "$config_path"/*.tfvars; do
+        for tfvars_file in "${config_path}"/*.tfvars; do
             [ -f "$tfvars_file" ] && echo "config/$(basename "$tfvars_file")" && return 0
         done
     fi
@@ -101,10 +101,10 @@ find_matching_tfvars_file() {
     echo ""
 }
 
-# Collect all unique environments and their config patterns
-declare -A all_environments
-declare -A backend_configs
-declare -A tfvars_files
+# Initialize arrays for environments and configs
+ENVIRONMENTS=""
+BACKEND_CONFIGS=""
+TFVARS_FILES=""
 
 # First pass: discover environments and their config files
 for base_dir in */; do
@@ -115,26 +115,41 @@ for base_dir in */; do
             environments=$(get_environments "$app_dir")
             while IFS= read -r env; do
                 [ -n "$env" ] || continue
-                all_environments["$env"]=1
+                
+                # Add to environments list if not already present
+                if ! echo "$ENVIRONMENTS" | grep -q "^$env$"; then
+                    ENVIRONMENTS="${ENVIRONMENTS}${env}\n"
+                fi
                 
                 # Discover config files for this environment
                 backend_config=$(find_matching_backend_config "$app_dir" "$env")
                 tfvars_file=$(find_matching_tfvars_file "$app_dir" "$env")
                 
-                # Store the first valid config found for each environment
-                if [ -n "$backend_config" ] && [ -z "${backend_configs[$env]:-}" ]; then
-                    backend_configs["$env"]="$backend_config"
+                # Store configs if found and not already stored
+                if [ -n "$backend_config" ] && ! echo "$BACKEND_CONFIGS" | grep -q "^$env:"; then
+                    BACKEND_CONFIGS="${BACKEND_CONFIGS}${env}:${backend_config}\n"
                     echo "Found backend config for $env: $backend_config"
                 fi
                 
-                if [ -n "$tfvars_file" ] && [ -z "${tfvars_files[$env]:-}" ]; then
-                    tfvars_files["$env"]="$tfvars_file"
+                if [ -n "$tfvars_file" ] && ! echo "$TFVARS_FILES" | grep -q "^$env:"; then
+                    TFVARS_FILES="${TFVARS_FILES}${env}:${tfvars_file}\n"
                     echo "Found tfvars file for $env: $tfvars_file"
                 fi
             done <<< "$environments"
         fi
     done
 done
+
+# Function to get config from stored lists
+get_backend_config_for_env() {
+    local env="$1"
+    echo -e "$BACKEND_CONFIGS" | grep "^${env}:" | cut -d: -f2-
+}
+
+get_tfvars_file_for_env() {
+    local env="$1"
+    echo -e "$TFVARS_FILES" | grep "^${env}:" | cut -d: -f2-
+}
 
 # Second pass: generate projects
 for base_dir in */; do
@@ -155,9 +170,17 @@ for base_dir in */; do
                 project_backend_config=$(find_matching_backend_config "$app_dir" "$env")
                 project_tfvars_file=$(find_matching_tfvars_file "$app_dir" "$env")
                 
-                # Use project-specific configs or fall back to global ones
-                backend_config_to_use="${project_backend_config:-${backend_configs[$env]:-}}"
-                tfvars_file_to_use="${project_tfvars_file:-${tfvars_files[$env]:-}}"
+                # Use project-specific configs or fall back to stored ones
+                backend_config_to_use="$project_backend_config"
+                tfvars_file_to_use="$project_tfvars_file"
+                
+                if [ -z "$backend_config_to_use" ]; then
+                    backend_config_to_use=$(get_backend_config_for_env "$env")
+                fi
+                
+                if [ -z "$tfvars_file_to_use" ]; then
+                    tfvars_file_to_use=$(get_tfvars_file_for_env "$env")
+                fi
                 
                 if [ -z "$backend_config_to_use" ] || [ -z "$tfvars_file_to_use" ]; then
                     echo "Warning: Missing config files for $app_dir env $env"
@@ -191,9 +214,12 @@ cat >> atlantis.yaml << 'EOF'
 workflows:
 EOF
 
-for env in "${!all_environments[@]}"; do
-    backend_config="${backend_configs[$env]:-}"
-    tfvars_file="${tfvars_files[$env]:-}"
+# Process each environment
+echo -e "$ENVIRONMENTS" | while IFS= read -r env; do
+    [ -z "$env" ] && continue
+    
+    backend_config=$(get_backend_config_for_env "$env")
+    tfvars_file=$(get_tfvars_file_for_env "$env")
     
     if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
         echo "Warning: Skipping workflow for $env - missing config files"
@@ -223,4 +249,4 @@ for env in "${!all_environments[@]}"; do
 WORKFLOW_EOF
 done
 
-echo "Generated atlantis.yaml with environments: ${!all_environments[@]}"
+echo "Generated atlantis.yaml successfully"
