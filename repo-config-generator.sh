@@ -154,7 +154,7 @@ for base_dir in */; do
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
             
-            # Check if main files changed (triggers all environments)
+            # Check if main files changed (triggers all environments for this app)
             main_changed=$(main_files_changed && echo "true" || echo "false")
             
             # Add project entries for each environment
@@ -163,7 +163,7 @@ for base_dir in */; do
                 [ -d "$env_path" ] || continue
                 
                 # Only include this environment if:
-                # 1. Main files changed, OR
+                # 1. Main files changed (include all environments for this app), OR
                 # 2. This specific environment directory changed
                 if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
@@ -196,7 +196,6 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
@@ -213,7 +212,6 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
@@ -230,7 +228,6 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
