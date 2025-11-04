@@ -186,34 +186,18 @@ workflows:
             fi
             
             echo "Detected environment: $ENVIRONMENT"
-            echo "Using backend config: $BACKEND_CONFIG"
-            echo "Using var file: $VAR_FILE"
-            
-            # Check if backend config file exists
-            if [ ! -f "$BACKEND_CONFIG" ]; then
-              echo "ERROR: Backend config file not found: $BACKEND_CONFIG"
-              echo "Available backend config files:"
-              find . -name "*.conf" -type f | head -10
-              exit 1
-            fi
-            
-            # Check if var file exists
-            if [ ! -f "$VAR_FILE" ]; then
-              echo "ERROR: Var file not found: $VAR_FILE"
-              echo "Available var files:"
-              find . -name "*.tfvars" -type f | head -10
-              exit 1
-            fi
             
             # Store environment in file for apply phase
             echo "$ENVIRONMENT" > /tmp/current_environment.txt
             echo "$BACKEND_CONFIG" > /tmp/backend_config.txt
             echo "$VAR_FILE" > /tmp/var_file.txt
+
+            cd "$(dirname "$PROJECT_DIR")"
             
-            # Initialize and plan - using the full backend config file
+            # Initialize and plan
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -lock=false -input=false
-            terraform plan -var-file="$VAR_FILE" -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
+            terraform plan -var-file=$VAR_FILE -lock-timeout=10m -out=$PLANFILE
 
     apply:
       steps:
@@ -227,6 +211,6 @@ workflows:
             echo "Using var file: $VAR_FILE"
             
             # Re-initialize to ensure correct backend
-            terraform init -backend-config="$BACKEND_CONFIG" -reconfigure -lock=false -input=false
+            terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
             terraform apply -auto-approve $PLANFILE
 EOF
