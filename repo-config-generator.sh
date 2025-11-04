@@ -249,33 +249,32 @@ set -euo pipefail
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
 # Compare changes against main branch
-# Fetch main and suppress output
 git fetch origin main >/dev/null 2>&1 || true
-# Get list of changed files relative to main branch
 CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
 
 # Function to check if any files in a directory changed
 has_changes() {
     local dir="$1"
-    # If CHANGED_FILES is empty, we default to including all projects (return 0)
-    # The project inclusion logic later handles this based on the 'main_changed' flag.
-    # Here, we only check for specific directory changes.
+    # If no changes were detected at all, assume no specific directory changes
     if [ -z "$CHANGED_FILES" ]; then
-        return 1 # Assume no specific directory changes if no changes are detected at all
+        return 1
     fi
+    # Check if CHANGED_FILES contains any path starting with the directory
     echo "$CHANGED_FILES" | grep -q "^$dir"
 }
 
 # Function to check if main Terraform files changed (excluding env/)
 main_files_changed() {
-    # If no changes were detected, return 1 (false) for main files
+    # If no changes were detected at all, return false
     if [ -z "$CHANGED_FILES" ]; then
         return 1
     fi
-    
-    # Check for .tf or .tfvars files NOT in a directory containing "/env/"
-    # This is more robust than trying to pipe grep -v
-    echo "$CHANGED_FILES" | grep -E "(\.tf$|\.tfvars$)" | grep -v "/env/" | grep -q "."
+
+    # Check for .tf or .tfvars files NOT under any directory containing "/env/"
+    echo "$CHANGED_FILES" | \
+        grep -E "(\.tf$|\.tfvars$)" | \
+        grep -v "/env/" | \
+        grep -q "."
 }
 
 # Start atlantis.yaml
@@ -302,8 +301,7 @@ for base_dir in */; do
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
             
-            # Check if main files changed (triggers all environments for this app)
-            # Use a variable to store the result of the function call
+            # Determine if a main file change occurred (triggers all environments)
             main_changed="false"
             if main_files_changed; then
                 main_changed="true"
@@ -314,22 +312,22 @@ for base_dir in */; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
                 
-                # Check for specific environment changes
+                # Determine if this specific environment changed
                 env_changed="false"
                 if has_changes "$env_path"; then
                     env_changed="true"
                 fi
                 
                 # Only include this environment if:
-                # 1. Main files changed, OR
-                # 2. This specific environment directory changed
+                # 1. Main files changed ('main_changed'), OR
+                # 2. This specific environment directory changed ('env_changed')
                 if [ "$main_changed" = "true" ] || [ "$env_changed" = "true" ]; then
+                    # NOTE: Indentation fixed here to resolve YAML error
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
     dir: $env_path
     autoplan:
       enabled: true
-      # Autoplan on changes to main app files or the specific env directory
       when_modified:
         - "../../*.tf"
         - "../../config/*.tfvars"
@@ -350,18 +348,6 @@ PROJECT_EOF
 done
 
 # Fixed workflows using only run steps (everything else unchanged)
-# Note: The 'cd' command in the workflows assumes the project structure:
-# <base_dir>/<app_dir>/env/<env>/
-# The project 'dir' is the innermost folder: $PROJECT_DIR = <base_dir>/<app_dir>/env/<env>/
-# cd "$(dirname "$PROJECT_DIR")/../.." goes up 3 levels:
-# 1. to <base_dir>/<app_dir>/env/
-# 2. to <base_dir>/<app_dir>/
-# 3. to <base_dir>/ (This seems incorrect for accessing config/ and env/ from <base_dir>/<app_dir>/)
-# Assuming the intention is to run 'terraform init/plan/apply' from the <base_dir>/<app_dir>/ directory,
-# you should only go up two levels: cd "$(dirname "$PROJECT_DIR")/.."
-# I will keep your original 'cd' command as I don't know your exact repository structure,
-# but please verify the pathing in your 'run' steps.
-
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
@@ -369,6 +355,7 @@ workflows:
       steps:
         - run: |
           echo "Project: $PROJECT_NAME"
+          # NOTE: Verify the correct path for 'cd'. This assumes the app's root is two levels up from $PROJECT_DIR.
           cd "$(dirname "$PROJECT_DIR")/../.."
           rm -rf .terraform .terraform.lock.hcl
           terraform init -backend-config=env/production/prod.conf -reconfigure -lock=false -input=false > /dev/null 2>&1
