@@ -17,6 +17,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: app11-production
     dir: ./app11/env/production
     autoplan:
@@ -30,6 +31,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: app11-staging
     dir: ./app11/env/staging
     autoplan:
@@ -43,6 +45,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: db-db71-staging
     dir: ./db/db71/env/staging
     autoplan:
@@ -56,6 +59,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: db-db1-production
     dir: ./db/db1/env/production
     autoplan:
@@ -69,6 +73,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: application-rdot-helia
     dir: ./application/rdot/env/helia
     autoplan:
@@ -82,6 +87,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: application-rdot-production
     dir: ./application/rdot/env/production
     autoplan:
@@ -95,6 +101,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: application-rdot-rameez
     dir: ./application/rdot/env/rameez
     autoplan:
@@ -108,6 +115,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
   - name: application-rdot-staging
     dir: ./application/rdot/env/staging
     autoplan:
@@ -121,6 +129,7 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+
 workflows:
   helia_workflow:
     plan:
@@ -128,12 +137,10 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             echo "Environment: helia"
-            echo "Using backend config: env/helia/helia.conf"
-            echo "Using tfvars file: config/helia.tfvars"
             cd "$(dirname "$PROJECT_DIR")/.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="env/helia/helia.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file="config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -reconfigure -lock=false -input=false
+            terraform plan -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -141,18 +148,17 @@ workflows:
             echo "Environment: helia"
             cd "$(dirname "$PROJECT_DIR")/.."
             terraform apply -auto-approve $PLANFILE
+
   production_workflow:
     plan:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
             echo "Environment: production"
-            echo "Using backend config: env/production/prod.conf"
-            echo "Using tfvars file: config/production.tfvars"
             cd "$(dirname "$PROJECT_DIR")/.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="env/production/prod.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file="config/production.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -reconfigure -lock=false -input=false
+            terraform plan -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -160,37 +166,17 @@ workflows:
             echo "Environment: production"
             cd "$(dirname "$PROJECT_DIR")/.."
             terraform apply -auto-approve $PLANFILE
-  staging_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: staging"
-            echo "Using backend config: env/staging/stage.conf"
-            echo "Using tfvars file: config/stage.tfvars"
-            cd "$(dirname "$PROJECT_DIR")/.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="env/staging/stage.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file="config/stage.tfvars" -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: staging"
-            cd "$(dirname "$PROJECT_DIR")/.."
-            terraform apply -auto-approve $PLANFILE
+
   rameez_workflow:
     plan:
       steps:
         - run: |
             echo "Project: $PROJECT_NAME"
             echo "Environment: rameez"
-            echo "Using backend config: env/rameez/rame.conf"
-            echo "Using tfvars file: config/rameez.tfvars"
             cd "$(dirname "$PROJECT_DIR")/.."
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="env/rameez/rame.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file="config/rameez.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -reconfigure -lock=false -input=false
+            terraform plan -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -198,3 +184,22 @@ workflows:
             echo "Environment: rameez"
             cd "$(dirname "$PROJECT_DIR")/.."
             terraform apply -auto-approve $PLANFILE
+
+  staging_workflow:
+    plan:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            echo "Environment: staging"
+            cd "$(dirname "$PROJECT_DIR")/.."
+            rm -rf .terraform .terraform.lock.hcl
+            terraform init -reconfigure -lock=false -input=false
+            terraform plan -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            echo "Project: $PROJECT_NAME"
+            echo "Environment: staging"
+            cd "$(dirname "$PROJECT_DIR")/.."
+            terraform apply -auto-approve $PLANFILE
+
