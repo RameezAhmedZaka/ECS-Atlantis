@@ -192,7 +192,6 @@ workflows:
             echo "$BACKEND_CONFIG" > /tmp/backend_config.txt
             echo "$VAR_FILE" > /tmp/var_file.txt
 
-            cd "$(dirname "$PROJECT_DIR")"
             
             # Initialize and plan
             rm -rf .terraform .terraform.lock.hcl 
@@ -210,7 +209,6 @@ workflows:
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
             
-            cd "$(dirname "$PROJECT_DIR")"
 
             # Re-initialize to ensure correct backend
             terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
