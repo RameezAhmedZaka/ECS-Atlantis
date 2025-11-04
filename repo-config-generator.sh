@@ -245,6 +245,7 @@
 # EOF
 
 
+
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
