@@ -104,8 +104,6 @@
 #             cd "$(dirname "$PROJECT_DIR")/../.."
 #             terraform apply -auto-approve $PLANFILE
 # EOF
-
-
 #!/bin/bash
 set -euo pipefail
 
@@ -114,17 +112,21 @@ echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 # Fetch latest main branch
 git fetch origin main >/dev/null 2>&1 || true
 
-# Find the merge base between HEAD and main
+# Merge base
 MERGE_BASE=$(git merge-base HEAD origin/main)
 
-# Get list of changed files relative to main
+# All changed files relative to main
 CHANGED_FILES=$(git diff --name-only "$MERGE_BASE"..HEAD || true)
 
-# Function to check if any files in a directory changed
+# Debug: uncomment to see changed files
+# echo "Changed files:"
+# echo "$CHANGED_FILES"
+
+# Check if a directory has changes
 has_changes() {
-    local dir="$1"
+    local dir="${1%/}"  # remove trailing slash
     [ -z "$CHANGED_FILES" ] && return 0
-    echo "$CHANGED_FILES" | grep -q "^$dir"
+    echo "$CHANGED_FILES" | grep -q "^$dir/" 
 }
 
 # Check if main Terraform files changed (outside env/)
@@ -149,7 +151,7 @@ is_terraform_project() {
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
-# Loop through top-level dirs
+# Loop through top-level directories
 for base_dir in */; do
     [ -d "$base_dir" ] || continue
     for app_dir in "$base_dir"*/; do
@@ -162,7 +164,6 @@ for base_dir in */; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
 
-                # Include project if main files changed OR env folder changed
                 if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
@@ -186,6 +187,7 @@ PROJECT_EOF
         fi
     done
 done
+
 # Workflows
 cat >> atlantis.yaml << 'EOF'
 workflows:
@@ -237,5 +239,3 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 EOF
-
-
