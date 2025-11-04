@@ -104,8 +104,6 @@
 #             cd "$(dirname "$PROJECT_DIR")/../.."
 #             terraform apply -auto-approve $PLANFILE
 # EOF
-
-
 #!/bin/bash
 set -euo pipefail
 
@@ -117,9 +115,10 @@ git fetch origin main >/dev/null 2>&1
 # Get all changes relative to main branch
 CHANGED_FILES=$(git diff --name-only origin/main...HEAD || echo "")
 
-# Function to check if main Terraform files changed (outside env folders)
+# Function to check if main Terraform files changed for an app
 main_files_changed() {
-    echo "$CHANGED_FILES" | grep -q -E "^[^/]+\.tf$|^[^/]+\.tfvars$"
+    local app_dir="$1"
+    echo "$CHANGED_FILES" | grep -qE "^${app_dir}[^/]+\.tf$|^${app_dir}[^/]+\.tfvars$"
 }
 
 # Function to check if any files in a specific directory changed
@@ -145,7 +144,7 @@ parallel_apply: false
 projects:
 EOF
 
-# Loop through top-level directories (apps)
+# Loop through top-level dirs (apps)
 for base_dir in */; do
     [ -d "$base_dir" ] || continue
     for app_dir in "$base_dir"*/; do
@@ -153,22 +152,15 @@ for base_dir in */; do
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
 
-            # Determine if main files changed
-            if main_files_changed; then
-                main_changed="true"
-            else
-                main_changed="false"
-            fi
-
             # Loop through environments
             for env in helia staging production; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
 
                 # Trigger this environment if:
-                # 1. Main files changed (all envs)
+                # 1. Main files changed in this app (all envs)
                 # 2. This specific env folder changed
-                if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
+                if main_files_changed "$app_dir" || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
     dir: $env_path
