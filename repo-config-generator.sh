@@ -398,11 +398,10 @@ EOF
 # Check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
-    # Consider a project valid if it has at least main.tf
     [ -f "$dir/main.tf" ]
 }
 
-# Function to get all environments dynamically
+# Get environments inside a project
 get_environments() {
     local project_dir="$1"
     local envs_dir="$project_dir/env"
@@ -413,7 +412,7 @@ get_environments() {
     fi
 }
 
-# Function to find backend config
+# Find backend config file for an environment
 find_backend_config() {
     local project_dir="$1"
     local env="$2"
@@ -425,7 +424,7 @@ find_backend_config() {
     fi
 }
 
-# Function to find tfvars file
+# Find tfvars file for an environment
 find_tfvars_file() {
     local project_dir="$1"
     local env="$2"
@@ -437,7 +436,7 @@ find_tfvars_file() {
     fi
 }
 
-# Function to get project name
+# Generate project name
 get_project_name() {
     local project_dir="$1"
     local base=$(basename "$project_dir")
@@ -447,29 +446,29 @@ get_project_name() {
 
 # Discover all Terraform projects
 projects=()
-while IFS= read -r dir; do
+for dir in $(find . -type f -name "main.tf" | xargs -n1 dirname | sort -u); do
     if is_terraform_project "$dir"; then
         projects+=("$dir")
     fi
-done < <(find . -type f -name "main.tf" -exec dirname {} \; | sort -u)
+done
 
-# Loop over projects and environments
+# Generate Atlantis project entries
 for project_dir in "${projects[@]}"; do
     [ -d "$project_dir" ] || continue
     project_name=$(get_project_name "$project_dir")
     environments=$(get_environments "$project_dir")
-    
+
     for env in $environments; do
         env_path="$project_dir/env/$env"
         [ -d "$env_path" ] || continue
-        
+
         backend_config=$(find_backend_config "$project_dir" "$env")
         tfvars_file=$(find_tfvars_file "$project_dir" "$env")
-        
-        [ -n "$backend_config" ] && [ -n "$tfvars_file" ] || {
+
+        if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
             echo "Skipping $project_name/$env due to missing config"
             continue
-        }
+        fi
 
         echo "  - name: ${project_name}-${env}" >> atlantis.yaml
         echo "    dir: $env_path" >> atlantis.yaml
