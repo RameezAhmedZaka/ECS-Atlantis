@@ -99,10 +99,10 @@ resource "aws_ecs_task_definition" "backend_task" {
           name: "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
           value: "true"
         },
-        # {
-        #   name: "ATLANTIS_DISABLE_REPO_LOCKING"
-        #   value: "true"
-        # },
+        {
+          name: "ATLANTIS_DISABLE_REPO_LOCKING"
+          value: "true"
+        },
         {
           name  = "ATLANTIS_HIDE_PREV_PLAN_COMMENTS"
           value = "true"  
