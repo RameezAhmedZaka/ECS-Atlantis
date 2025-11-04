@@ -4,7 +4,7 @@ set -euo pipefail
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
 # Start atlantis.yaml
-cat > atlantis.yaml <<-EOF
+cat > atlantis.yaml <<EOF
 ---
 version: 3
 automerge: true
@@ -113,7 +113,7 @@ for base_dir in */; do
         [ -d "$app_dir" ] || continue
         if is_terraform_project "$app_dir"; then
             environments=$(get_environments "$app_dir")
-            while IFS= read -r env; do
+            echo "$environments" | while IFS= read -r env; do
                 [ -n "$env" ] || continue
                 
                 # Add to environments list if not already present
@@ -135,7 +135,7 @@ for base_dir in */; do
                     echo "$env:$tfvars_file" >> "$TFVARS_FILE"
                     echo "Found tfvars file for $env: $tfvars_file"
                 fi
-            done <<< "$environments"
+            done
         fi
     done
 done
@@ -160,8 +160,7 @@ for base_dir in */; do
             app_name="$(basename "$app_dir")"
             
             environments=$(get_environments "$app_dir")
-            
-            while IFS= read -r env; do
+            echo "$environments" | while IFS= read -r env; do
                 [ -z "$env" ] && continue
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
@@ -189,28 +188,29 @@ for base_dir in */; do
                     continue
                 fi
 
-                cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}-${env}
-    dir: $env_path
-    autoplan:
-      enabled: true
-      when_modified:
-        - "../../*.tf"
-        - "../../config/*.tfvars"
-        - "../../env/*/*"
-    terraform_version: v1.6.6
-    workflow: ${env}_workflow
-    apply_requirements:
-      - approved
-      - mergeable
-PROJECT_EOF
-            done <<< "$environments"
+                # Write project configuration
+                {
+                echo "  - name: ${base_dir%/}-${app_name}-${env}"
+                echo "    dir: $env_path"
+                echo "    autoplan:"
+                echo "      enabled: true"
+                echo "      when_modified:"
+                echo "        - \"../../*.tf\""
+                echo "        - \"../../config/*.tfvars\""
+                echo "        - \"../../env/*/*\""
+                echo "    terraform_version: v1.6.6"
+                echo "    workflow: ${env}_workflow"
+                echo "    apply_requirements:"
+                echo "      - approved"
+                echo "      - mergeable"
+                } >> atlantis.yaml
+            done
         fi
     done
 done
 
 # Generate workflows for all found environments
-cat >> atlantis.yaml << 'EOF'
+cat >> atlantis.yaml <<EOF
 workflows:
 EOF
 
@@ -226,27 +226,28 @@ while IFS= read -r env; do
         continue
     fi
     
-    cat >> atlantis.yaml << WORKFLOW_EOF
-  ${env}_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: \$PROJECT_NAME"
-            echo "Environment: $env"
-            echo "Using backend config: $backend_config"
-            echo "Using tfvars file: $tfvars_file"
-            cd "\$(dirname "\$PROJECT_DIR")/../.."
-            rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config=$backend_config -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform plan -var-file=$tfvars_file -lock-timeout=10m -out=\$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: \$PROJECT_NAME"
-            echo "Environment: $env"
-            cd "\$(dirname "\$PROJECT_DIR")/../.."
-            terraform apply -auto-approve \$PLANFILE
-WORKFLOW_EOF
+    # Write workflow configuration
+    {
+    echo "  ${env}_workflow:"
+    echo "    plan:"
+    echo "      steps:"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            echo \"Using backend config: $backend_config\""
+    echo "            echo \"Using tfvars file: $tfvars_file\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/../..\""
+    echo "            rm -rf .terraform .terraform.lock.hcl"
+    echo "            terraform init -backend-config=$backend_config -reconfigure -lock=false -input=false > /dev/null 2>&1"
+    echo "            terraform plan -var-file=$tfvars_file -lock-timeout=10m -out=\$PLANFILE"
+    echo "    apply:"
+    echo "      steps:"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/../..\""
+    echo "            terraform apply -auto-approve \$PLANFILE"
+    } >> atlantis.yaml
 done < "$ENV_FILE"
 
 # Clean up
