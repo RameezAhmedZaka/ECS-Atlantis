@@ -111,7 +111,7 @@ set -euo pipefail
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
 # Get the current git changes
-CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
 
 # Function to check if main Terraform files changed
 main_files_changed() {
