@@ -56,7 +56,7 @@ resource "aws_ecs_task_definition" "backend_task" {
   container_definitions = jsonencode([
     {
       name      = var.container_name
-      image     = "ghcr.io/runatlantis/atlantis:latest"
+      image     = "ghcr.io/runatlantis/atlantis:v0.35.0"
       cpu       = var.container_cpu
       memory    = var.container_memory
       essential = var.container_essential
