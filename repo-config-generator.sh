@@ -105,23 +105,29 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
+
 #!/bin/bash
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Fetch main branch
+# Fetch latest main branch
 git fetch origin main >/dev/null 2>&1 || true
-CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
 
-# Check if a directory has changes
+# Find the merge base between HEAD and main
+MERGE_BASE=$(git merge-base HEAD origin/main)
+
+# Get list of changed files relative to main
+CHANGED_FILES=$(git diff --name-only "$MERGE_BASE"..HEAD || true)
+
+# Function to check if any files in a directory changed
 has_changes() {
     local dir="$1"
-    [ -z "$CHANGED_FILES" ] && return 0  # include all if changes can't be detected
+    [ -z "$CHANGED_FILES" ] && return 0
     echo "$CHANGED_FILES" | grep -q "^$dir"
 }
 
-# Check if main Terraform files changed
+# Check if main Terraform files changed (outside env/)
 main_files_changed() {
     [ -z "$CHANGED_FILES" ] && return 1
     echo "$CHANGED_FILES" | grep -q -E "(\.tf$|\.tfvars$|providers\.tf|variables\.tf)" | grep -v "/env/"
@@ -143,23 +149,20 @@ is_terraform_project() {
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
-# Loop through top-level directories
+# Loop through top-level dirs
 for base_dir in */; do
     [ -d "$base_dir" ] || continue
     for app_dir in "$base_dir"*/; do
         [ -d "$app_dir" ] || continue
         if is_terraform_project "$app_dir"; then
             app_name="$(basename "$app_dir")"
-
-            # Detect main change for this app
             main_changed=$(main_files_changed && echo "true" || echo "false")
 
-            # Loop through environments
             for env in helia staging production; do
                 env_path="${app_dir}env/${env}"
                 [ -d "$env_path" ] || continue
 
-                # Include project if main files changed OR env changed
+                # Include project if main files changed OR env folder changed
                 if [ "$main_changed" = "true" ] || has_changes "$env_path"; then
                     cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_dir%/}-${app_name}-${env}
@@ -183,7 +186,6 @@ PROJECT_EOF
         fi
     done
 done
-
 # Workflows
 cat >> atlantis.yaml << 'EOF'
 workflows:
