@@ -139,7 +139,7 @@ for base_dir in */; do
             # Create one project per app that handles all environments
             cat >> atlantis.yaml << PROJECT_EOF
   - name: ${base_name}-${app_name}
-    dir: ${app_dir}
+    dir: .
     autoplan:
       enabled: true
       when_modified:
@@ -195,7 +195,7 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")"
             
             # Initialize and plan
-            rm -rf .terraform .terraform.lock.hcl
+            rm -rf .terraform .terraform.lock.hcl 
             terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
             terraform plan -var-file=$VAR_FILE -lock-timeout=10m -out=$PLANFILE
 
@@ -210,6 +210,8 @@ workflows:
             echo "Using backend config: $BACKEND_CONFIG"
             echo "Using var file: $VAR_FILE"
             
+            cd "$(dirname "$PROJECT_DIR")"
+
             # Re-initialize to ensure correct backend
             terraform init -backend-config=$BACKEND_CONFIG -reconfigure -lock=false -input=false
             terraform apply -auto-approve $PLANFILE
