@@ -107,34 +107,9 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+echo "🔧 Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
-# Fetch main branch to ensure accurate diff
-git fetch origin main >/dev/null 2>&1
-
-# Get all changes relative to main branch
-CHANGED_FILES=$(git diff --name-only origin/main...HEAD || echo "")
-
-# Function to check if main Terraform files changed for an app
-main_files_changed() {
-    local app_dir="$1"
-    echo "$CHANGED_FILES" | grep -qE "^${app_dir}[^/]+\.tf$|^${app_dir}[^/]+\.tfvars$"
-}
-
-# Function to check if any files in a specific directory changed
-has_changes() {
-    local dir="$1"
-    dir="${dir%/}"  # remove trailing slash
-    echo "$CHANGED_FILES" | grep -q "^$dir/"
-}
-
-# Function to check if a directory is a Terraform project
-is_terraform_project() {
-    local dir="$1"
-    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
-}
-
-# Start atlantis.yaml
+# Start new file
 cat > atlantis.yaml <<-EOF
 ---
 version: 3
@@ -144,47 +119,81 @@ parallel_apply: false
 projects:
 EOF
 
-# Loop through top-level dirs (apps)
-for base_dir in */; do
-    [ -d "$base_dir" ] || continue
-    for app_dir in "$base_dir"*/; do
-        [ -d "$app_dir" ] || continue
-        if is_terraform_project "$app_dir"; then
-            app_name="$(basename "$app_dir")"
+# Fetch latest main branch
+git fetch origin main >/dev/null 2>&1 || true
 
-            # Loop through environments
-            for env in helia staging production; do
-                env_path="${app_dir}env/${env}"
-                [ -d "$env_path" ] || continue
+# Get changed files compared to main
+CHANGED_FILES=$(git diff --name-only origin/main...HEAD || echo "")
 
-                # Trigger this environment if:
-                # 1. Main files changed in this app (all envs)
-                # 2. This specific env folder changed
-                if main_files_changed "$app_dir" || has_changes "$env_path"; then
-                    cat >> atlantis.yaml << PROJECT_EOF
-  - name: ${base_dir%/}-${app_name}-${env}
+# Helper: check if directory has Terraform code
+is_terraform_project() {
+    local dir="$1"
+    [ -f "$dir/main.tf" ] || [ -f "$dir/variables.tf" ] || [ -f "$dir/outputs.tf" ]
+}
+
+# Helper: check if main Terraform or config files changed
+main_files_changed() {
+    local app_dir="$1"
+    echo "$CHANGED_FILES" | grep -qE "^${app_dir}/(main\.tf|variables\.tf|outputs\.tf|provider\.tf|.*\.tfvars|config/.*\.tfvars)$"
+}
+
+# Walk through all apps that have Terraform code
+for app_dir in */; do
+    [ -d "$app_dir" ] || continue
+    is_terraform_project "$app_dir" || continue
+
+    app_name=$(basename "$app_dir")
+
+    # Find envs inside app_dir/env/
+    if [ ! -d "$app_dir/env" ]; then
+        echo "⚠️  Skipping $app_name — no env folder found."
+        continue
+    fi
+
+    for env_path in "$app_dir"/env/*/; do
+        [ -d "$env_path" ] || continue
+        env=$(basename "$env_path")
+        base_dir=$(basename "$(dirname "$app_dir")")
+
+        # Determine if this env should be added
+        env_changed=$(echo "$CHANGED_FILES" | grep -qE "^${app_dir}/env/${env}/" && echo "yes" || echo "no")
+        main_changed=$(main_files_changed "$app_dir" && echo "yes" || echo "no")
+
+        if [ "$env_changed" = "no" ] && [ "$main_changed" = "no" ]; then
+            # Nothing changed relevant to this env — skip
+            continue
+        fi
+
+        # Build dynamic when_modified list
+        if [ "$main_changed" = "yes" ]; then
+            # If shared files changed, trigger all envs
+            WHEN_MODIFIED="
+- ../../*.tf
+- ../../config/*.tfvars
+"
+        else
+            # If only env files changed
+            WHEN_MODIFIED="
+- ../../env/$env/*
+"
+        fi
+
+        cat >> atlantis.yaml <<PROJECT_EOF
+  - name: ${base_dir}-${app_name}-${env}
     dir: $env_path
     autoplan:
       enabled: true
-      when_modified:
-        - "../../*.tf"
-        - "../../config/*.tfvars"
-        - "../../env/$env/*"
+      when_modified:$WHEN_MODIFIED
     terraform_version: v1.6.6
     workflow: ${env}_workflow
     apply_requirements:
       - approved
       - mergeable
 PROJECT_EOF
-                else
-                    echo "Skipping ${base_dir%/}-${app_name}-${env} - no changes detected"
-                fi
-            done
-        fi
     done
 done
 
-# Add fixed workflows
+# Fixed workflows
 cat >> atlantis.yaml << 'EOF'
 workflows:
   production_workflow:
@@ -235,5 +244,3 @@ workflows:
             cd "$(dirname "$PROJECT_DIR")/../.."
             terraform apply -auto-approve $PLANFILE
 EOF
-
-echo "✅ atlantis.yaml generated successfully!"
