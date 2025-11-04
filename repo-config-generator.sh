@@ -196,7 +196,7 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
+            terraform workspace select "prod-pr-$PULL_NUM" || terraform workspace new "prod-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
@@ -213,7 +213,7 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
+            terraform workspace select "stage-pr-$PULL_NUM" || terraform workspace new "stage-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
@@ -230,7 +230,7 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform workspace select "pr-$PULL_NUM" || terraform workspace new "pr-$PULL_NUM"
+            terraform workspace select "helia-pr-$PULL_NUM" || terraform workspace new "helia-pr-$PULL_NUM"
             echo "Project: $PROJECT_NAME"
             cd "$(dirname "$PROJECT_DIR")/../.."
             rm -rf .terraform .terraform.lock.hcl
