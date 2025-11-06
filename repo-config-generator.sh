@@ -385,7 +385,6 @@ set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 echo "Current directory: $(pwd)"
-ls -la
 
 # Start atlantis.yaml
 cat > atlantis.yaml <<EOF
@@ -400,13 +399,7 @@ EOF
 # Check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
-    if [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]; then
-        echo "✓ Valid Terraform project: $dir"
-        return 0
-    else
-        echo "✗ Not a Terraform project (missing required files): $dir"
-        return 1
-    fi
+    [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
 # Function to get all environments dynamically
@@ -435,8 +428,6 @@ find_matching_backend_config() {
     
     local env_prefix=$(get_first_four_chars "$env")
     
-    echo "Looking for backend config in: $env_path"
-    
     # Find all .conf files in the env directory
     if [ -d "$env_path" ]; then
         for config_file in "${env_path}"/*.conf; do
@@ -444,10 +435,7 @@ find_matching_backend_config() {
             local config_name=$(basename "$config_file" .conf)
             local config_prefix=$(get_first_four_chars "$config_name")
             
-            echo "  Checking config: $config_name (prefix: $config_prefix vs env: $env_prefix)"
-            
             if [ "$env_prefix" = "$config_prefix" ]; then
-                echo "  ✓ Matched backend config: $config_file"
                 echo "$config_file"
                 return 0
             fi
@@ -457,11 +445,10 @@ find_matching_backend_config() {
     # Fallback: try to find any .conf file
     if [ -d "$env_path" ]; then
         for config_file in "${env_path}"/*.conf; do
-            [ -f "$config_file" ] && echo "  ✓ Using fallback backend config: $config_file" && echo "$config_file" && return 0
+            [ -f "$config_file" ] && echo "$config_file" && return 0
         done
     fi
     
-    echo "  ✗ No backend config found"
     echo ""
 }
 
@@ -473,8 +460,6 @@ find_matching_tfvars_file() {
     
     local env_prefix=$(get_first_four_chars "$env")
     
-    echo "Looking for tfvars in: $config_path"
-    
     # Find all .tfvars files in the config directory
     if [ -d "$config_path" ]; then
         for tfvars_file in "${config_path}"/*.tfvars; do
@@ -482,10 +467,7 @@ find_matching_tfvars_file() {
             local tfvars_name=$(basename "$tfvars_file" .tfvars)
             local tfvars_prefix=$(get_first_four_chars "$tfvars_name")
             
-            echo "  Checking tfvars: $tfvars_name (prefix: $tfvars_prefix vs env: $env_prefix)"
-            
             if [ "$env_prefix" = "$tfvars_prefix" ]; then
-                echo "  ✓ Matched tfvars file: $tfvars_file"
                 echo "$tfvars_file"
                 return 0
             fi
@@ -495,11 +477,10 @@ find_matching_tfvars_file() {
     # Fallback: try to find any .tfvars file
     if [ -d "$config_path" ]; then
         for tfvars_file in "${config_path}"/*.tfvars; do
-            [ -f "$tfvars_file" ] && echo "  ✓ Using fallback tfvars file: $tfvars_file" && echo "$tfvars_file" && return 0
+            [ -f "$tfvars_file" ] && echo "$tfvars_file" && return 0
         done
     fi
     
-    echo "  ✗ No tfvars file found"
     echo ""
 }
 
@@ -518,36 +499,24 @@ get_project_name() {
     fi
 }
 
-# Use a temporary file to store project configurations
+# Use files to store projects and workflows
 PROJECTS_FILE=$(mktemp)
+WORKFLOWS_FILE=$(mktemp)
 
 echo "Starting project discovery..."
-echo "Directory structure:"
-find . -type d -name "env" | head -10
 
 # Find all projects with env directories
 find . -type d -name "env" | while read -r env_dir; do
     project_dir=$(dirname "$env_dir")
-    echo "Found env directory: $env_dir"
-    echo "Project directory: $project_dir"
     
     if is_terraform_project "$project_dir"; then
         project_name=$(get_project_name "$project_dir")
-        echo "Processing project: $project_name"
         
         environments=$(get_environments "$project_dir")
-        echo "Environments found: $environments"
-        
         echo "$environments" | while IFS= read -r env; do
             [ -z "$env" ] && continue
             env_path="$project_dir/env/${env}"
-            
-            if [ ! -d "$env_path" ]; then
-                echo "Environment directory not found: $env_path"
-                continue
-            fi
-            
-            echo "Processing environment: $env"
+            [ -d "$env_path" ] || continue
             
             # Get config files
             backend_config=$(find_matching_backend_config "$project_dir" "$env")
@@ -555,52 +524,50 @@ find . -type d -name "env" | while read -r env_dir; do
             
             if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
                 echo "Warning: Missing config files for $project_dir env $env"
-                echo "  Backend config: $backend_config"
-                echo "  TFVars file: $tfvars_file"
                 continue
             fi
             
-            # Write project configuration to temp file
+            # Store project configuration
             {
             echo "PROJECT_START"
-            echo "name:${project_name}-${env}"
-            echo "dir:${project_dir#./}"
-            echo "backend:${backend_config}"
-            echo "tfvars:${tfvars_file}"
+            echo "NAME:${project_name}-${env}"
+            echo "DIR:${project_dir#./}"
+            echo "WORKFLOW:${env}_workflow"
+            echo "BACKEND:${backend_config}"
+            echo "TFVARS:${tfvars_file}"
             echo "PROJECT_END"
             } >> "$PROJECTS_FILE"
             
-            echo "✓ Added project to queue: ${project_name}-${env}"
+            # Store workflow requirement
+            echo "${env}_workflow" >> "$WORKFLOWS_FILE"
         done
     fi
 done
 
-echo "Project discovery completed. Generating atlantis.yaml..."
-
-# Count and process projects from the temp file
-PROJECT_COUNT=0
-
+# Process projects and write to atlantis.yaml
 if [ -s "$PROJECTS_FILE" ]; then
     while IFS= read -r line; do
         case $line in
             PROJECT_START*)
-                unset PROJECT_NAME PROJECT_DIR BACKEND_CONFIG TFVARS_FILE
+                unset PROJECT_NAME PROJECT_DIR WORKFLOW_NAME BACKEND_CONFIG TFVARS_FILE
                 ;;
-            name:*)
-                PROJECT_NAME="${line#name:}"
+            NAME:*)
+                PROJECT_NAME="${line#NAME:}"
                 ;;
-            dir:*)
-                PROJECT_DIR="${line#dir:}"
+            DIR:*)
+                PROJECT_DIR="${line#DIR:}"
                 ;;
-            backend:*)
-                BACKEND_CONFIG="${line#backend:}"
+            WORKFLOW:*)
+                WORKFLOW_NAME="${line#WORKFLOW:}"
                 ;;
-            tfvars:*)
-                TFVARS_FILE="${line#tfvars:}"
+            BACKEND:*)
+                BACKEND_CONFIG="${line#BACKEND:}"
+                ;;
+            TFVARS:*)
+                TFVARS_FILE="${line#TFVARS:}"
                 ;;
             PROJECT_END*)
-                if [ -n "$PROJECT_NAME" ] && [ -n "$PROJECT_DIR" ] && [ -n "$BACKEND_CONFIG" ] && [ -n "$TFVARS_FILE" ]; then
-                    # Write project configuration
+                if [ -n "$PROJECT_NAME" ] && [ -n "$PROJECT_DIR" ] && [ -n "$WORKFLOW_NAME" ]; then
                     {
                     echo "  - name: $PROJECT_NAME"
                     echo "    dir: $PROJECT_DIR"
@@ -611,35 +578,56 @@ if [ -s "$PROJECTS_FILE" ]; then
                     echo "        - \"$PROJECT_DIR/config/*.tfvars\""
                     echo "        - \"$PROJECT_DIR/env/*/*\""
                     echo "    terraform_version: v1.6.6"
-                    echo "    workflow: ${PROJECT_NAME##*-}_workflow"
+                    echo "    workflow: $WORKFLOW_NAME"
                     echo "    apply_requirements:"
                     echo "      - approved"
                     echo "      - mergeable"
                     } >> atlantis.yaml
                     
-                    PROJECT_COUNT=$((PROJECT_COUNT + 1))
-                    echo "✓ Generated configuration for: $PROJECT_NAME"
+                    echo "Added project: $PROJECT_NAME"
                 fi
                 ;;
         esac
     done < "$PROJECTS_FILE"
-else
-    echo "No projects found. Checking directory structure:"
-    echo "Files in current directory:"
-    ls -la
-    echo "Terraform files found:"
-    find . -name "*.tf" | head -10
-    echo "Env directories found:"
-    find . -type d -name "env" 
 fi
 
-# Generate workflows
+# Generate workflows section
 cat >> atlantis.yaml <<EOF
 workflows:
 EOF
 
-# Add a default workflow
-cat >> atlantis.yaml <<EOF
+# Generate workflows for all unique workflows found
+if [ -s "$WORKFLOWS_FILE" ]; then
+    sort -u "$WORKFLOWS_FILE" | while IFS= read -r workflow; do
+        [ -z "$workflow" ] && continue
+        
+        # Extract environment name from workflow name (remove _workflow suffix)
+        env="${workflow%_workflow}"
+        
+        {
+        echo "  ${workflow}:"
+        echo "    plan:"
+        echo "      steps:"
+        echo "        - run: |"
+        echo "            echo \"Project: \$PROJECT_NAME\""
+        echo "            echo \"Environment: $env\""
+        echo "            cd \"\$PROJECT_DIR\""
+        echo "            rm -rf .terraform .terraform.lock.hcl"
+        echo "            terraform init -reconfigure -lock=false -input=false > /dev/null 2>&1"
+        echo "            terraform plan -lock-timeout=10m -out=\$PLANFILE"
+        echo "    apply:"
+        echo "      steps:"
+        echo "        - run: |"
+        echo "            echo \"Applying project: \$PROJECT_NAME\""
+        echo "            cd \"\$PROJECT_DIR\""
+        echo "            terraform apply -auto-approve \$PLANFILE"
+        } >> atlantis.yaml
+        
+        echo "Added workflow: $workflow"
+    done
+else
+    # Add a default workflow if no specific workflows were found
+    cat >> atlantis.yaml <<EOF
   default_workflow:
     plan:
       steps:
@@ -652,24 +640,30 @@ cat >> atlantis.yaml <<EOF
         - apply:
             extra_args: [ "-auto-approve" ]
 EOF
+    echo "Added default workflow"
+fi
 
 # Clean up
-rm -f "$PROJECTS_FILE"
+rm -f "$PROJECTS_FILE" "$WORKFLOWS_FILE"
 
-echo "=========================================="
 echo "Generated atlantis.yaml successfully"
-echo "Total projects found: $PROJECT_COUNT"
-echo "=========================================="
 
-if [ $PROJECT_COUNT -eq 0 ]; then
-    echo "DEBUG INFO:"
-    echo "Current directory: $(pwd)"
-    echo "Directory contents:"
-    ls -la
-    echo ""
-    echo "Looking for Terraform projects..."
-    find . -name "main.tf" -o -name "variables.tf" -o -name "providers.tf" | sort
-    echo ""
-    echo "Looking for env directories..."
-    find . -type d -name "env"
+# Validate that all referenced workflows exist
+echo "Validating workflow references..."
+VALIDATION_ERROR=0
+while IFS= read -r line; do
+    if [[ "$line" =~ workflow:[[:space:]]*(.+)_workflow ]]; then
+        workflow_name="${BASH_REMATCH[1]}_workflow"
+        if ! grep -q "  ${workflow_name}:" atlantis.yaml; then
+            echo "ERROR: Workflow '$workflow_name' is referenced but not defined"
+            VALIDATION_ERROR=1
+        fi
+    fi
+done < atlantis.yaml
+
+if [ $VALIDATION_ERROR -eq 0 ]; then
+    echo "✓ All workflow references are valid"
+else
+    echo "✗ Workflow validation failed"
+    exit 1
 fi
