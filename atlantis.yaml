@@ -132,7 +132,7 @@ workflows:
             echo "Using tfvars file: config/stage.tfvars"
             cd "$PROJECT_DIR"
             rm -rf .terraform .terraform.lock.hcl
-            terraform init -backend-config="env/staging/stage.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
+            terraform init -backend-config="env/staging/stage.conf" -reconfigure -lock=false -input=false
             terraform plan -var-file="config/stage.tfvars" -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:

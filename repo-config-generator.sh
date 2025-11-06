@@ -380,7 +380,6 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -604,7 +603,6 @@ get_tfvars_file_for_env() {
 }
 
 # Second pass: generate projects for all discovered Terraform projects
-# Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
 
 # Find all projects with env directories
@@ -683,7 +681,7 @@ while IFS= read -r env; do
         continue
     fi
     
-    # Write workflow configuration
+    # Write workflow configuration - REMOVED the cd command since Atlantis already sets the directory
     {
     echo "  ${env}_workflow:"
     echo "    plan:"
@@ -693,7 +691,7 @@ while IFS= read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            echo \"Using backend config: $backend_config\""
     echo "            echo \"Using tfvars file: $tfvars_file\""
-    echo "            cd \"\$PROJECT_DIR\""
+    echo "            echo \"Current directory: \$(pwd)\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
     echo "            terraform plan -var-file=\"$tfvars_file\" -lock-timeout=10m -out=\$PLANFILE"
@@ -702,7 +700,6 @@ while IFS= read -r env; do
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            cd \"\$PROJECT_DIR\""
     echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
 done < "$ENV_FILE"
