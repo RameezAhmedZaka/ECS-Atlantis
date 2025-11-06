@@ -8,17 +8,22 @@
       - plan_requirements
       - repo_locks
     apply_requirements: []
-    repo_locks:
-      mode: disabled 
     repo_locking: false  
     pre_workflow_hooks:
-        - run: |
-            echo "Running config-generator from $(pwd)"
-            ls -la
-            chmod +x ./repo-config-generator.sh || echo "Script not found or not executable"
-            ./repo-config-generator.sh || (echo "Script failed !" && exit 1)
-          description: Generating configs
+      - run: |
+          echo "Clearing all PR workspaces for this repo..."
+          REPOS_DIR="/atlantis-data/repos/github.com/RameezAhmedZaka/ECS-Atlantis"
+          if [ -d "$REPOS_DIR" ]; then
+            rm -rf "$REPOS_DIR"/*
+            echo "All PR workspaces cleared."
+          else
+            echo "Repo directory does not exist: $REPOS_DIR"
+          fi
 
+          # Run your config generator
+          chmod +x ./repo-config-generator.sh
+          ./repo-config-generator.sh
+        description: Clearing old PRs and generating configs
 
 
 
