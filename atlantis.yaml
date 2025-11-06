@@ -5,117 +5,117 @@ parallel_plan: true
 parallel_apply: false
 projects:
   - name: app11-helia
-    dir: app11
+    dir: ./app11/env/helia
     autoplan:
       enabled: true
       when_modified:
-        - "app11/*.tf"
-        - "app11/config/*.tfvars"
-        - "app11/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: helia_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: app11-production
-    dir: app11
+    dir: ./app11/env/production
     autoplan:
       enabled: true
       when_modified:
-        - "app11/*.tf"
-        - "app11/config/*.tfvars"
-        - "app11/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: production_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: app11-staging
-    dir: app11
+    dir: ./app11/env/staging
     autoplan:
       enabled: true
       when_modified:
-        - "app11/*.tf"
-        - "app11/config/*.tfvars"
-        - "app11/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: staging_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: db-db71-staging
-    dir: db/db71
+    dir: ./db/db71/env/staging
     autoplan:
       enabled: true
       when_modified:
-        - "db/db71/*.tf"
-        - "db/db71/config/*.tfvars"
-        - "db/db71/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: staging_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: db-db1-production
-    dir: db/db1
+    dir: ./db/db1/env/production
     autoplan:
       enabled: true
       when_modified:
-        - "db/db1/*.tf"
-        - "db/db1/config/*.tfvars"
-        - "db/db1/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: production_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: application-rdot-helia
-    dir: application/rdot
+    dir: ./application/rdot/env/helia
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/*.tf"
-        - "application/rdot/config/*.tfvars"
-        - "application/rdot/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: helia_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: application-rdot-production
-    dir: application/rdot
+    dir: ./application/rdot/env/production
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/*.tf"
-        - "application/rdot/config/*.tfvars"
-        - "application/rdot/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: production_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: application-rdot-rameez
-    dir: application/rdot
+    dir: ./application/rdot/env/rameez
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/*.tf"
-        - "application/rdot/config/*.tfvars"
-        - "application/rdot/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: rameez_workflow
     apply_requirements:
       - approved
       - mergeable
   - name: application-rdot-staging
-    dir: application/rdot
+    dir: ./application/rdot/env/staging
     autoplan:
       enabled: true
       when_modified:
-        - "application/rdot/*.tf"
-        - "application/rdot/config/*.tfvars"
-        - "application/rdot/env/*/*"
+        - "../../*.tf"
+        - "../../config/*.tfvars"
+        - "../../env/*/*"
     terraform_version: v1.6.6
     workflow: staging_workflow
     apply_requirements:
@@ -128,73 +128,5 @@ workflows:
         - run: |
             echo "Project: $PROJECT_NAME"
             echo "Environment: helia"
-            echo "Using backend config: env/helia/helia.conf"
-            echo "Using tfvars file: config/helia.tfvars"
-            echo "Working directory: $DIR"
-            rm -rf .terraform .terraform.lock.hcl
-            terraform -chdir=$DIR init -backend-config="env/helia/helia.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform -chdir=$DIR plan -var-file="config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: helia"
-            echo "Working directory: $DIR"
-            terraform -chdir=$DIR apply -auto-approve $PLANFILE
-  production_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: production"
-            echo "Using backend config: env/production/prod.conf"
-            echo "Using tfvars file: config/production.tfvars"
-            echo "Working directory: $DIR"
-            rm -rf .terraform .terraform.lock.hcl
-            terraform -chdir=$DIR init -backend-config="env/production/prod.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform -chdir=$DIR plan -var-file="config/production.tfvars" -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: production"
-            echo "Working directory: $DIR"
-            terraform -chdir=$DIR apply -auto-approve $PLANFILE
-  staging_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: staging"
-            echo "Using backend config: env/staging/stage.conf"
-            echo "Using tfvars file: config/stage.tfvars"
-            echo "Working directory: $DIR"
-            rm -rf .terraform .terraform.lock.hcl
-            terraform -chdir=$DIR init -backend-config="env/staging/stage.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform -chdir=$DIR plan -var-file="config/stage.tfvars" -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: staging"
-            echo "Working directory: $DIR"
-            terraform -chdir=$DIR apply -auto-approve $PLANFILE
-  rameez_workflow:
-    plan:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: rameez"
-            echo "Using backend config: env/rameez/rame.conf"
-            echo "Using tfvars file: config/rameez.tfvars"
-            echo "Working directory: $DIR"
-            rm -rf .terraform .terraform.lock.hcl
-            terraform -chdir=$DIR init -backend-config="env/rameez/rame.conf" -reconfigure -lock=false -input=false > /dev/null 2>&1
-            terraform -chdir=$DIR plan -var-file="config/rameez.tfvars" -lock-timeout=10m -out=$PLANFILE
-    apply:
-      steps:
-        - run: |
-            echo "Project: $PROJECT_NAME"
-            echo "Environment: rameez"
-            echo "Working directory: $DIR"
-            terraform -chdir=$DIR apply -auto-approve $PLANFILE
+            echo "Using backend config: helia.conf"
+            echo "Using tfvars file: helia.tfvars"

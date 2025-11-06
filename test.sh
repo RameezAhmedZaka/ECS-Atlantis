@@ -37,19 +37,6 @@ get_first_four_chars() {
     echo "${name:0:4}" | tr '[:upper:]' '[:lower:]'
 }
 
-# Fixed function to calculate relative path
-get_relative_path() {
-    local target="$1"
-    local base="$2"
-    
-    # Convert both paths to absolute paths without cd'ing into them
-    local abs_target=$(cd "$(dirname "$target")" && pwd)/$(basename "$target")
-    local abs_base=$(cd "$base" && pwd)
-    
-    # Remove the base path from target path
-    echo "${abs_target#$abs_base/}"
-}
-
 # Function to find matching backend config file
 find_matching_backend_config() {
     local project_dir="$1"
@@ -66,7 +53,7 @@ find_matching_backend_config() {
             local config_prefix=$(get_first_four_chars "$config_name")
             
             if [ "$env_prefix" = "$config_prefix" ]; then
-                echo "$(get_relative_path "$config_file" "$project_dir")"
+                echo "$config_file"
                 return 0
             fi
         done
@@ -75,7 +62,7 @@ find_matching_backend_config() {
     # Fallback: try to find any .conf file
     if [ -d "$env_path" ]; then
         for config_file in "${env_path}"/*.conf; do
-            [ -f "$config_file" ] && echo "$(get_relative_path "$config_file" "$project_dir")" && return 0
+            [ -f "$config_file" ] && echo "$config_file" && return 0
         done
     fi
     
@@ -98,7 +85,7 @@ find_matching_tfvars_file() {
             local tfvars_prefix=$(get_first_four_chars "$tfvars_name")
             
             if [ "$env_prefix" = "$tfvars_prefix" ]; then
-                echo "$(get_relative_path "$tfvars_file" "$project_dir")"
+                echo "$tfvars_file"
                 return 0
             fi
         done
@@ -107,7 +94,7 @@ find_matching_tfvars_file() {
     # Fallback: try to find any .tfvars file
     if [ -d "$config_path" ]; then
         for tfvars_file in "${config_path}"/*.tfvars; do
-            [ -f "$tfvars_file" ] && echo "$(get_relative_path "$tfvars_file" "$project_dir")" && return 0
+            [ -f "$tfvars_file" ] && echo "$tfvars_file" && return 0
         done
     fi
     
@@ -129,10 +116,21 @@ get_project_name() {
     fi
 }
 
-# Function to get chdir path (relative from repo root)
-get_chdir_path() {
-    local project_dir="$1"
-    echo "$(get_relative_path "$project_dir" ".")"
+# Function to calculate relative path from env dir to project root
+get_relative_path_to_root() {
+    local env_dir="$1"
+    local project_dir="$2"
+    
+    # Count how many levels deep the env dir is from project dir
+    local levels_deep=$(echo "$env_dir" | sed "s|$project_dir/||" | tr -cd '/' | wc -c)
+    levels_deep=$((levels_deep + 1))  # Add 1 for the env directory itself
+    
+    # Generate the relative path (e.g., "../../" for 2 levels deep)
+    if [ $levels_deep -eq 0 ]; then
+        echo "."
+    else
+        printf '../%.0s' $(seq 1 $levels_deep) | sed 's/.$//'
+    fi
 }
 
 # Use files to store environments and configs
@@ -235,7 +233,6 @@ find . -type d -name "env" | while read -r env_dir; do
     
     if is_terraform_project "$project_dir"; then
         project_name=$(get_project_name "$project_dir")
-        chdir_path=$(get_chdir_path "$project_dir")
         
         environments=$(get_environments "$project_dir")
         echo "$environments" | while IFS= read -r env; do
@@ -266,16 +263,19 @@ find . -type d -name "env" | while read -r env_dir; do
                 continue
             fi
 
-            # Write project configuration - dir points to project directory, not env directory
+            # Calculate relative path from env directory to project root
+            relative_to_root=$(get_relative_path_to_root "$env_path" "$project_dir")
+            
+            # Write project configuration - dir points to env directory
             {
             echo "  - name: ${project_name}-${env}"
-            echo "    dir: $chdir_path"
+            echo "    dir: $env_path"
             echo "    autoplan:"
             echo "      enabled: true"
             echo "      when_modified:"
-            echo "        - \"$chdir_path/*.tf\""
-            echo "        - \"$chdir_path/config/*.tfvars\""
-            echo "        - \"$chdir_path/env/*/*\""
+            echo "        - \"${relative_to_root}/*.tf\""
+            echo "        - \"${relative_to_root}/config/*.tfvars\""
+            echo "        - \"${relative_to_root}/env/*/*\""
             echo "    terraform_version: v1.6.6"
             echo "    workflow: ${env}_workflow"
             echo "    apply_requirements:"
@@ -303,7 +303,11 @@ while IFS= read -r env; do
         continue
     fi
     
-    # Write workflow configuration using -chdir
+    # Get just the filenames for the configs (not full paths)
+    backend_config_file=$(basename "$backend_config")
+    tfvars_config_file=$(basename "$tfvars_file")
+    
+    # Write workflow configuration
     {
     echo "  ${env}_workflow:"
     echo "    plan:"
@@ -311,19 +315,19 @@ while IFS= read -r env; do
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            echo \"Using backend config: $backend_config\""
-    echo "            echo \"Using tfvars file: $tfvars_file\""
-    echo "            echo \"Working directory: \$DIR\""
+    echo "            echo \"Using backend config: $backend_config_file\""
+    echo "            echo \"Using tfvars file: $tfvars_config_file\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
-    echo "            terraform -chdir=\$DIR init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
-    echo "            terraform -chdir=\$DIR plan -var-file=\"$tfvars_file\" -lock-timeout=10m -out=\$PLANFILE"
+    echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
+    echo "            terraform plan -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
     echo "    apply:"
     echo "      steps:"
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            echo \"Working directory: \$DIR\""
-    echo "            terraform -chdir=\$DIR apply -auto-approve \$PLANFILE"
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+    echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
 done < "$ENV_FILE"
 
