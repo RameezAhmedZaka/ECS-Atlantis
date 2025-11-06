@@ -6,9 +6,11 @@
       - apply_requirements
       - workflow
       - plan_requirements
+      - repo_locks
     apply_requirements: []
     repo_locks:
       mode: disabled 
+    repo_locking: false  
     pre_workflow_hooks:
         - run: |
             echo "Running config-generator from $(pwd)"
