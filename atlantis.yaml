@@ -126,8 +126,8 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform init -backend-config="application/rdot/env/helia/helia.conf" -reconfigure -lock=false -input=false
-            terraform plan -var-file="application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config="./app11/env/helia/helia.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./app11/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -136,8 +136,8 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform init -backend-config="application/rdot/env/production/prod.conf" -reconfigure -lock=false -input=false
-            terraform plan -var-file="application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config="./app11/env/production/prod.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./app11/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -146,8 +146,48 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform init -backend-config="application/rdot/env/staging/stage.conf" -reconfigure -lock=false -input=false
-            terraform plan -var-file="application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config="./app11/env/staging/stage.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./app11/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            terraform apply -auto-approve $PLANFILE
+  staging_workflow:
+    plan:
+      steps:
+        - run: |
+            terraform init -backend-config="./db/db71/env/staging/stage.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./db/db71/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            terraform apply -auto-approve $PLANFILE
+  production_workflow:
+    plan:
+      steps:
+        - run: |
+            terraform init -backend-config="./db/db1/env/production/prod.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./db/db1/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            terraform apply -auto-approve $PLANFILE
+  helia_workflow:
+    plan:
+      steps:
+        - run: |
+            terraform init -backend-config="./application/rdot/env/helia/helia.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            terraform apply -auto-approve $PLANFILE
+  production_workflow:
+    plan:
+      steps:
+        - run: |
+            terraform init -backend-config="./application/rdot/env/production/prod.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
@@ -156,8 +196,18 @@ workflows:
     plan:
       steps:
         - run: |
-            terraform init -backend-config="application/rdot/env/rameez/rame.conf" -reconfigure -lock=false -input=false
-            terraform plan -var-file="application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+            terraform init -backend-config="./application/rdot/env/rameez/rame.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
+    apply:
+      steps:
+        - run: |
+            terraform apply -auto-approve $PLANFILE
+  staging_workflow:
+    plan:
+      steps:
+        - run: |
+            terraform init -backend-config="./application/rdot/env/staging/stage.conf" -reconfigure -lock=false -input=false
+            terraform plan -var-file="./application/rdot/config/helia.tfvars" -lock-timeout=10m -out=$PLANFILE
     apply:
       steps:
         - run: |
