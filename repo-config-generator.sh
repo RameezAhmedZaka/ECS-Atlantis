@@ -713,3 +713,4 @@ rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
 echo "Generated atlantis.yaml successfully"
 echo "Found projects:"
 grep "name:" atlantis.yaml | sed 's/.*name: //'
+
