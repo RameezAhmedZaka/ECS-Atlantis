@@ -666,6 +666,7 @@ find . -type d -name "env" | while read -r env_dir; do
     fi
 done
 
+
 # Generate workflows for all found environments
 cat >> atlantis.yaml <<EOF
 workflows:
