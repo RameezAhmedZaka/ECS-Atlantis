@@ -380,7 +380,6 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
-
 #!/bin/bash
 set -euo pipefail
 
@@ -537,11 +536,37 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "    apply_requirements:"
             echo "      - approved"
             echo "      - mergeable"
+            echo "    workflow: ${project_name}-${env}"
             } >> atlantis.yaml
+        done
+    fi
+done
+
+# Add workflows section after all projects
+cat >> atlantis.yaml <<EOF
+workflows:
+EOF
+
+# Add workflows for each project-environment
+find . -type d -name "env" | while read -r env_dir; do
+    project_dir=$(dirname "$env_dir")
+    
+    if is_terraform_project "$project_dir"; then
+        project_name=$(get_project_name "$project_dir")
+        
+        environments=$(get_environments "$project_dir")
+        echo "$environments" | while IFS= read -r env; do
+            [ -z "$env" ] && continue
             
-            # Add environment-specific workflow with proper backend config
+            backend_config=$(find_matching_backend_config "$project_dir" "$env")
+            tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
+            
+            if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
+                continue
+            fi
+
+            # Write workflow configuration
             {
-            echo "workflows:"
             echo "  ${project_name}-${env}:"
             echo "    plan:"
             echo "      steps:"
@@ -554,7 +579,6 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "            extra_args:"
             echo "              - -var-file=$tfvars_file"
             echo "              - -lock-timeout=10m"
-            echo "            extra_args: []"
             echo "    apply:"
             echo "      steps:"
             echo "        - apply:"
