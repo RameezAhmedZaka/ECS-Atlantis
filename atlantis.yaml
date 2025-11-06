@@ -17,6 +17,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: app11-production
     dir: app11
     autoplan:
@@ -30,6 +32,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: app11-staging
     dir: app11
     autoplan:
@@ -43,6 +47,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: db-db71-staging
     dir: db/db71
     autoplan:
@@ -56,6 +62,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: db-db1-production
     dir: db/db1
     autoplan:
@@ -69,6 +77,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: application-rdot-helia
     dir: application/rdot
     autoplan:
@@ -82,6 +92,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: application-rdot-production
     dir: application/rdot
     autoplan:
@@ -95,6 +107,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: application-rdot-rameez
     dir: application/rdot
     autoplan:
@@ -108,6 +122,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
   - name: application-rdot-staging
     dir: application/rdot
     autoplan:
@@ -121,6 +137,8 @@ projects:
     apply_requirements:
       - approved
       - mergeable
+    repo_locks: 
+            echo  mode: on_plan
 workflows:
   helia_workflow:
     plan:

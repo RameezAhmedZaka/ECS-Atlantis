@@ -1,6 +1,7 @@
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
+echo "Current directory: $(pwd)"
 
 # Start atlantis.yaml
 cat > atlantis.yaml <<EOF
@@ -133,6 +134,8 @@ ENV_FILE=$(mktemp)
 BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
 
+echo "Starting project discovery..."
+
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
 find . -type d -name "env" | while read -r env_dir; do
@@ -165,6 +168,8 @@ find . -type d -name "env" | while read -r env_dir; do
                 echo "Found tfvars file for $env: $tfvars_file"
             fi
         done
+    else
+        echo "Skipping $project_dir - not a valid Terraform project"
     fi
 done
 
@@ -220,8 +225,9 @@ get_tfvars_file_for_env() {
 }
 
 # Second pass: generate projects for all discovered Terraform projects
-# Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
+
+PROJECT_COUNT=0
 
 # Find all projects with env directories
 find . -type d -name "env" | while read -r env_dir; do
@@ -277,7 +283,12 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "    apply_requirements:"
             echo "      - approved"
             echo "      - mergeable"
+            echo "    repo_locks: 
+            echo "     mode: on_plan 
             } >> atlantis.yaml
+            
+            echo "Added project: ${project_name}-${env}"
+            PROJECT_COUNT=$((PROJECT_COUNT + 1))
         done
     fi
 done
@@ -321,11 +332,13 @@ while IFS= read -r env; do
     echo "            cd \"\$PROJECT_DIR\""
     echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
+    
+    echo "Added workflow: ${env}_workflow"
 done < "$ENV_FILE"
 
 # Clean up
 rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
 
 echo "Generated atlantis.yaml successfully"
+echo "Total projects found: $PROJECT_COUNT"
 echo "Found projects:"
-grep "name:" atlantis.yaml | sed 's/.*name: //'
