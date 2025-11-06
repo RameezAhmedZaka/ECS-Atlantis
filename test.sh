@@ -8,7 +8,7 @@ cat > atlantis.yaml <<EOF
 ---
 version: 3
 automerge: true
-parallel_plan: false
+parallel_plan: true
 parallel_apply: false
 projects:
 EOF
@@ -37,17 +37,11 @@ get_first_four_chars() {
     echo "${name:0:4}" | tr '[:upper:]' '[:lower:]'
 }
 
-# Fixed function to calculate relative path
+# Simplified relative path function
 get_relative_path() {
     local target="$1"
-    local base="$2"
-    
-    # Convert both paths to absolute paths without cd'ing into them
-    local abs_target=$(cd "$(dirname "$target")" && pwd)/$(basename "$target")
-    local abs_base=$(cd "$base" && pwd)
-    
-    # Remove the base path from target path
-    echo "${abs_target#$abs_base/}"
+    # Remove leading ./ if present and ensure it's relative to current directory
+    echo "${target#./}"
 }
 
 # Function to find matching backend config file
@@ -66,7 +60,7 @@ find_matching_backend_config() {
             local config_prefix=$(get_first_four_chars "$config_name")
             
             if [ "$env_prefix" = "$config_prefix" ]; then
-                echo "$(get_relative_path "$config_file" "$project_dir")"
+                echo "$(get_relative_path "$config_file")"
                 return 0
             fi
         done
@@ -75,7 +69,7 @@ find_matching_backend_config() {
     # Fallback: try to find any .conf file
     if [ -d "$env_path" ]; then
         for config_file in "${env_path}"/*.conf; do
-            [ -f "$config_file" ] && echo "$(get_relative_path "$config_file" "$project_dir")" && return 0
+            [ -f "$config_file" ] && echo "$(get_relative_path "$config_file")" && return 0
         done
     fi
     
@@ -98,7 +92,7 @@ find_matching_tfvars_file() {
             local tfvars_prefix=$(get_first_four_chars "$tfvars_name")
             
             if [ "$env_prefix" = "$tfvars_prefix" ]; then
-                echo "$(get_relative_path "$tfvars_file" "$project_dir")"
+                echo "$(get_relative_path "$tfvars_file")"
                 return 0
             fi
         done
@@ -107,7 +101,7 @@ find_matching_tfvars_file() {
     # Fallback: try to find any .tfvars file
     if [ -d "$config_path" ]; then
         for tfvars_file in "${config_path}"/*.tfvars; do
-            [ -f "$tfvars_file" ] && echo "$(get_relative_path "$tfvars_file" "$project_dir")" && return 0
+            [ -f "$tfvars_file" ] && echo "$(get_relative_path "$tfvars_file")" && return 0
         done
     fi
     
@@ -169,101 +163,32 @@ find . -type d -name "env" | while read -r env_dir; do
     fi
 done
 
-# Alternative approach: find projects by looking for the required files
-find . -type f -name "main.tf" | while read -r main_tf; do
-    project_dir=$(dirname "$main_tf")
-    
-    # Skip if we already processed this project via env directory
-    if [ -d "$project_dir/env" ] && is_terraform_project "$project_dir"; then
-        continue
-    fi
-    
-    # Check if this is a valid project
-    if is_terraform_project "$project_dir"; then
-        echo "Found project (via main.tf): $project_dir"
-        
-        environments=$(get_environments "$project_dir")
-        echo "$environments" | while IFS= read -r env; do
-            [ -n "$env" ] || continue
-            
-            # Add to environments list if not already present
-            if ! grep -q "^$env$" "$ENV_FILE" 2>/dev/null; then
-                echo "$env" >> "$ENV_FILE"
-            fi
-            
-            # Discover config files for this environment
-            backend_config=$(find_matching_backend_config "$project_dir" "$env")
-            tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
-            
-            # Store configs if found and not already stored
-            if [ -n "$backend_config" ] && ! grep -q "^$env:$backend_config$" "$BACKEND_FILE" 2>/dev/null; then
-                echo "$env:$backend_config" >> "$BACKEND_FILE"
-                echo "Found backend config for $env: $backend_config"
-            fi
-            
-            if [ -n "$tfvars_file" ] && ! grep -q "^$env:$tfvars_file$" "$TFVARS_FILE" 2>/dev/null; then
-                echo "$env:$tfvars_file" >> "$TFVARS_FILE"
-                echo "Found tfvars file for $env: $tfvars_file"
-            fi
-        done
-    fi
-done
-
-# Function to get config from stored files
-get_backend_config_for_env() {
-    local env="$1"
-    grep "^${env}:" "$BACKEND_FILE" 2>/dev/null | cut -d: -f2- || echo ""
-}
-
-get_tfvars_file_for_env() {
-    local env="$1"
-    grep "^${env}:" "$TFVARS_FILE" 2>/dev/null | cut -d: -f2- || echo ""
-}
-
-# Second pass: generate projects for all discovered Terraform projects
 # Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
 
-# Find all projects with env directories
 find . -type d -name "env" | while read -r env_dir; do
     project_dir=$(dirname "$env_dir")
     
     if is_terraform_project "$project_dir"; then
         project_name=$(get_project_name "$project_dir")
+        project_relative_path=$(get_relative_path "$project_dir")
         
         environments=$(get_environments "$project_dir")
         echo "$environments" | while IFS= read -r env; do
             [ -z "$env" ] && continue
-            env_path="$project_dir/env/${env}"
-            [ -d "$env_path" ] || continue
 
-            # Get config files specific to this project
-            project_backend_config=$(find_matching_backend_config "$project_dir" "$env")
-            project_tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
+            # Get config files
+            backend_config=$(find_matching_backend_config "$project_dir" "$env")
+            tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
             
-            # Use project-specific configs or fall back to stored ones
-            backend_config_to_use="$project_backend_config"
-            tfvars_file_to_use="$project_tfvars_file"
-            
-            if [ -z "$backend_config_to_use" ]; then
-                backend_config_to_use=$(get_backend_config_for_env "$env")
-            fi
-            
-            if [ -z "$tfvars_file_to_use" ]; then
-                tfvars_file_to_use=$(get_tfvars_file_for_env "$env")
-            fi
-            
-            if [ -z "$backend_config_to_use" ] || [ -z "$tfvars_file_to_use" ]; then
+            if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
                 echo "Warning: Missing config files for $project_dir env $env"
-                echo "  Backend config: $backend_config_to_use"
-                echo "  TFVars file: $tfvars_file_to_use"
+                echo "  Backend config: $backend_config"
+                echo "  TFVars file: $tfvars_file"
                 continue
             fi
 
-            # Calculate relative paths - use project_dir instead of env_path for the main directory
-            project_relative_path=$(get_relative_path "$project_dir" ".")
-            
-            # Write project configuration - dir points to project directory, not env directory
+            # Write project configuration
             {
             echo "  - name: ${project_name}-${env}"
             echo "    dir: $project_relative_path"
@@ -292,8 +217,9 @@ EOF
 while IFS= read -r env; do
     [ -z "$env" ] && continue
     
-    backend_config=$(get_backend_config_for_env "$env")
-    tfvars_file=$(get_tfvars_file_for_env "$env")
+    # Get the first backend config and tfvars file for this environment
+    backend_config=$(head -1 "$BACKEND_FILE" | grep "^${env}:" | cut -d: -f2- || echo "")
+    tfvars_file=$(head -1 "$TFVARS_FILE" | grep "^${env}:" | cut -d: -f2- || echo "")
     
     if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
         echo "Warning: Skipping workflow for $env - missing config files"
@@ -310,16 +236,14 @@ while IFS= read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            echo \"Using backend config: $backend_config\""
     echo "            echo \"Using tfvars file: $tfvars_file\""
-    echo "            cd \"\$PROJECT_DIR\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
-    echo "            terraform init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
+    echo "            terraform init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false"
     echo "            terraform plan -var-file=\"$tfvars_file\" -lock-timeout=10m -out=\$PLANFILE"
     echo "    apply:"
     echo "      steps:"
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            cd \"\$PROJECT_DIR\""
     echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
 done < "$ENV_FILE"
