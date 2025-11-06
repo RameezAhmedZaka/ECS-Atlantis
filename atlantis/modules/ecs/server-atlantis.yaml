@@ -7,6 +7,8 @@
       - workflow
       - plan_requirements
     apply_requirements: []
+    repo_locks:
+      mode: disabled 
     pre_workflow_hooks:
         - run: |
             echo "Running config-generator from $(pwd)"
@@ -14,3 +16,28 @@
             chmod +x ./repo-config-generator.sh || echo "Script not found or not executable"
             ./repo-config-generator.sh || (echo "Script failed !" && exit 1)
           description: Generating configs
+
+
+
+
+
+
+
+
+
+
+
+
+    # pre_workflow_hooks:
+    #   - run: |
+    #       set -e
+    #       echo "Running config-generator from $(pwd)"
+    #       if [ -f "./repo-config-generator.sh" ]; then
+    #           chmod +x ./repo-config-generator.sh
+    #           ./repo-config-generator.sh
+    #           echo "Config generation completed successfully"
+    #       else
+    #           echo "Warning: repo-config-generator.sh not found"
+    #           exit 0  # Don't fail if script doesn't exist
+    #       fi
+    #     description: Generating configs
