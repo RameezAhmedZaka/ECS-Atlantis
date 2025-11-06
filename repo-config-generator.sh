@@ -380,11 +380,11 @@
 #             terraform apply -auto-approve $PLANFILE
 # EOF
 
+
 #!/bin/bash
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
-echo "Current directory: $(pwd)"
 
 # Start atlantis.yaml
 cat > atlantis.yaml <<EOF
@@ -517,8 +517,6 @@ ENV_FILE=$(mktemp)
 BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
 
-echo "Starting project discovery..."
-
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
 find . -type d -name "env" | while read -r env_dir; do
@@ -551,8 +549,6 @@ find . -type d -name "env" | while read -r env_dir; do
                 echo "Found tfvars file for $env: $tfvars_file"
             fi
         done
-    else
-        echo "Skipping $project_dir - not a valid Terraform project"
     fi
 done
 
@@ -608,6 +604,7 @@ get_tfvars_file_for_env() {
 }
 
 # Second pass: generate projects for all discovered Terraform projects
+# Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
 
 # Find all projects with env directories
@@ -646,27 +643,25 @@ find . -type d -name "env" | while read -r env_dir; do
                 continue
             fi
 
-            # Calculate relative paths
+            # Calculate relative paths - use project_dir instead of env_path for the main directory
             project_relative_path=$(get_relative_path "$project_dir" ".")
             
-            # Write project configuration
+            # Write project configuration - dir points to project directory, not env directory
             {
             echo "  - name: ${project_name}-${env}"
             echo "    dir: $project_relative_path"
             echo "    autoplan:"
             echo "      enabled: true"
             echo "      when_modified:"
-            echo "        - \"*.tf\""
             echo "        - \"$project_relative_path/*.tf\""
             echo "        - \"$project_relative_path/config/*.tfvars\""
             echo "        - \"$project_relative_path/env/*/*\""
             echo "    terraform_version: v1.6.6"
-            echo "    workflow: ${env}"
+            echo "    workflow: ${env}_workflow"
             echo "    apply_requirements:"
             echo "      - approved"
-            echo "      - mergeable" 
+            echo "      - mergeable"
             } >> atlantis.yaml
-            
         done
     fi
 done
@@ -690,20 +685,26 @@ while IFS= read -r env; do
     
     # Write workflow configuration
     {
-    echo "  ${env}:"
+    echo "  ${env}_workflow:"
     echo "    plan:"
     echo "      steps:"
-    echo "        - init:"
-    echo "            extra_args: [\"-backend-config=$backend_config\", \"-reconfigure\"]"
-    echo "        - plan:"
-    echo "            extra_args: [\"-var-file=$tfvars_file\", \"-lock-timeout=10m\"]"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            echo \"Using backend config: $backend_config\""
+    echo "            echo \"Using tfvars file: $tfvars_file\""
+    echo "            cd \"\$PROJECT_DIR\""
+    echo "            rm -rf .terraform .terraform.lock.hcl"
+    echo "            terraform init -backend-config=\"$backend_config\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
+    echo "            terraform plan -var-file=\"$tfvars_file\" -lock-timeout=10m -out=\$PLANFILE"
     echo "    apply:"
     echo "      steps:"
-    echo "        - apply:"
-    echo "            extra_args: [\"-auto-approve\"]"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            cd \"\$PROJECT_DIR\""
+    echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
-    
-    echo "Added workflow: ${env}"
 done < "$ENV_FILE"
 
 # Clean up
@@ -711,3 +712,4 @@ rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
 
 echo "Generated atlantis.yaml successfully"
 echo "Found projects:"
+grep "name:" atlantis.yaml | sed 's/.*name: //'
