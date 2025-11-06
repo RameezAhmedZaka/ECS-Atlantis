@@ -537,26 +537,33 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "    apply_requirements:"
             echo "      - approved"
             echo "      - mergeable"
-            echo "    workflow: default"
+            } >> atlantis.yaml
+            
+            # Add environment-specific workflow with proper backend config
+            {
+            echo "workflows:"
+            echo "  ${project_name}-${env}:"
+            echo "    plan:"
+            echo "      steps:"
+            echo "        - run: rm -rf .terraform .terraform.lock.hcl"
+            echo "        - init:"
+            echo "            extra_args:"
+            echo "              - -backend-config=$backend_config"
+            echo "              - -reconfigure"
+            echo "        - plan:"
+            echo "            extra_args:"
+            echo "              - -var-file=$tfvars_file"
+            echo "              - -lock-timeout=10m"
+            echo "            extra_args: []"
+            echo "    apply:"
+            echo "      steps:"
+            echo "        - apply:"
+            echo "            extra_args:"
+            echo "              - -auto-approve"
             } >> atlantis.yaml
         done
     fi
 done
-
-# Add default workflow
-cat >> atlantis.yaml <<EOF
-workflows:
-  default:
-    plan:
-      steps:
-        - init:
-            extra_args: [-\$-backend-config, -\$-backend-config=-\$BACKEND_CONFIG]
-        - plan:
-            extra_args: [-\$-var-file, -\$-var-file=-\$TFVARS_FILE]
-    apply:
-      steps:
-        - apply
-EOF
 
 echo "Generated atlantis.yaml successfully"
 echo "Found projects:"
