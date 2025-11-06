@@ -62,6 +62,7 @@ resource "aws_ecs_task_definition" "backend_task" {
       essential = var.container_essential
       command   = var.command
 
+
       portMappings = [
         {
           name          = var.container_name
