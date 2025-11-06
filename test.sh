@@ -133,10 +133,11 @@ get_relative_path_to_root() {
     fi
 }
 
-# Use files to store environments and configs
+# Use files to store environments, configs, and project info
 ENV_FILE=$(mktemp)
 BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
+PROJECT_INFO_FILE=$(mktemp)
 
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
@@ -266,6 +267,9 @@ find . -type d -name "env" | while read -r env_dir; do
             # Calculate relative path from env directory to project root
             relative_to_root=$(get_relative_path_to_root "$env_path" "$project_dir")
             
+            # Store project info for workflow generation
+            echo "$env:$project_dir:$relative_to_root" >> "$PROJECT_INFO_FILE"
+            
             # Write project configuration - dir points to env directory
             {
             echo "  - name: ${project_name}-${env}"
@@ -307,6 +311,12 @@ while IFS= read -r env; do
     backend_config_file=$(basename "$backend_config")
     tfvars_config_file=$(basename "$tfvars_file")
     
+    # Get a sample relative path for this environment (use the first one found)
+    sample_relative_path=$(grep "^${env}:" "$PROJECT_INFO_FILE" | head -1 | cut -d: -f3)
+    if [ -z "$sample_relative_path" ]; then
+        sample_relative_path="../.."  # Default fallback
+    fi
+    
     # Write workflow configuration
     {
     echo "  ${env}_workflow:"
@@ -317,7 +327,7 @@ while IFS= read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            echo \"Using backend config: $backend_config_file\""
     echo "            echo \"Using tfvars file: $tfvars_config_file\""
-    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
     echo "            terraform plan -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
@@ -326,13 +336,13 @@ while IFS= read -r env; do
     echo "        - run: |"
     echo "            echo \"Project: \$PROJECT_NAME\""
     echo "            echo \"Environment: $env\""
-    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            terraform apply -auto-approve \$PLANFILE"
     } >> atlantis.yaml
 done < "$ENV_FILE"
 
 # Clean up
-rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
+rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
 
 echo "Generated atlantis.yaml successfully"
 echo "Found projects:"
