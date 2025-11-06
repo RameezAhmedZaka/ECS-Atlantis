@@ -1,3 +1,4 @@
+#!/bin/bash
 set -euo pipefail
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
@@ -283,8 +284,8 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "    apply_requirements:"
             echo "      - approved"
             echo "      - mergeable"
-            echo "    repo_locks: 
-            echo "     mode: on_plan 
+            echo "    repo_locks:" 
+            echo "      mode: disabled" 
             } >> atlantis.yaml
             
             echo "Added project: ${project_name}-${env}"
