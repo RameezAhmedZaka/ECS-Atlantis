@@ -17,6 +17,7 @@ EOF
 # Check if a directory is a Terraform project
 is_terraform_project() {
     local dir="$1"
+    echo "DEBUG: Checking if $dir is Terraform project"
     [ -f "$dir/main.tf" ] && [ -f "$dir/variables.tf" ] && [ -f "$dir/providers.tf" ]
 }
 
@@ -143,11 +144,13 @@ find . -type d -name "env" | while read -r env_dir; do
     project_dir=$(dirname "$env_dir")
     
     if is_terraform_project "$project_dir"; then
-        echo "Found project: $project_dir"
+        echo "Found valid project: $project_dir"
         
         environments=$(get_environments "$project_dir")
+        echo "Environments found: $environments"
         echo "$environments" | while IFS= read -r env; do
             [ -n "$env" ] || continue
+            echo "Processing environment: $env"
             
             # Add to environments list if not already present
             if ! grep -q "^$env$" "$ENV_FILE" 2>/dev/null; then
@@ -170,7 +173,7 @@ find . -type d -name "env" | while read -r env_dir; do
             fi
         done
     else
-        echo "Skipping $project_dir - not a valid Terraform project"
+        echo "Skipping $project_dir - not a valid Terraform project (missing required .tf files)"
     fi
 done
 
@@ -228,7 +231,9 @@ get_tfvars_file_for_env() {
 # Second pass: generate projects for all discovered Terraform projects
 echo "Generating project configurations..."
 
-PROJECT_COUNT=0
+# Use a file to track project count since variables don't work across subshells
+PROJECT_COUNT_FILE=$(mktemp)
+echo "0" > "$PROJECT_COUNT_FILE"
 
 # Find all projects with env directories
 find . -type d -name "env" | while read -r env_dir; do
@@ -242,6 +247,8 @@ find . -type d -name "env" | while read -r env_dir; do
             [ -z "$env" ] && continue
             env_path="$project_dir/env/${env}"
             [ -d "$env_path" ] || continue
+
+            echo "Generating config for: $project_dir - $env"
 
             # Get config files specific to this project
             project_backend_config=$(find_matching_backend_config "$project_dir" "$env")
@@ -287,7 +294,9 @@ find . -type d -name "env" | while read -r env_dir; do
             } >> atlantis.yaml
             
             echo "Added project: ${project_name}-${env}"
-            PROJECT_COUNT=$((PROJECT_COUNT + 1))
+            # Update project count
+            count=$(<"$PROJECT_COUNT_FILE")
+            echo $((count + 1)) > "$PROJECT_COUNT_FILE"
         done
     fi
 done
@@ -296,6 +305,16 @@ done
 cat >> atlantis.yaml <<EOF
 workflows:
 EOF
+
+# Check if we have any environments
+if [ ! -s "$ENV_FILE" ]; then
+    echo "ERROR: No environments found!"
+    echo "ENV_FILE contents:"
+    cat "$ENV_FILE"
+else
+    echo "Processing environments from file:"
+    cat "$ENV_FILE"
+fi
 
 # Process each environment from file
 while IFS= read -r env; do
@@ -335,9 +354,13 @@ while IFS= read -r env; do
     echo "Added workflow: ${env}_workflow"
 done < "$ENV_FILE"
 
+# Get final project count
+PROJECT_COUNT=$(<"$PROJECT_COUNT_FILE")
+
 # Clean up
-rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE"
+rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_COUNT_FILE"
 
 echo "Generated atlantis.yaml successfully"
 echo "Total projects found: $PROJECT_COUNT"
-echo "Found projects:"
+echo "Final atlantis.yaml content:"
+cat atlantis.yaml
