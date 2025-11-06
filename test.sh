@@ -283,9 +283,7 @@ find . -type d -name "env" | while read -r env_dir; do
             echo "    workflow: ${env}_workflow"
             echo "    apply_requirements:"
             echo "      - approved"
-            echo "      - mergeable"
-            echo "    repo_locks:" 
-            echo "      mode: disabled" 
+            echo "      - mergeable" 
             } >> atlantis.yaml
             
             echo "Added project: ${project_name}-${env}"
