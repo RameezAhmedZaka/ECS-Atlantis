@@ -346,5 +346,3 @@ done < "$ENV_FILE"
 rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
 
 echo "Generated atlantis.yaml successfully"
-
-
