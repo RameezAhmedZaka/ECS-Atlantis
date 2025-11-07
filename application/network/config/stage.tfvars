@@ -1,3 +1,3 @@
 region      = "us-east-1"
 environment = "staging"
-bucket_name = "network-stage-bucket2345"
+bucket_name = "network-stage-bucket23345"
