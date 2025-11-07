@@ -68,6 +68,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 | Pull Requests     | Read & write |
 | Webhooks          | Read & write |
 | Actions           | Read-only |
+| Secrets           | Read-only |
 
 ### Subscribe to Events
 
@@ -76,6 +77,8 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - issue_comment  
 - pull_request  
 - repository
+- Pull request review
+- Pull request review comment
 
  ### Create the App with key 
 - Click Create GitHub App.
