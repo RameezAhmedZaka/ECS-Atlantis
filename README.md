@@ -105,7 +105,6 @@ aws ssm put-parameter \
 - Ensure permissions match Atlantis requirements.
 - Get the app_id and installation_id that will be needed.
 - The last numbers are installation id. ```https://github.com/settings/installations/987654```
-- 
 ### GitHub App Parameters in `terraform.tfvars`
 
 ```hcl
