@@ -359,7 +359,7 @@ git push origin feature/my-infrastructure-change
 
 ## 🛠️ Troubleshooting
 ### Common Issues:
-- Webhook not delivered → Check GitHub App recent deliveries. Go to Github App → advanced → Recent deliveries. 
+- Webhook not delivered → Check GitHub App recent deliveries. Go to Github App → advanced → Recent deliveries.
 - Plan not running → Verify folder structure and Terraform file requirements
 - Permission errors → Ensure GitHub App has correct access
 - Configuration not generated → Ensure repo-config-generator.sh is executable
