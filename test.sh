@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-
+trap '' PIPE
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
