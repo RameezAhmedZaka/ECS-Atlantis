@@ -159,19 +159,19 @@ resource "aws_iam_role_policy_attachment" "admin_access" {
 ## 📁 Server-Side Configuration: server-atlantis.yaml
 ```
 repos:
-  - id: github.com/<org-name>/<repo-name>                     #change this configuration
-    allow_custom_workflows: true 
+  - id: github.com/<org-name>/<repo-name>                     # change this configuration
+    allow_custom_workflows: true
     allowed_overrides:
       - apply_requirements
       - workflow
       - plan_requirements
+      - repo_locks
     apply_requirements: []
+    repo_locking: false  
     pre_workflow_hooks:
       - run: |
-          echo "Running config-generator from $(pwd)"
-          ls -la
-          chmod +x ./repo-config-generator.sh || echo "Script not found or not executable"         
-          ./repo-config-generator.sh || (echo "Script failed !" && exit 1)                  # File must be placed at root level
+          chmod +x ./repo-config-generator.sh               # place the file at root level of your repo
+          ./repo-config-generator.sh
         description: Generating configs
 ```
 ### Explanation:
