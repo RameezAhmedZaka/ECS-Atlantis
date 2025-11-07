@@ -20,11 +20,6 @@ Atlantis enables GitOps-style workflows by automating `terraform plan` and `appl
 - **GitHub Webhook**: Automatically created and linked to your repository  
 
 ---
-### Required Permissions
-
-- Clone repositories  
-- Comment on pull requests  
-- Access GitHub APIs
   
 ### Create the api for terraform code
 1. Create the API
