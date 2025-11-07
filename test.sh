@@ -1,6 +1,6 @@
-
 #!/bin/bash
 set -euo pipefail
+trap '' PIPE
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
@@ -9,7 +9,7 @@ cat > atlantis.yaml <<EOF
 ---
 version: 3
 automerge: true
-parallel_plan: true
+parallel_plan: false
 parallel_apply: false
 projects:
 EOF
@@ -346,5 +346,3 @@ done < "$ENV_FILE"
 rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
 
 echo "Generated atlantis.yaml successfully"
-echo "Found projects:"
-grep "name:" atlantis.yaml | sed 's/.*name: //'
