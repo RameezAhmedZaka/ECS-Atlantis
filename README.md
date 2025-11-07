@@ -39,12 +39,13 @@ aws apigatewayv2 create-api \
 
 Note the id returned → this is your API_ID that will be used in terraform.tfvars
 
-2. Deploy the API to a stage
+2. Deploy the API to a stage default 
 ```
 aws apigatewayv2 create-stage \
     --api-id <api-id> \
-    --stage-name prod \
+    --stage-name '$default' \
     --auto-deploy
+
 
 ```
 
@@ -68,7 +69,7 @@ Store the Base64 key
 ```
 aws ssm put-parameter \
   --name "/github/app/key_base64" \
-  --value "$(cat /github/app/key_base64)" \
+  --value "$(cat name_of_file)" \
   --type "SecureString" \
   --overwrite
 ```
@@ -76,7 +77,7 @@ Store the PEM file
 ```
 aws ssm put-parameter \
   --name "/github/app/pem_file" \
-  --value "$(cat /github/app/pem_file)" \
+  --value "$(cat name_pem_file)" \
   --type "SecureString" \
   --overwrite
 ```
@@ -93,7 +94,6 @@ aws ssm put-parameter \
 | Metadata          | Read-only |
 | Pull Requests     | Read & write |
 | Webhooks          | Read & write |
-| Members           | Read-only |
 | Actions           | Read-only |
 
 ### Subscribe to Events
@@ -107,47 +107,31 @@ aws ssm put-parameter \
 ### Install GitHub App
 - Install the App on selected repositories.
 - Ensure permissions match Atlantis requirements.
-- Get the app_id and installation_id that will be needed.
-  https://github.com/settings/installations/987654             #last numbers are installation id
+- Get the app_id and installation_id that will be needed. You will the installation_id at the url after installation that can looks like this https://github.com/settings/installations/987654 
+- The last numbers are installation id. (https://github.com/settings/installations/987654) 
 
 ### GitHub App Parameters in `terraform.tfvars`
 
 ```hcl
 github_repositories_webhook = {
   github_owner               = "owner-of-github-app"
-  github_app_key_base64      = "github_app_key_base64" # base64 PEM file
-  github_app_pem_file        = "github_app_key_plain"  # PEM file as-is
-  repositories               = ["terraform"]           # repositories to add webhook to
-  github_app_id              = "github-app-id"
-  github_app_installation_id = "xyz"
-  webhook_secret             = "xyz"              
+  github_app_key_base64      = "/github/app/key_base64"   # base64 PEM file
+  github_app_pem_file        = "/github/app/pem_file"     # PEM file as-is
+  repositories               = ["terraform"]              # repositories to add webhook to
+  webhook_secret             = "yrdjf@edstru"             # add wehbook secrets (random string)       
+  github_app_id              = "github-app-id"            # app_id
+  github_app_installation_id = "xyz"                      # installation id              
 }
 
 atlantis_ecs = {
-  atlantis_repo_allowlist = "github.com/your-org/*"       add this too in terraform.tfvars
+  atlantis_repo_allowlist = "github.com/your-org/*"       # add this too in terraform.tfvars
 }
+
 atlantis_api_gateway = {
-  api_id                   = "xyz"                          #place the api_id that you created above
+  api_id                   = "xyz"                        # place the api_id that you created above
 }
 ```
 
-### ⚙️ Terraform Configuration
-aws = {
-  region  = "us-east-1"
-  profile = ""
-}
-Clone the code 
-```
-cd atlantis
-```
-Initialize Terraform:
-```
-terraform init -backend-config=./dev/dev.conf
-```
-Apply Infrastructure:
-```
-terraform apply -var-file=./config/dev.tfvars 
-```
 ### 🚀 Atlantis Environment Configuration
 ```
 {
@@ -161,10 +145,6 @@ terraform apply -var-file=./config/dev.tfvars
 {
   name: "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS",
   value: "true"
-},
-{
-  name: "ATLANTIS_MAX_COMMENTS_PER_COMMAND",
-  value: "1"
 }
 ```
 ### Explanation:
@@ -172,8 +152,6 @@ terraform apply -var-file=./config/dev.tfvars
 - ATLANTIS_REPO_CONFIG_JSON: Loads server-side config from server-atlantis.yaml
 - ATLANTIS_ALLOW_COMMANDS: Specifies allowed commands (plan, apply, etc.)
 - ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS: Hides plan comments when nothing changes
-- ATLANTIS_MAX_COMMENTS_PER_COMMAND: Limits comments to one per command
-- ATLANTIS_DISABLE_REPO_LOCKING (optional): Allows multiple plans/applies simultaneously
 
 ## Atlantis Permissions
 ```
@@ -221,33 +199,122 @@ repos:
 - Auto-planning
 
 ## 📂 Required Folder Structure
+Make sure you are following this folder structure for any app and than you can place at root or at folder.
+```
+└── db71
+    ├── backend.tf
+    ├── config
+    │   ├── helia.tfvars
+    │   ├── production.tfvars
+    │   └── stage.tfvars
+    ├── env
+    │   └── staging
+    │       └── stage.conf
+    ├── main.tf
+    ├── providers.tf
+    └── variables.tf
+```
+Overall Structure can look like this
 ```
 repository/
-├── application/
-│   ├── app1/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   ├── providers.tf
+.
+├── application
+│   ├── network
 │   │   ├── backend.tf
-│   │   ├── config/
+│   │   ├── config
+│   │   │   ├── helia.tfvars
 │   │   │   ├── production.tfvars
-│   │   │   ├── stage.tfvars
-│   │   │   └── helia.tfvars
-│   │   └── env/
-│   │       ├── production/
-│   │       │   └── prod.conf
-│   │       ├── staging/
-│   │       │   └── stage.conf
-│   │       └── helia/
-│   │           └── helia.conf
-│   ├── app2/
-│   │   └── ... (same structure)
-│   └── ... (more apps)
-├── db/
-│   ├── db1/
-│   │   └── ... (same structure)
-│   └── ... (more databases)
+│   │   │   └── stage.tfvars
+│   │   ├── env
+│   │   │   ├── helia
+│   │   │   │   └── helia.conf
+│   │   │   ├── production
+│   │   │   │   └── prod.conf
+│   │   │   └── staging
+│   │   │       └── stage.conf
+│   │   ├── main.tf
+│   │   ├── providers.tf
+│   │   └── variables.tf
+│   └── rdot
+│       ├── app11
+│       │   ├── backend.tf
+│       │   ├── config
+│       │   │   ├── helia.tfvars
+│       │   │   ├── production.tfvars
+│       │   │   └── stage.tfvars
+│       │   ├── db1
+│       │   │   ├── backend.tf
+│       │   │   ├── config
+│       │   │   │   ├── helia.tfvars
+│       │   │   │   ├── production.tfvars
+│       │   │   │   └── stage.tfvars
+│       │   │   ├── env
+│       │   │   │   └── production
+│       │   │   │       └── prod.conf
+│       │   │   ├── main.tf
+│       │   │   ├── providers.tf
+│       │   │   └── variables.tf
+│       │   ├── env
+│       │   │   ├── helia
+│       │   │   │   └── helia.conf
+│       │   │   ├── production
+│       │   │   │   └── prod.conf
+│       │   │   └── staging
+│       │   │       └── stage.conf
+│       │   ├── main.tf
+│       │   ├── providers.tf
+│       │   └── variables.tf
+│       ├── backend.tf
+│       ├── config
+│       │   ├── helia.tfvars
+│       │   ├── production.tfvars
+│       │   ├── rameez.tfvars
+│       │   └── stage.tfvars
+│       ├── env
+│       │   ├── helia
+│       │   │   └── helia.conf
+│       │   ├── production
+│       │   │   └── prod.conf
+│       │   ├── rameez
+│       │   │   └── rame.conf
+│       │   └── staging
+│       │       └── stage.conf
+│       ├── main.tf
+│       ├── providers.tf
+│       └── variables.tf
+├── db
+│   └── db71
+│       ├── backend.tf
+│       ├── config
+│       │   ├── helia.tfvars
+│       │   ├── production.tfvars
+│       │   └── stage.tfvars
+│       ├── env
+│       │   └── staging
+│       │       └── stage.conf
+│       ├── main.tf
+│       ├── providers.tf
+│       └── variables.tf
 └── repo-config-generator.sh
+
+```
+
+### ⚙️ Terraform Configuration
+aws = {
+  region  = "us-east-1"
+  profile = ""
+}
+Clone the code 
+```
+cd atlantis
+```
+Initialize Terraform:
+```
+terraform init -backend-config=./dev/dev.conf
+```
+Apply Infrastructure:
+```
+terraform apply -var-file=./config/dev.tfvars
 ```
 ## 🎯 How to Trigger Atlantis
 ### 1. Pull Request Workflow (Automatic)
@@ -297,7 +364,7 @@ git push origin feature/my-infrastructure-change
 
 ## 🛠️ Troubleshooting
 ### Common Issues:
-- Webhook not delivered → Check GitHub App permissions and webhook secret
+- Webhook not delivered → Check GitHub App recent deliveries. By going from Github App to advanced option
 - Plan not running → Verify folder structure and Terraform file requirements
 - Permission errors → Ensure GitHub App has correct access
 - Configuration not generated → Ensure repo-config-generator.sh is executable
