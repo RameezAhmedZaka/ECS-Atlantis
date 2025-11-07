@@ -13,7 +13,7 @@
       - run: |
           chmod +x ./repo-config-generator.sh
           ./repo-config-generator.sh
-        description: Clearing old PRs and generating configs
+        description: Generating configs
 
 
 
