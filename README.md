@@ -44,9 +44,8 @@ Note the id returned → this is your API_ID that will be used in terraform.tfva
 aws apigatewayv2 create-stage \
     --api-id <api-id> \
     --stage-name '$default' \
-    --auto-deploy
-
-
+    --auto-deploy \
+    --region us-east-1
 ```
 
 ## 🔑 GitHub Integration
