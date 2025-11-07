@@ -77,11 +77,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - pull_request  
 - repository
 
-### Install GitHub App
-- Install the App on selected repositories.
-- Ensure permissions match Atlantis requirements.
-- Get the app_id and installation_id that will be needed.
-- The last numbers are installation id. ```https://github.com/settings/installations/987654``` 
+ ### Create the App with key 
 - Click Create GitHub App.
 - Generate App Private Key
 - Download the .pem file from the GitHub App dashboard. Keep it secure.
@@ -103,6 +99,13 @@ aws ssm put-parameter \
   --type "SecureString" \
   --overwrite
 ```
+
+### Install GitHub App
+- Install the App on selected repositories.
+- Ensure permissions match Atlantis requirements.
+- Get the app_id and installation_id that will be needed.
+- The last numbers are installation id. ```https://github.com/settings/installations/987654```
+- 
 ### GitHub App Parameters in `terraform.tfvars`
 
 ```hcl
