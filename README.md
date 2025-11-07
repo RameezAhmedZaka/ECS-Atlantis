@@ -54,28 +54,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
    - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created before)
      may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/```
    - Webhook Secret: random string added in terraform.tfvars
-- Click Create GitHub App.
-- Generate App Private Key
-- Download the .pem file from the GitHub App dashboard. Keep it secure.
-- Encode Private Key and than place both files in parameter store.
-
-Store the Base64 key
-```
-aws ssm put-parameter \
-  --name "/github/app/key_base64" \
-  --value "$(cat name_of_file)" \
-  --type "SecureString" \
-  --overwrite
-```
-Store the PEM file
-```
-aws ssm put-parameter \
-  --name "/github/app/pem_file" \
-  --value "$(cat name_pem_file)" \
-  --type "SecureString" \
-  --overwrite
-```
-
+  
 ### GitHub App Permissions Table
 
 | Category          | Permission |
@@ -103,7 +82,27 @@ aws ssm put-parameter \
 - Ensure permissions match Atlantis requirements.
 - Get the app_id and installation_id that will be needed.
 - The last numbers are installation id. ```https://github.com/settings/installations/987654``` 
+- Click Create GitHub App.
+- Generate App Private Key
+- Download the .pem file from the GitHub App dashboard. Keep it secure.
+- Encode Private Key and than place both files in parameter store.
 
+Store the Base64 key
+```
+aws ssm put-parameter \
+  --name "/github/app/key_base64" \
+  --value "$(cat name_of_file)" \
+  --type "SecureString" \
+  --overwrite
+```
+Store the PEM file
+```
+aws ssm put-parameter \
+  --name "/github/app/pem_file" \
+  --value "$(cat name_pem_file)" \
+  --type "SecureString" \
+  --overwrite
+```
 ### GitHub App Parameters in `terraform.tfvars`
 
 ```hcl
