@@ -340,7 +340,7 @@ git push origin feature/my-infrastructure-change
 - Comment 'atlantis apply' to deploy changes
 
 ### 4. What Happens Behind the Scenes
-- GitHub webhook notifies Atlantis about PR
+- GitHub App notifies Atlantis about PR
 - Atlantis clones repository
 - Runs repo-config-generator.sh
 - Generates atlantis.yaml with project definitions
@@ -359,7 +359,7 @@ git push origin feature/my-infrastructure-change
 
 ## 🛠️ Troubleshooting
 ### Common Issues:
-- Webhook not delivered → Check GitHub App recent deliveries. By going from Github App to advanced option
+- Webhook not delivered → Check GitHub App recent deliveries. Go to Github App → advanced → Recent deliveries.
 - Plan not running → Verify folder structure and Terraform file requirements
 - Permission errors → Ensure GitHub App has correct access
 - Configuration not generated → Ensure repo-config-generator.sh is executable
