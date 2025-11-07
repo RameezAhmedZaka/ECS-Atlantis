@@ -11,16 +11,6 @@
     repo_locking: false  
     pre_workflow_hooks:
       - run: |
-          echo "Clearing all PR workspaces for this repo..."
-          REPOS_DIR="/atlantis-data/repos/github.com/RameezAhmedZaka/ECS-Atlantis"
-          if [ -d "$REPOS_DIR" ]; then
-            rm -rf "$REPOS_DIR"/*
-            echo "All PR workspaces cleared."
-          else
-            echo "Repo directory does not exist: $REPOS_DIR"
-          fi
-
-          # Run your config generator
           chmod +x ./repo-config-generator.sh
           ./repo-config-generator.sh
         description: Clearing old PRs and generating configs
