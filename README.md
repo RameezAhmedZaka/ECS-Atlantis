@@ -101,8 +101,8 @@ aws ssm put-parameter \
 ### Install GitHub App
 - Install the App on selected repositories.
 - Ensure permissions match Atlantis requirements.
-- Get the app_id and installation_id that will be needed. You will the installation_id at the url after installation that can looks like this https://github.com/settings/installations/987654 
-- The last numbers are installation id. (https://github.com/settings/installations/987654) 
+- Get the app_id and installation_id that will be needed.
+- The last numbers are installation id. ```https://github.com/settings/installations/987654``` 
 
 ### GitHub App Parameters in `terraform.tfvars`
 
