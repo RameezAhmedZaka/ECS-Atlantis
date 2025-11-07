@@ -101,5 +101,5 @@ atlantis_api_gateway = {
   to_port                  = 4141
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
-  api_id                   = "28anxlkkc3"                          #create the api_id
+  api_id                   = "s17rzqnlg7"                          #create the api_id
 }
