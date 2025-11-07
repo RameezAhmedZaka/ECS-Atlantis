@@ -53,7 +53,6 @@ Atlantis interacts with GitHub using a **GitHub App**.
    - Homepage URL: your project URL (optional)
    - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created before)
      may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/```
-   - Add the same url as callback url too.        
    - Webhook Secret: random string added in terraform.tfvars
 - Click Create GitHub App.
 - Generate App Private Key
