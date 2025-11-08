@@ -331,7 +331,7 @@ while IFS= read -r env; do
     echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
-    echo "            terraform plan -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
+    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
     echo "    apply:"
     echo "      steps:"
     echo "        - run: |"
