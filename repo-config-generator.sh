@@ -342,7 +342,6 @@ awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
 } >> atlantis.yaml
 done
 
-
 # Clean up
 rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
 
