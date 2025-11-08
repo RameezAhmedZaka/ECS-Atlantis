@@ -318,7 +318,7 @@ awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
     fi
 
     # Write workflow configuration
-    {
+{
     echo "  ${env}_workflow:"
     echo "    plan:"
     echo "      steps:"
@@ -330,10 +330,8 @@ awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
     echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
-    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE > plan_output.txt 2>&1"
-    echo "            # Show only resource changes and summary, hide 'Refreshing state...' lines"
-    echo "            awk '/^Terraform will perform the following actions:/ {flag=1} flag {print}' plan_output.txt | grep -v 'Refreshing state'"
-    echo "            echo ''"
+    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE > /dev/null 2>&1"
+    echo "            terraform show \$PLANFILE"
     echo "    apply:"
     echo "      steps:"
     echo "        - run: |"
@@ -341,7 +339,7 @@ awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            terraform apply -auto-approve \$PLANFILE"
-    } >> atlantis.yaml
+} >> atlantis.yaml
 done
 
 
