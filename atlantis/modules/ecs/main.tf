@@ -104,10 +104,10 @@ resource "aws_ecs_task_definition" "backend_task" {
         #   name = "ATLANTIS_DISABLE_REPO_LOCKING"
         #   value = "true"
         # },
-        # {
-        #   name  = "ATLANTIS_HIDE_PREV_PLAN_COMMENTS"
-        #   value = "true"  
-        # },
+        {
+          name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
+          value = "0"  
+        },
         {
           name  = "ATLANTIS_GH_APP_ID"
           value = var.github_app_id
