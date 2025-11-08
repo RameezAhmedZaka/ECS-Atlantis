@@ -11,7 +11,6 @@ version: 3
 automerge: true
 parallel_plan: false
 parallel_apply: false
-projects:
 EOF
 
 # Check if a directory is a Terraform project
@@ -139,6 +138,7 @@ ENV_FILE=$(mktemp)
 BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
 PROJECT_INFO_FILE=$(mktemp)
+VALID_WORKFLOWS_FILE=$(mktemp)
 
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
@@ -226,10 +226,71 @@ get_tfvars_file_for_env() {
     grep "^${env}:" "$TFVARS_FILE" 2>/dev/null | cut -d: -f2- || echo ""
 }
 
-# Second pass: generate projects for all discovered Terraform projects
-echo "Generating project configurations..."
+# Generate workflows section FIRST
+echo "Generating workflows..."
+cat >> atlantis.yaml <<EOF
+workflows:
+EOF
 
-# Find all projects with env directories
+# Process each environment to generate workflows
+while IFS= read -r env; do
+    [ -z "$env" ] && continue
+    
+    backend_config=$(get_backend_config_for_env "$env")
+    tfvars_file=$(get_tfvars_file_for_env "$env")
+    
+    if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
+        echo "Warning: Skipping workflow for $env - missing config files"
+        continue
+    fi
+    
+    # Mark this as a valid workflow
+    echo "$env" >> "$VALID_WORKFLOWS_FILE"
+    
+    # Get just the filenames for the configs (not full paths)
+    backend_config_file=$(basename "$backend_config")
+    tfvars_config_file=$(basename "$tfvars_file")
+    
+    # Get a sample relative path for this environment (use the first one found)
+    sample_relative_path=$(grep "^${env}:" "$PROJECT_INFO_FILE" | head -1 | cut -d: -f3)
+    if [ -z "$sample_relative_path" ]; then
+        sample_relative_path="../.."  # Default fallback
+    fi
+    
+    # Write workflow configuration
+    {
+    echo "  ${env}_workflow:"
+    echo "    plan:"
+    echo "      steps:"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            echo \"Using backend config: $backend_config_file\""
+    echo "            echo \"Using tfvars file: $tfvars_config_file\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
+    echo "            rm -rf .terraform .terraform.lock.hcl"
+    echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
+    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE > plan_output.txt 2>&1"
+    echo "            # Show only resource changes and summary, hide 'Refreshing state...' lines"
+    echo "            awk '/^Terraform will perform the following actions:/ {flag=1} flag {print}' plan_output.txt | grep -v 'Refreshing state' "
+    echo "            echo ''"
+    echo "    apply:"
+    echo "      steps:"
+    echo "        - run: |"
+    echo "            echo \"Project: \$PROJECT_NAME\""
+    echo "            echo \"Environment: $env\""
+    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
+    echo "            terraform apply -auto-approve \$PLANFILE"
+    } >> atlantis.yaml
+done < "$ENV_FILE"
+
+# Now generate projects section
+echo "Generating project configurations..."
+cat >> atlantis.yaml <<EOF
+projects:
+EOF
+
+# Second pass: generate projects for all discovered Terraform projects
 find . -type d -name "env" | while read -r env_dir; do
     project_dir=$(dirname "$env_dir")
     
@@ -241,6 +302,12 @@ find . -type d -name "env" | while read -r env_dir; do
             [ -z "$env" ] && continue
             env_path="$project_dir/env/${env}"
             [ -d "$env_path" ] || continue
+
+            # Check if this environment has a valid workflow
+            if ! grep -q "^${env}$" "$VALID_WORKFLOWS_FILE" 2>/dev/null; then
+                echo "Warning: Skipping project $project_dir env $env - no valid workflow"
+                continue
+            fi
 
             # Get config files specific to this project
             project_backend_config=$(find_matching_backend_config "$project_dir" "$env")
@@ -291,61 +358,7 @@ find . -type d -name "env" | while read -r env_dir; do
     fi
 done
 
-# Generate workflows for all found environments based on actual projects
-cat >> atlantis.yaml <<EOF
-workflows:
-EOF
-
-# Get unique environments from PROJECT_INFO_FILE
-awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
-    [ -z "$env" ] && continue
-
-    backend_config=$(get_backend_config_for_env "$env")
-    tfvars_file=$(get_tfvars_file_for_env "$env")
-
-    if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
-        echo "Warning: Skipping workflow for $env - missing config files"
-        continue
-    fi
-
-    backend_config_file=$(basename "$backend_config")
-    tfvars_config_file=$(basename "$tfvars_file")
-
-    # Get a sample relative path for this environment
-    sample_relative_path=$(grep "^${env}:" "$PROJECT_INFO_FILE" | head -1 | cut -d: -f3)
-    if [ -z "$sample_relative_path" ]; then
-        sample_relative_path="../.."  # Default fallback
-    fi
-
-    # Write workflow configuration
-    {
-    echo "  ${env}_workflow:"
-    echo "    plan:"
-    echo "      steps:"
-    echo "        - run: |"
-    echo "            echo \"Project: \$PROJECT_NAME\""
-    echo "            echo \"Environment: $env\""
-    echo "            echo \"Using backend config: $backend_config_file\""
-    echo "            echo \"Using tfvars file: $tfvars_config_file\""
-    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
-    echo "            rm -rf .terraform .terraform.lock.hcl"
-    echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
-    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE > plan_output.txt 2>&1"
-    echo "            # Show only resource changes and summary, hide 'Refreshing state...' lines"
-    echo "            awk '/^Terraform will perform the following actions:/ {flag=1} flag {print}' plan_output.txt | grep -v 'Refreshing state'"
-    echo "            echo ''"
-    echo "    apply:"
-    echo "      steps:"
-    echo "        - run: |"
-    echo "            echo \"Project: \$PROJECT_NAME\""
-    echo "            echo \"Environment: $env\""
-    echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
-    echo "            terraform apply -auto-approve \$PLANFILE"
-    } >> atlantis.yaml
-done
-
-
 # Clean up
-rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
+rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE" "$VALID_WORKFLOWS_FILE"
 
 echo "Generated atlantis.yaml successfully"
