@@ -120,6 +120,7 @@ resource "aws_ecs_task_definition" "backend_task" {
         }
       ]
 
+
       logConfiguration = {
         logDriver = var.log_driver
         options = {
