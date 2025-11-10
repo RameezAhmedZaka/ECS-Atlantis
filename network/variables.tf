@@ -18,11 +18,6 @@ variable "vpc_name" {
   description = "Name of the VPC"
 }
 
-variable "environment" {
-  type        = string
-  description = "Deployment environment (e.g., dev, staging, prod)"
-}
-
 variable "cidr_block" {
   type        = string
   description = "CIDR block for the VPC"
