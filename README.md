@@ -127,8 +127,7 @@ github_repositories_webhook = {
   github_owner               = "owner-of-github-app"
   github_app_key_base64      = "/github/app/key_base64"   # base64 PEM file
   github_app_pem_file        = "/github/app/pem_file"     # PEM file as-is
-  repositories               = ["terraform"]              # repositories to add webhook to
-  webhook_secret             = "yrdjf@edstru"             # add wehbook secrets (random string)       
+  repositories               = ["terraform"]              # repositories to add webhook to      
   github_app_id              = "github-app-id"            # app_id
   github_app_installation_id = "xyz"                      # installation id              
 }
