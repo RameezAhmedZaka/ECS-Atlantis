@@ -139,6 +139,7 @@ BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
 PROJECT_INFO_FILE=$(mktemp)
 
+
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
 find . -type d -name "env" | while read -r env_dir; do
