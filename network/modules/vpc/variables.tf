@@ -1,31 +1,12 @@
-variable "environment" {
-  description = "Environment name (staging, prod, helia)"
-  type        = string
-}
-
-variable "bucket_name" {
-  description = "Name of the S3 bucket"
-  type        = string
-}
-
-variable "region" {
-  description = "AWS region to create S3 bucket in"
-  type        = string
-}
-
 variable "vpc_name" {
   type        = string
   description = "Name of the VPC"
 }
 
-variable "environment" {
-  type        = string
-  description = "Deployment environment (e.g., dev, staging, prod)"
-}
-
 variable "cidr_block" {
   type        = string
   description = "CIDR block for the VPC"
+  default     = "10.0.0.0/16"
 }
 
 variable "public_subnets" {
@@ -42,4 +23,9 @@ variable "enable_nat_gateway" {
   type        = bool
   default     = true
   description = "Enable NAT Gateways for private subnets"
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment tag (e.g., dev, prod)"
 }
