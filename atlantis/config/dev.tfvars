@@ -38,9 +38,6 @@ atlantis_ecs = {
   command                       = ["server", "--write-git-creds"]
   containerPort                 = 4141
   hostPort                      = 4141
-  atlantis_port                 = 4141
-  atlantis_repo_allowlist       = "github.com/RameezAhmedZaka/*" #specify repo to allowlist
-  atlantis_markdown_format      = "true"
   log_driver                    = "awslogs"
   log_stream_prefix             = "ecs"
   backend_cloudwatch_group_name = "/aws/ecs/atlantis"
@@ -54,7 +51,38 @@ atlantis_ecs = {
   backend_task_role_name        = "atlantis-task-role"
   backend_execution_role_name   = "atlantis-execution-role"
   region                        = "us-east-1"
+  image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
+  repo_config_file              = "modules/ecs/server-atlantis.yaml"
+  github_webhook_secret         = "github_webhook_secret"
+
+    environment_variables = [
+    {
+      name  = "ATLANTIS_PORT"
+      value = "4141"
+    },
+    {
+      name  = "ATLANTIS_REPO_ALLOWLIST"
+      value = "github.com/RameezAhmedZaka/*"
+    },
+    {
+      name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
+      value = "true"
+    },
+    {
+      name  = "ATLANTIS_ALLOW_COMMANDS"
+      value = "version,plan,apply,unlock,approve_policies"
+    },
+    {
+      name  = "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
+      value = "true"
+    },
+    {
+      name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
+      value = "0"
+    }
+  ]
 }
+
 
 github_repositories_webhook = {
   github_owner               = "RameezAhmedZaka" 

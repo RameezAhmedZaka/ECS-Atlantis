@@ -76,21 +76,6 @@ variable "containerPort" {
 variable "hostPort" {
   type = number
 }
-variable "atlantis_port" {
-  type = string
-}
-variable "atlantis_url" {
-  type = string
-}
-variable "atlantis_repo_allowlist" {
-  type = string
-}
-variable "atlantis_markdown_format" {
-  type = string
-}
-variable "github_app_id" {
-  type = string
-}
 variable "log_driver" {
   type = string
 }
@@ -135,4 +120,31 @@ variable "region" {
 }
 variable "gh_app_key" {
   type = string
+}
+variable "image" {
+  type = string
+}
+variable "repo_config_file" {
+  type = string
+}
+variable "environment_variables" {
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  description = "List of all environment variables for the Atlantis container"
+}
+variable "atlantis_url" {
+  type        = string
+}
+
+variable "repo_config_json" {
+  type        = string
+}
+
+variable "gh_app_id" {
+  type        = string
+}
+variable "github_webhook_secret" {
+  type        = string
 }

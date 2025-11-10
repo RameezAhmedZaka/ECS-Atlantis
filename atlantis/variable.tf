@@ -43,9 +43,6 @@ variable "atlantis_ecs" {
     command                       = list(string)
     containerPort                 = number
     hostPort                      = number
-    atlantis_port                 = string
-    atlantis_repo_allowlist       = string
-    atlantis_markdown_format      = string
     log_driver                    = string
     log_stream_prefix             = string
     backend_cloudwatch_group_name = string
@@ -59,6 +56,13 @@ variable "atlantis_ecs" {
     backend_task_role_name        = string
     backend_execution_role_name   = string
     region                        = string
+    image                         = string
+    repo_config_file              = string
+    github_webhook_secret         = string
+    environment_variables         = list(object({
+      name  = string
+      value = string
+    }))
   })
 }
 

@@ -1,5 +1,9 @@
 data "aws_availability_zones" "all" {}
 
+locals {
+  repo_config_json = jsonencode(yamldecode(file(var.atlantis_ecs.repo_config_file)))
+}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
@@ -43,11 +47,6 @@ module "backend" {
   command                       = var.atlantis_ecs.command
   containerPort                 = var.atlantis_ecs.containerPort
   hostPort                      = var.atlantis_ecs.hostPort
-  atlantis_port                 = var.atlantis_ecs.atlantis_port
-  atlantis_url                  = module.apigateway.atlantis_url_gui
-  github_app_id                 = var.github_repositories_webhook.github_app_id
-  atlantis_repo_allowlist       = var.atlantis_ecs.atlantis_repo_allowlist
-  atlantis_markdown_format      = var.atlantis_ecs.atlantis_markdown_format
   log_driver                    = var.atlantis_ecs.log_driver
   region                        = var.atlantis_ecs.region
   log_stream_prefix             = var.atlantis_ecs.log_stream_prefix
@@ -63,6 +62,13 @@ module "backend" {
   backend_task_role_name        = var.atlantis_ecs.backend_task_role_name
   backend_execution_role_name   = var.atlantis_ecs.backend_execution_role_name
   gh_app_key                    = module.github_webhook.gh_app_key
+  image                         = var.atlantis_ecs.image
+  repo_config_file              = var.atlantis_ecs.repo_config_file
+  environment_variables         = var.atlantis_ecs.environment_variables
+  atlantis_url                  = module.apigateway.atlantis_url_gui
+  gh_app_id                     = var.github_repositories_webhook.github_app_id
+  repo_config_json              = local.repo_config_json
+  github_webhook_secret         = var.atlantis_ecs.github_webhook_secret
 }
 
 module "github_webhook" {
