@@ -42,6 +42,14 @@ aws apigatewayv2 create-stage \
     --auto-deploy \
     --region us-east-1
 ```
+3. Send the secret to secret manager
+```
+aws secretsmanager create-secret \
+  --name github_webhook_secret \                         # set the same name or if changing than update in config/dev.tfvars
+  --description "Secret for verifying GitHub App webhooks" \
+  --secret-string "<place-secret-here>" 
+
+```
 
 ## 🔑 GitHub Integration
 
@@ -49,11 +57,11 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Create a GitHub App
 - Go to GitHub → Settings → Developer settings → GitHub Apps → New GitHub App.
 - Fill details:
-   - Name: <any-name>
-   - Homepage URL: your project URL (optional)
+   - Name: <unique-name>
+   - Homepage URL: your project URL (optional) add the same as wehbook url.
    - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created before)
      may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/atlantis/events```
-   - Webhook Secret: random string added in terraform.tfvars
+   - Add the secret the same secret that you pushed to secrets manager before.  
   
 ### GitHub App Permissions Table
 
@@ -85,20 +93,24 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Generate App Private Key
 - Download the .pem file from the GitHub App dashboard. Keep it secure.
 - Encode Private Key and than place both files in parameter store.
-
-Store the Base64 key
-```
-aws ssm put-parameter \
-  --name "/github/app/key_base64" \
-  --value "$(cat name_of_file)" \
-  --type "SecureString" \
-  --overwrite
-```
 Store the PEM file
 ```
 aws ssm put-parameter \
-  --name "/github/app/pem_file" \
-  --value "$(cat name_pem_file)" \
+  --name "/github/app/pem_file" \                       # set the same name or if changing than update in config/dev.tfvars
+  --value "$(cat name_pem_file)" \                      # name of file that you downloaded
+  --type "SecureString" \
+  --overwrite
+```
+Covert into base64
+```
+base64 <file-name-downloaded> > <file-name-want-to-create.base64>
+```
+command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64
+Store the Base64 key
+```
+aws ssm put-parameter \
+  --name "/github/app/key_base64" \                     # set the same name or if changing than update in config/dev.tfvars
+  --value "$(cat name_of_file)" \                       # the file name that you created using the above command
   --type "SecureString" \
   --overwrite
 ```
@@ -107,7 +119,7 @@ aws ssm put-parameter \
 - Install the App on selected repositories.
 - Ensure permissions match Atlantis requirements.
 - Get the app_id and installation_id that will be needed.
-- The last numbers are installation id of url. ```https://github.com/settings/installations/987654```
+- The last numbers are installation id of url after installing the required repo on github app. ```https://github.com/settings/installations/987654```
 ### GitHub App Parameters in `atlantis/config/dev.tfvars`
 
 ```hcl
@@ -129,6 +141,29 @@ atlantis_api_gateway = {
   api_id                   = "xyz"                        # place the api_id that you created above
 }
 ```
+## 📁 Server-Side Configuration: atlantis/modules/ecs/server-atlantis.yaml
+```
+repos:
+  - id: github.com/<org-name>/<repo-name>                     # change this configuration
+    allow_custom_workflows: true
+    allowed_overrides:
+      - apply_requirements
+      - workflow
+      - plan_requirements
+      - repo_locks
+    apply_requirements: []
+    repo_locking: false  
+    pre_workflow_hooks:
+      - run: |
+          chmod +x ./repo-config-generator.sh               # place the file at root level of your repo that you installed.
+          ./repo-config-generator.sh
+        description: Generating configs
+```
+### Explanation:
+- id: Repository this config applies to
+- allow_custom_workflows: Enables custom Terraform workflows
+- allowed_overrides: Permits repo-specific overrides
+- pre_workflow_hooks: Runs scripts before Terraform operations
 
 ### 🚀 Atlantis Environment Configuration
 ```
@@ -158,30 +193,6 @@ resource "aws_iam_role_policy_attachment" "admin_access" {
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 ```
-
-## 📁 Server-Side Configuration: server-atlantis.yaml
-```
-repos:
-  - id: github.com/<org-name>/<repo-name>                     # change this configuration
-    allow_custom_workflows: true
-    allowed_overrides:
-      - apply_requirements
-      - workflow
-      - plan_requirements
-      - repo_locks
-    apply_requirements: []
-    repo_locking: false  
-    pre_workflow_hooks:
-      - run: |
-          chmod +x ./repo-config-generator.sh               # place the file at root level of your repo
-          ./repo-config-generator.sh
-        description: Generating configs
-```
-### Explanation:
-- id: Repository this config applies to
-- allow_custom_workflows: Enables custom Terraform workflows
-- allowed_overrides: Permits repo-specific overrides
-- pre_workflow_hooks: Runs scripts before Terraform operations
 
 ## 🪄 The Magic Script: repo-config-generator.sh
 ### Functionality:
