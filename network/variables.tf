@@ -13,28 +13,22 @@ variable "region" {
   type        = string
 }
 
-variable "vpc_name" {
-  type        = string
-  description = "Name of the VPC"
+variable "project_name" {
+  type = string
 }
 
-variable "cidr_block" {
-  type        = string
-  description = "CIDR block for the VPC"
+variable "environment" {
+  type = string
 }
 
-variable "public_subnets" {
-  type        = list(string)
-  description = "CIDR blocks for public subnets"
+variable "vpc_cidr" {
+  type = string
 }
 
-variable "private_subnets" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
+variable "private_subnet_cidrs" {
+  type = list(string)
 }
 
-variable "enable_nat_gateway" {
-  type        = bool
-  default     = true
-  description = "Enable NAT Gateways for private subnets"
+variable "availability_zones" {
+  type = list(string)
 }

@@ -1,31 +1,24 @@
-variable "vpc_name" {
+variable "project_name" {
+  description = "Name of the project"
   type        = string
-  description = "Name of the VPC"
-}
-
-variable "cidr_block" {
-  type        = string
-  description = "CIDR block for the VPC"
-  default     = "10.0.0.0/16"
-}
-
-variable "public_subnets" {
-  type        = list(string)
-  description = "CIDR blocks for public subnets"
-}
-
-variable "private_subnets" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
-}
-
-variable "enable_nat_gateway" {
-  type        = bool
-  default     = true
-  description = "Enable NAT Gateways for private subnets"
 }
 
 variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
   type        = string
-  description = "Environment tag (e.g., dev, prod)"
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
+variable "private_subnet_cidrs" {
+  description = "List of private subnet CIDRs"
+  type        = list(string)
+}
+
+variable "availability_zones" {
+  description = "List of availability zones for private subnets"
+  type        = list(string)
 }
