@@ -1,6 +1,6 @@
 aws = {
   region  = "us-east-1"
-  profile = "admin"
+  profile = ""
 }
 
 vpc = {
@@ -85,17 +85,17 @@ atlantis_ecs = {
 
 
 github_repositories_webhook = {
-  github_owner               = "RameezAhmedZaka" 
+  github_owner               = "" 
   github_app_key_base64      = "/github/app/key_base64"                   
   github_app_pem_file        = "/github/app/pem_file" 
   create                     = false
-  repositories               = ["ECS-Atlantis"] # repositories to add webhook to
-  webhook_secret             = "secret123" # add wehbook secrets
+  repositories               = [""]        # repositories to add webhook to
+  webhook_secret             = ""          # add wehbook secrets
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "2251636"        #enter the app_id
-  github_app_installation_id = "93546467"
+  github_app_id              = ""        #enter the app_id
+  github_app_installation_id = ""
 } 
 
 lb = {
@@ -129,5 +129,5 @@ atlantis_api_gateway = {
   to_port                  = 4141
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
-  api_id                   = "s17rzqnlg7"                          #create the api_id
+  api_id                   = ""                          #create the api_id
 }

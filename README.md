@@ -52,7 +52,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
    - Name: <any-name>
    - Homepage URL: your project URL (optional)
    - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created before)
-     may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/```
+     may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/atlantis/events```
    - Webhook Secret: random string added in terraform.tfvars
   
 ### GitHub App Permissions Table
@@ -68,6 +68,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 | Pull Requests     | Read & write |
 | Webhooks          | Read & write |
 | Actions           | Read-only |
+| Secrets           | Read-only |
 
 ### Subscribe to Events
 
@@ -76,6 +77,8 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - issue_comment  
 - pull_request  
 - repository
+- Pull request review
+- Pull request review comment
 
  ### Create the App with key 
 - Click Create GitHub App.
@@ -104,8 +107,8 @@ aws ssm put-parameter \
 - Install the App on selected repositories.
 - Ensure permissions match Atlantis requirements.
 - Get the app_id and installation_id that will be needed.
-- The last numbers are installation id. ```https://github.com/settings/installations/987654```
-### GitHub App Parameters in `terraform.tfvars`
+- The last numbers are installation id of url. ```https://github.com/settings/installations/987654```
+### GitHub App Parameters in `atlantis/config/dev.tfvars`
 
 ```hcl
 github_repositories_webhook = {
