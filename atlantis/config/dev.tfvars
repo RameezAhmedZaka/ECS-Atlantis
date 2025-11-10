@@ -90,7 +90,6 @@ github_repositories_webhook = {
   github_app_pem_file        = "/github/app/pem_file" 
   create                     = false
   repositories               = ["ECS-Atlantis"] # repositories to add webhook to
-  webhook_secret             = "secret123" # add wehbook secrets
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]

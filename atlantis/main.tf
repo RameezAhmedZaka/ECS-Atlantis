@@ -79,7 +79,6 @@ module "github_webhook" {
   create                     = var.github_repositories_webhook.create
   repositories               = var.github_repositories_webhook.repositories
   webhook_url                = module.apigateway.atlantis_url_webhook
-  webhook_secret             = var.github_repositories_webhook.webhook_secret
   content_type               = var.github_repositories_webhook.insecure_ssl
   insecure_ssl               = var.github_repositories_webhook.insecure_ssl
   events                     = var.github_repositories_webhook.events

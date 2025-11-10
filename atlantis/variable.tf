@@ -73,7 +73,6 @@ variable "github_repositories_webhook" {
     github_owner               = string
     create                     = bool
     repositories               = list(string)
-    webhook_secret             = string
     insecure_ssl               = bool
     content_type               = string
     events                     = list(string)

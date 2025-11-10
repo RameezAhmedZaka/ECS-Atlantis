@@ -16,9 +16,6 @@ variable "repositories" {
 variable "webhook_url" {
   type = string
 }
-variable "webhook_secret" {
-  type = string
-}
 variable "content_type" {
   type = string
 }
