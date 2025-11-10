@@ -22,7 +22,6 @@ resource "github_repository_webhook" "webhook" {
     url          = var.webhook_url
     content_type = var.content_type
     insecure_ssl = var.insecure_ssl
-    secret       = var.webhook_secret
   }
   events = var.events
 }

@@ -16,25 +16,3 @@
         description: Generating configs
 
 
-
-
-
-
-
-
-
-
-
-    # pre_workflow_hooks:
-    #   - run: |
-    #       set -e
-    #       echo "Running config-generator from $(pwd)"
-    #       if [ -f "./repo-config-generator.sh" ]; then
-    #           chmod +x ./repo-config-generator.sh
-    #           ./repo-config-generator.sh
-    #           echo "Config generation completed successfully"
-    #       else
-    #           echo "Warning: repo-config-generator.sh not found"
-    #           exit 0  # Don't fail if script doesn't exist
-    #       fi
-    #     description: Generating configs

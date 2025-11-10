@@ -1,3 +1,6 @@
+data "aws_secretsmanager_secret_version" "github_webhook_secret" {
+  secret_id = var.github_webhook_secret
+}
 
 resource "aws_ecs_cluster" "cluster" {
   name = var.cluster_name
@@ -33,7 +36,6 @@ resource "aws_ecs_service" "atlantis_service" {
     container_port   = var.container_port
     target_group_arn = var.backend_target_group_arn
   }
-
 }
 
 resource "aws_ecs_task_definition" "backend_task" {
@@ -56,12 +58,11 @@ resource "aws_ecs_task_definition" "backend_task" {
   container_definitions = jsonencode([
     {
       name      = var.container_name
-      image     = "ghcr.io/runatlantis/atlantis:v0.35.0"
+      image     = var.image
       cpu       = var.container_cpu
       memory    = var.container_memory
       essential = var.container_essential
       command   = var.command
-
 
       portMappings = [
         {
@@ -71,55 +72,34 @@ resource "aws_ecs_task_definition" "backend_task" {
         }
       ]
 
-      environment = [
-        {
-          name  = "ATLANTIS_PORT"
-          value = var.atlantis_port
-        },
-        {
-          name  = "ATLANTIS_ATLANTIS_URL"
-          value = var.atlantis_url
-        },
-        {
-          name  = "ATLANTIS_REPO_ALLOWLIST"
-          value = var.atlantis_repo_allowlist
-        },
-        {
-          name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
-          value = var.atlantis_markdown_format
-        },
-        {
-          name = "ATLANTIS_REPO_CONFIG_JSON",
-          value = jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
-        },
-        {
-          name = "ATLANTIS_ALLOW_COMMANDS"
-          value = "version,plan,apply,unlock,approve_policies"
-        },
-        {
-          name = "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
-          value = "true"
-        },
-        # {
-        #   name = "ATLANTIS_DISABLE_REPO_LOCKING"
-        #   value = "true"
-        # },
-        {
-          name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
-          value = "0"  
-        },
-        {
-          name  = "ATLANTIS_GH_APP_ID"
-          value = var.github_app_id
-        }
-      ]
+      environment = concat(
+        var.environment_variables,
+        [
+          {
+            name  = "ATLANTIS_ATLANTIS_URL"
+            value = var.atlantis_url
+          },
+          {
+            name  = "ATLANTIS_REPO_CONFIG_JSON"
+            value = var.repo_config_json
+          },
+          {
+            name  = "ATLANTIS_GH_APP_ID"
+            value = var.gh_app_id
+          },
+          {
+            name  = "ATLANTIS_GH_WEBHOOK_SECRET"
+            value = data.aws_secretsmanager_secret_version.github_webhook_secret.secret_string
+          }
+        ]
+      )
+
       secrets = [
         {
           name      = "ATLANTIS_GH_APP_KEY"
           valueFrom = var.gh_app_key
         }
       ]
-
 
       logConfiguration = {
         logDriver = var.log_driver
@@ -131,7 +111,6 @@ resource "aws_ecs_task_definition" "backend_task" {
       }
     }
   ])
-
 
   tags = {}
 }
@@ -160,6 +139,7 @@ resource "aws_security_group" "backend_service" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 data "aws_iam_policy_document" "ecs_assume_role_policy_doc" {
   version = "2012-10-17"
 
