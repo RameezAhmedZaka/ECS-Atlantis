@@ -63,6 +63,7 @@ resource "aws_nat_gateway" "this" {
   }
 }
 
+
 # Route Tables
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
