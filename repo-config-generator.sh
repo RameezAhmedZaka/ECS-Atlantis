@@ -1,6 +1,5 @@
 #!/bin/bash
 set -euo pipefail
-trap '' PIPE 
 
 echo "Generating dynamic atlantis.yaml for $(basename "$(pwd)")"
 
@@ -139,6 +138,7 @@ ENV_FILE=$(mktemp)
 BACKEND_FILE=$(mktemp)
 TFVARS_FILE=$(mktemp)
 PROJECT_INFO_FILE=$(mktemp)
+
 
 # First pass: discover all Terraform projects recursively from root
 echo "Searching for Terraform projects..."
@@ -291,47 +291,43 @@ find . -type d -name "env" | while read -r env_dir; do
     fi
 done
 
-# Generate workflows for all found environments
+# Generate workflows for all found environments based on actual projects
 cat >> atlantis.yaml <<EOF
 workflows:
 EOF
 
-# Process each environment from file
-while IFS= read -r env; do
+# Get unique environments from PROJECT_INFO_FILE
+awk -F: '{print $1}' "$PROJECT_INFO_FILE" | sort -u | while read -r env; do
     [ -z "$env" ] && continue
-    
+
     backend_config=$(get_backend_config_for_env "$env")
     tfvars_file=$(get_tfvars_file_for_env "$env")
-    
+
     if [ -z "$backend_config" ] || [ -z "$tfvars_file" ]; then
         echo "Warning: Skipping workflow for $env - missing config files"
         continue
     fi
-    
-    # Get just the filenames for the configs (not full paths)
+
     backend_config_file=$(basename "$backend_config")
     tfvars_config_file=$(basename "$tfvars_file")
-    
-    # Get a sample relative path for this environment (use the first one found)
+
+    # Get a sample relative path for this environment
     sample_relative_path=$(grep "^${env}:" "$PROJECT_INFO_FILE" | head -1 | cut -d: -f3)
     if [ -z "$sample_relative_path" ]; then
         sample_relative_path="../.."  # Default fallback
     fi
-    
+
     # Write workflow configuration
-    {
+{
     echo "  ${env}_workflow:"
     echo "    plan:"
     echo "      steps:"
     echo "        - run: |"
-    echo "            echo \"Project: \$PROJECT_NAME\""
-    echo "            echo \"Environment: $env\""
-    echo "            echo \"Using backend config: $backend_config_file\""
-    echo "            echo \"Using tfvars file: $tfvars_config_file\""
     echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            rm -rf .terraform .terraform.lock.hcl"
     echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false > /dev/null 2>&1"
-    echo "            terraform plan -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
+    echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE > /dev/null 2>&1"
+    echo "            terraform show \$PLANFILE"
     echo "    apply:"
     echo "      steps:"
     echo "        - run: |"
@@ -339,8 +335,8 @@ while IFS= read -r env; do
     echo "            echo \"Environment: $env\""
     echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$sample_relative_path\""
     echo "            terraform apply -auto-approve \$PLANFILE"
-    } >> atlantis.yaml
-done < "$ENV_FILE"
+} >> atlantis.yaml
+done
 
 # Clean up
 rm -f "$ENV_FILE" "$BACKEND_FILE" "$TFVARS_FILE" "$PROJECT_INFO_FILE"
