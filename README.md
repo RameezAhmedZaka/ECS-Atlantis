@@ -223,7 +223,7 @@ Make sure you are following this folder structure for any app and than you can p
     ├── providers.tf
     └── variables.tf
 ```
-Overall Structure can look like this
+Overall Structure can look like this and make sure that the repo-config-generator.sh is placed at root
 ```
 repository/
 .
