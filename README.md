@@ -380,6 +380,6 @@ git push origin my-infrastructure-change
 
 ### Debugging Tips:
 - Check ECS task logs in CloudWatch
-- Verify GitHub webhook deliveries in repo settings
 - Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
 - Ensure environment folders (e.g production, staging, helia) exist
+- Ensure that you have made changes in the .tf files before making the PR.
