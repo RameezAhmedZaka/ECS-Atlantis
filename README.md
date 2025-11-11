@@ -124,17 +124,24 @@ aws ssm put-parameter \
 ### GitHub App Parameters in `atlantis/config/dev.tfvars`
 
 ```hcl
+aws = {
+  profile = ""                                           # mention profile
+}
 github_repositories_webhook = {
-  github_owner               = "owner-of-github-app"
+  github_owner               = ""                         # owner-of-github-app
   github_app_key_base64      = "/github/app/key_base64"   # base64 PEM file
   github_app_pem_file        = "/github/app/pem_file"     # PEM file as-is
-  repositories               = ["terraform"]              # repositories to add webhook to      
-  github_app_id              = "github-app-id"            # app_id
-  github_app_installation_id = "xyz"                      # installation id              
+  repositories               = [""]                       # repositories on which you want to run alantis and on which you installed github app      
+  github_app_id              = ""                         # app_id
+  github_app_installation_id = ""                         # installation id              
 }
 
 atlantis_ecs = {
   atlantis_repo_allowlist = "github.com/your-org/*"       # add this too in terraform.tfvars
+  {
+      name  = "ATLANTIS_REPO_ALLOWLIST"
+      value = "github.com/<org-name>/*"                   # name of org  
+    },
 }
 
 atlantis_api_gateway = {
