@@ -89,12 +89,12 @@ github_repositories_webhook = {
   github_app_key_base64      = "/github/app/key_base64"                   
   github_app_pem_file        = "/github/app/pem_file" 
   create                     = false                                     #remains false as we dont need wehbook manually to create
-  repositories               = [""] # repositories to add webhook to
+  repositories               = [""]                                      # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = ""        #enter the app_id
-  github_app_installation_id = ""
+  github_app_id              = ""                                        #enter the app_id
+  github_app_installation_id = ""                                        #enter the installation_id
 } 
 
 lb = {
@@ -128,5 +128,5 @@ atlantis_api_gateway = {
   to_port                  = 4141
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
-  api_id                   = ""                          #create the api_id
+  api_id                   = ""                          #enter the api_id 
 }
