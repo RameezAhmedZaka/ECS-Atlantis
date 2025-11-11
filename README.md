@@ -346,7 +346,7 @@ git checkout -b my-infrastructure-change
 vim application/app1/main.tf
 git add .
 git commit -m "Add new resource to app1"
-git push origin feature/my-infrastructure-change
+git push origin my-infrastructure-change
 ```
 - Create PR on GitHub for main branch
 - Atlantis automatically runs 'terraform plan' and comments results
