@@ -342,7 +342,7 @@ atlantis apply -p project-name# Apply specific project
 ```
 ### 3. Example Workflow
 ```
-git checkout -b feature/my-infrastructure-change
+git checkout -b my-infrastructure-change
 vim application/app1/main.tf
 git add .
 git commit -m "Add new resource to app1"
