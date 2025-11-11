@@ -1,6 +1,6 @@
 aws = {
   region  = "us-east-1"
-  profile = "admin"
+  profile = ""
 }
 
 vpc = {
@@ -53,7 +53,7 @@ atlantis_ecs = {
   region                        = "us-east-1"
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
-  github_webhook_secret         = "github_webhook_secret"
+  github_webhook_secret         = "github_webhook_secret"          # name of secret that you pushed to secrets manager           
 
     environment_variables = [
     {
@@ -62,7 +62,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/RameezAhmedZaka/*"
+      value = "github.com//*"
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
@@ -88,8 +88,8 @@ github_repositories_webhook = {
   github_owner               = "" 
   github_app_key_base64      = "/github/app/key_base64"                   
   github_app_pem_file        = "/github/app/pem_file" 
-  create                     = false
-  repositories               = ["ECS-Atlantis"] # repositories to add webhook to
+  create                     = false                                     #remains false as we dont need wehbook manually to create
+  repositories               = [""] # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
