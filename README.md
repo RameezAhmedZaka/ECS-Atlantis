@@ -210,18 +210,23 @@ resource "aws_iam_role_policy_attachment" "admin_access" {
 ## 📂 Required Folder Structure
 Make sure you are following this folder structure for any app and than you can place at root or at folder.
 ```
-└── db71
-    ├── backend.tf
-    ├── config
-    │   ├── helia.tfvars
-    │   ├── production.tfvars
-    │   └── stage.tfvars
-    ├── env
-    │   └── staging
-    │       └── stage.conf
-    ├── main.tf
-    ├── providers.tf
-    └── variables.tf
+app1
+├── backend.tf
+├── config
+│   ├── helia.tfvars
+│   ├── production.tfvars
+│   └── stage.tfvars
+├── env
+│   ├── helia
+│   │   └── helia.conf
+│   ├── production
+│   │   └── prod.conf
+│   └── staging
+│       └── stage.conf
+├── main.tf
+├── providers.tf
+└── variables.tf
+
 ```
 Overall Structure can look like this and make sure that the repo-config-generator.sh is placed at root
 ```
