@@ -105,8 +105,9 @@ Covert into base64
 ```
 base64 <file-name-downloaded> > <file-name-want-to-create.base64>
 ```
-command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64
-Store the Base64 key
+Command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64.
+
+Store the Base64 key.
 ```
 aws ssm put-parameter \
   --name "/github/app/key_base64" \                     # set the same name or if changing than update in config/dev.tfvars
