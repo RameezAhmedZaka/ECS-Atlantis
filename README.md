@@ -47,7 +47,7 @@ aws apigatewayv2 create-stage \
 aws secretsmanager create-secret \
   --name github_webhook_secret \                         # set the same name or if changing than update in config/dev.tfvars
   --description "Secret for verifying GitHub App webhooks" \
-  --secret-string "<place-secret-here>" 
+  --secret-string "<place-secret-here>"                  # specify region if you are not using default one
 
 ```
 
@@ -99,7 +99,7 @@ aws ssm put-parameter \
   --name "/github/app/pem_file" \                       # set the same name or if changing than update in config/dev.tfvars
   --value "$(cat name_pem_file)" \                      # name of file that you downloaded
   --type "SecureString" \
-  --overwrite
+  --overwrite                                           # specify region if you are not using default one
 ```
 Covert into base64
 ```
@@ -113,7 +113,7 @@ aws ssm put-parameter \
   --name "/github/app/key_base64" \                     # set the same name or if changing than update in config/dev.tfvars
   --value "$(cat name_of_file)" \                       # the file name that you created using the above command
   --type "SecureString" \
-  --overwrite
+  --overwrite                                           # specify region if you are not using default one
 ```
 
 ### Install GitHub App
