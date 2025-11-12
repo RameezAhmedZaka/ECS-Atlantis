@@ -357,7 +357,13 @@ aws = {
   region  = "us-east-1"
   profile = ""
 }
-Clone the code 
+- Clone the code
+- Change this configuration according to your need for s3 backend
+```
+bucket  = "tf-state-test123"
+key     = "terraform.tfstate"
+region  = "us-east-1"
+```
 ```
 cd atlantis
 ```
