@@ -105,7 +105,7 @@ aws ssm put-parameter \
   --overwrite                                         
 ```
 ### Instruction for Paramater Store command above:
-- Set the same name or if changing than update in atlantis/config/dev.tfvars for variable github_app_pem_file.
+- Set the same name as /github/app/pem_file or if changing than update in atlantis/config/dev.tfvars for variable github_app_pem_file.
 - Name of file that you downloaded placed after cat "$(cat name_pem_file)"
 - Specify region if you are not using default one
   
@@ -124,7 +124,7 @@ aws ssm put-parameter \
   --overwrite                                         
 ```
 ### Instruction for Paramater Store command above:
-- Set the same name or if changing than update in atlantis/config/dev.tfvars for variable github_app_key_base64.
+- Set the same name as /github/app/key_base64 or if changing than update in atlantis/config/dev.tfvars for variable github_app_key_base64.
 - Name of file that you downloaded placed after cat "$(cat name_of_file)"
 - Specify region if you are not using default one
 
