@@ -50,7 +50,7 @@ aws secretsmanager create-secret \
   --secret-string "<place-secret-here>"                  
 
 ```
-## Instruction for secret manager command above:
+### Instruction for secret manager command above:
 - Set the same name as github_webhook_secret or if changing than update in atlantis/config/dev.tfvars for variable github_webhook_secret.
 - Specify region if you are not using default one 
 
@@ -104,7 +104,7 @@ aws ssm put-parameter \
   --type "SecureString" \
   --overwrite                                         
 ```
-## Instruction for Paramater Store command above:
+### Instruction for Paramater Store command above:
 - Set the same name or if changing than update in atlantis/config/dev.tfvars for variable github_app_pem_file.
 - Name of file that you downloaded placed after cat "$(cat name_pem_file)"
 - Specify region if you are not using default one
@@ -123,7 +123,7 @@ aws ssm put-parameter \
   --type "SecureString" \
   --overwrite                                         
 ```
-## Instruction for Paramater Store command above:
+### Instruction for Paramater Store command above:
 - Set the same name or if changing than update in atlantis/config/dev.tfvars for variable github_app_key_base64.
 - Name of file that you downloaded placed after cat "$(cat name_of_file)"
 - Specify region if you are not using default one
