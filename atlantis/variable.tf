@@ -192,7 +192,6 @@ variable "github_repositories_webhook" {
     insecure_ssl               = bool
     content_type               = string
     events                     = list(string)
-    github_webhook_secret      = string
   })
 }
 variable "lb" {

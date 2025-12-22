@@ -54,7 +54,6 @@ atlantis_ecs = {
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
   github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
-  github_webhook_secret         = "github_webhook_secret"          # name of secret that you pushed to secrets manager           
 
     environment_variables = [
     {
@@ -87,9 +86,9 @@ atlantis_ecs = {
 
 github_repositories_webhook = {
   github_owner               = "RameezAhmedZaka"                                    #organization name or user name
-  github_app_key_base64      = ""                   
-  github_app_pem_file        = "" 
-  github_webhook_secret      = ""                                                    #secret name in secrets manager
+  # github_app_key_base64      = ""                   
+  # github_app_pem_file        = "" 
+  # github_webhook_secret      = ""                                                    #secret name in secrets manager
   create                     = false                                                 #remains false as we dont need wehbook manually to create
   repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
   insecure_ssl               = false

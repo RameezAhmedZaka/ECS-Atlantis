@@ -1,7 +1,3 @@
-# data "aws_secretsmanager_secret_version" "github_webhook_secret" {
-#   secret_id = var.github_webhook_secret
-# }
-
 resource "aws_ecs_cluster" "cluster" {
   name = var.cluster_name
 }

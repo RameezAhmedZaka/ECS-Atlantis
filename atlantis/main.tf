@@ -216,17 +216,14 @@ module "github_webhook" {
   github_owner               = var.github_repositories_webhook.github_owner
   github_app_id              = var.github_repositories_webhook.github_app_id
   github_app_installation_id = var.github_repositories_webhook.github_app_installation_id
-
   create                     = var.github_repositories_webhook.create
   repositories               = var.github_repositories_webhook.repositories
   webhook_url                = module.apigateway.atlantis_url_webhook
   content_type               = var.github_repositories_webhook.content_type
   insecure_ssl               = var.github_repositories_webhook.insecure_ssl
   events                     = var.github_repositories_webhook.events
-  
-  github_app_key_base64      = local.github_app_secret.key_base64
-  github_app_pem_file        = local.github_app_secret.private_key
-  github_webhook_secret      = local.github_app_secret.webhook_secret
+  # github_app_key_base64      = local.github_app_secret.key_base64
+  # github_app_pem_file        = local.github_app_secret.private_key
 }
 
 ######################
@@ -279,9 +276,9 @@ module "backend" {
   repo_config_file              = var.atlantis_ecs.repo_config_file
   environment_variables         = var.atlantis_ecs.environment_variables
   atlantis_url                  = module.apigateway.atlantis_url_gui
-  github_app_secret_arn = data.aws_secretsmanager_secret_version.github_app.arn
-  gh_app_key            = local.github_app_secret["private_key"]
-  github_webhook_secret = local.github_app_secret["webhook_secret"]
-  gh_app_id             = var.github_repositories_webhook.github_app_id
-  repo_config_json      = local.repo_config_json
+  github_app_secret_arn         = data.aws_secretsmanager_secret_version.github_app.arn
+  # gh_app_key                    = local.github_app_secret["private_key"]
+  # github_webhook_secret         = local.github_app_secret["webhook_secret"]
+  gh_app_id                     = var.github_repositories_webhook.github_app_id
+  repo_config_json              = local.repo_config_json
 }
