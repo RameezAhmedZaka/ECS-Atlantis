@@ -1,6 +1,6 @@
 aws = {
   region  = "us-east-1"
-  profile = "admin"
+  profile = ""
 }
 
 vpc = {
@@ -62,7 +62,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/RameezAhmedZaka/*"
+      value = "github.com/<org-name>/*"
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
