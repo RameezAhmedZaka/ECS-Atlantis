@@ -129,6 +129,11 @@ atlantis_api_gateway = {
   from_port                = 4141
   to_port                  = 4141
   protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]                   
+  cidr_blocks              =[
+  "192.30.252.0/22",
+  "185.199.108.0/22",
+  "140.82.112.0/20",
+  "143.55.64.0/20"
+]                 
   api_name                 = "atlantis-api"
 }
