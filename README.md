@@ -21,28 +21,8 @@ Atlantis enables GitOps-style workflows by automating `terraform plan` and `appl
 
 ---
   
-### Create the api for terraform code
-1. Create the API
-```
-aws apigatewayv2 create-api \
-    --name atlantis-api \
-    --protocol-type HTTP \
-    --description "Atlantis HTTP API" \
-    --region us-east-1
-```
-
-
-Note the id returned → this is your API_ID that will be used in terraform.tfvars
-
-2. Deploy the API to a stage default 
-```
-aws apigatewayv2 create-stage \
-    --api-id <api-id> \
-    --stage-name '$default' \
-    --auto-deploy \
-    --region us-east-1
-```
-3. Send the secret to secret manager
+### Create the Secrets for terraform code
+Send the secret to secret manager
 ```
 aws secretsmanager create-secret \
   --name github_webhook_secret \                         
@@ -62,7 +42,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Fill details:
    - Name: <unique-name>
    - Homepage URL: your project URL (optional) add the same as wehbook url.
-   - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created before)
+   - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created using the terraform code.)
      may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/atlantis/events```
    - Add the secret the same secret that you pushed to secrets manager before.  
   
