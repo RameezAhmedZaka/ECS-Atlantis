@@ -85,7 +85,7 @@ atlantis_ecs = {
 
 
 github_repositories_webhook = {
-  github_owner               = "RameezAhmedZaka"                                    #organization name or user name
+  github_owner               = ""                                    #organization name or user name
   github_app_key_base64      = "/github/app/key_base64"                   
   github_app_pem_file        = "/github/app/pem_file" 
   create                     = false                                                 #remains false as we dont need wehbook manually to create
