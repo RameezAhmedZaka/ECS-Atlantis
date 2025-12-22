@@ -45,11 +45,14 @@ aws apigatewayv2 create-stage \
 3. Send the secret to secret manager
 ```
 aws secretsmanager create-secret \
-  --name github_webhook_secret \                         # set the same name or if changing than update in config/dev.tfvars
+  --name github_webhook_secret \                         
   --description "Secret for verifying GitHub App webhooks" \
-  --secret-string "<place-secret-here>" 
+  --secret-string "<place-secret-here>"                  
 
 ```
+### Instruction for secret manager command above:
+- Set the same name as github_webhook_secret or if changing than update in atlantis/config/dev.tfvars for variable github_webhook_secret.
+- Specify region if you are not using default one 
 
 ## 🔑 GitHub Integration
 
@@ -96,24 +99,34 @@ Atlantis interacts with GitHub using a **GitHub App**.
 Store the PEM file
 ```
 aws ssm put-parameter \
-  --name "/github/app/pem_file" \                       # set the same name or if changing than update in config/dev.tfvars
-  --value "$(cat name_pem_file)" \                      # name of file that you downloaded
+  --name "/github/app/pem_file" \                      
+  --value "$(cat name_pem_file)" \                   
   --type "SecureString" \
-  --overwrite
+  --overwrite                                         
 ```
+### Instruction for Paramater Store command above:
+- Set the same name as /github/app/pem_file or if changing than update in atlantis/config/dev.tfvars for variable github_app_pem_file.
+- Name of file that you downloaded placed after cat "$(cat name_pem_file)"
+- Specify region if you are not using default one
+  
 Covert into base64
 ```
 base64 <file-name-downloaded> > <file-name-want-to-create.base64>
 ```
-command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64
-Store the Base64 key
+Command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64.
+
+Store the Base64 key.
 ```
 aws ssm put-parameter \
-  --name "/github/app/key_base64" \                     # set the same name or if changing than update in config/dev.tfvars
-  --value "$(cat name_of_file)" \                       # the file name that you created using the above command
+  --name "/github/app/key_base64" \                    
+  --value "$(cat name_of_file)" \                       
   --type "SecureString" \
-  --overwrite
+  --overwrite                                         
 ```
+### Instruction for Paramater Store command above:
+- Set the same name as /github/app/key_base64 or if changing than update in atlantis/config/dev.tfvars for variable github_app_key_base64.
+- Name of file that you downloaded placed after cat "$(cat name_of_file)"
+- Specify region if you are not using default one
 
 ### Install GitHub App
 - Install the App on selected repositories.
@@ -123,17 +136,23 @@ aws ssm put-parameter \
 ### GitHub App Parameters in `atlantis/config/dev.tfvars`
 
 ```hcl
+aws = {
+  profile = ""                                           # mention profile
+}
 github_repositories_webhook = {
-  github_owner               = "owner-of-github-app"
+  github_owner               = ""                         # owner-of-github-app
   github_app_key_base64      = "/github/app/key_base64"   # base64 PEM file
   github_app_pem_file        = "/github/app/pem_file"     # PEM file as-is
-  repositories               = ["terraform"]              # repositories to add webhook to      
-  github_app_id              = "github-app-id"            # app_id
-  github_app_installation_id = "xyz"                      # installation id              
+  repositories               = [""]                       # repositories on which you want to run alantis and on which you installed github app      
+  github_app_id              = ""                         # app_id
+  github_app_installation_id = ""                         # installation id              
 }
 
 atlantis_ecs = {
-  atlantis_repo_allowlist = "github.com/your-org/*"       # add this too in terraform.tfvars
+  {
+      name  = "ATLANTIS_REPO_ALLOWLIST"
+      value = "github.com/<org-name>/*"                   # name of org  
+    },
 }
 
 atlantis_api_gateway = {
@@ -143,7 +162,7 @@ atlantis_api_gateway = {
 ## 📁 Server-Side Configuration: atlantis/modules/ecs/server-atlantis.yaml
 ```
 repos:
-  - id: github.com/<org-name>/<repo-name>                     # change this configuration
+  - id: github.com/<org-name>/<repo-name>                  # change this configuration
     allow_custom_workflows: true
     allowed_overrides:
       - apply_requirements
@@ -154,7 +173,7 @@ repos:
     repo_locking: false  
     pre_workflow_hooks:
       - run: |
-          chmod +x ./repo-config-generator.sh               # place the file at root level of your repo that you installed.
+          chmod +x ./repo-config-generator.sh              # place the file repo-config-generator.sh at root level of your repo that you installed.
           ./repo-config-generator.sh
         description: Generating configs
 ```
@@ -166,24 +185,45 @@ repos:
 
 ### 🚀 Atlantis Environment Configuration
 ```
-{
-  name: "ATLANTIS_REPO_CONFIG_JSON",
-  value: jsonencode(yamldecode(file("${path.module}/server-atlantis.yaml"))),
-},
-{
-  name: "ATLANTIS_ALLOW_COMMANDS",
-  value: "version,plan,apply,unlock,approve_policies"
-},
-{
-  name: "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS",
-  value: "true"
-}
+    {
+      name  = "ATLANTIS_PORT"
+      value = "4141"
+    },
+    {
+      name  = "ATLANTIS_REPO_ALLOWLIST"
+      value = "github.com/RameezAhmedZaka/*"
+    },
+    {
+      name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
+      value = "true"
+    },
+    {
+      name  = "ATLANTIS_ALLOW_COMMANDS"
+      value = "version,plan,apply,unlock,approve_policies"
+    },
+    {
+      name  = "ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS"
+      value = "true"
+    },
+    {
+      name  = "ATLANTIS_MAX_COMMENTS_PER_COMMAND"
+      value = "0"
+    },
+    {
+      name  = "ATLANTIS_GH_WEBHOOK_SECRET"
+      value = data.aws_secretsmanager_secret_version.github_webhook_secret.secret_string
+     }    
 ```
 ### Explanation:
 
 - ATLANTIS_REPO_CONFIG_JSON: Loads server-side config from server-atlantis.yaml
 - ATLANTIS_ALLOW_COMMANDS: Specifies allowed commands (plan, apply, etc.)
 - ATLANTIS_HIDE_UNCHANGED_PLAN_COMMENTS: Hides plan comments when nothing changes
+- ATLANTIS_PORT – Specifies the port on which the Atlantis server runs (here, port 4141).
+- ATLANTIS_REPO_ALLOWLIST – Limits Atlantis to only operate on repositories matching github.com/RameezAhmedZaka/*.
+- ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT – Enables Markdown formatting for Terraform plan diffs in pull requests.
+- ATLANTIS_MAX_COMMENTS_PER_COMMAND – Sets the maximum number of comments per command (0 = unlimited).
+- ATLANTIS_GH_WEBHOOK_SECRET – Stores the GitHub webhook secret (fetched securely from AWS Secrets Manager).
 
 ## Atlantis Permissions
 ```
@@ -209,20 +249,25 @@ resource "aws_iam_role_policy_attachment" "admin_access" {
 ## 📂 Required Folder Structure
 Make sure you are following this folder structure for any app and than you can place at root or at folder.
 ```
-└── db71
-    ├── backend.tf
-    ├── config
-    │   ├── helia.tfvars
-    │   ├── production.tfvars
-    │   └── stage.tfvars
-    ├── env
-    │   └── staging
-    │       └── stage.conf
-    ├── main.tf
-    ├── providers.tf
-    └── variables.tf
+app1
+├── backend.tf
+├── config
+│   ├── helia.tfvars
+│   ├── production.tfvars
+│   └── stage.tfvars
+├── env
+│   ├── helia
+│   │   └── helia.conf
+│   ├── production
+│   │   └── prod.conf
+│   └── staging
+│       └── stage.conf
+├── main.tf
+├── providers.tf
+└── variables.tf
+
 ```
-Overall Structure can look like this
+Overall Structure can look like this and make sure that the repo-config-generator.sh is placed at root
 ```
 repository/
 .
@@ -312,7 +357,13 @@ aws = {
   region  = "us-east-1"
   profile = ""
 }
-Clone the code 
+- Clone the code
+- Change this configuration according to your need for s3 backend
+```
+bucket  = "tf-state-test123"
+key     = "terraform.tfstate"
+region  = "us-east-1"
+```
 ```
 cd atlantis
 ```
@@ -341,11 +392,11 @@ atlantis apply -p project-name# Apply specific project
 ```
 ### 3. Example Workflow
 ```
-git checkout -b feature/my-infrastructure-change
+git checkout -b my-infrastructure-change
 vim application/app1/main.tf
 git add .
 git commit -m "Add new resource to app1"
-git push origin feature/my-infrastructure-change
+git push origin my-infrastructure-change
 ```
 - Create PR on GitHub for main branch
 - Atlantis automatically runs 'terraform plan' and comments results
@@ -379,6 +430,6 @@ git push origin feature/my-infrastructure-change
 
 ### Debugging Tips:
 - Check ECS task logs in CloudWatch
-- Verify GitHub webhook deliveries in repo settings
 - Ensure all required Terraform files exist(main.tf, variables.tf, provider.tf)
 - Ensure environment folders (e.g production, staging, helia) exist
+- Ensure that you have made changes in the .tf files before making the PR.

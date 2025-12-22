@@ -49,6 +49,6 @@ variable "protocol" {
 variable "cidr_blocks" {
   type = list(string)
 }
-variable "api_id" {
+variable "api_name" {
   type = string
 }

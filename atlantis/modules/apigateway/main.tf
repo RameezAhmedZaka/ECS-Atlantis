@@ -1,5 +1,12 @@
-data "aws_apigatewayv2_api" "existing_api" {
-  api_id = var.api_id
+resource "aws_apigatewayv2_api" "atlantis" {
+  name          = var.api_name
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.atlantis.id
+  name        = "$default"
+  auto_deploy = true
 }
 
 resource "aws_apigatewayv2_vpc_link" "atlantis" {
@@ -9,7 +16,7 @@ resource "aws_apigatewayv2_vpc_link" "atlantis" {
 }
 
 resource "aws_apigatewayv2_integration" "atlantis" {
-  api_id                 = data.aws_apigatewayv2_api.existing_api.id
+  api_id                 = aws_apigatewayv2_api.atlantis.id
   integration_type       = var.integration_type
   integration_method     = var.integration_method
   connection_type        = var.connection_type
@@ -23,13 +30,13 @@ resource "aws_apigatewayv2_integration" "atlantis" {
 
 
 resource "aws_apigatewayv2_route" "atlantis_gui" {
-  api_id    = data.aws_apigatewayv2_api.existing_api.id
+  api_id    = aws_apigatewayv2_api.atlantis.id
   route_key = var.atlantis_gui_route_key
   target    = "integrations/${aws_apigatewayv2_integration.atlantis.id}"
 }
 
 resource "aws_apigatewayv2_route" "atlantis_proxy" {
-  api_id    = data.aws_apigatewayv2_api.existing_api.id
+  api_id    = aws_apigatewayv2_api.atlantis.id
   route_key = var.atlantis_proxy_route_key
   target    = "integrations/${aws_apigatewayv2_integration.atlantis.id}"
 }

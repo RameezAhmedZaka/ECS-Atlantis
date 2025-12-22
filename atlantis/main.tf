@@ -123,5 +123,5 @@ module "apigateway" {
   protocol                 = var.atlantis_api_gateway.protocol
   cidr_blocks              = var.atlantis_api_gateway.cidr_blocks
   lb_listener_arn          = module.lb.lb_listener_arn
-  api_id                   = var.atlantis_api_gateway.api_id
+  api_name                 = var.atlantis_api_gateway.api_name
 }

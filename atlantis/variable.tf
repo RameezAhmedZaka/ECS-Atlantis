@@ -112,6 +112,6 @@ variable "atlantis_api_gateway" {
     to_port                  = number
     protocol                 = string
     cidr_blocks              = list(string)
-    api_id                   = string
+    api_name                 = string
   })
 }
