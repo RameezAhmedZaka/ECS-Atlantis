@@ -118,9 +118,6 @@ variable "backend_execution_role_name" {
 variable "region" {
   type = string
 }
-# variable "gh_app_key" {
-#   type = string
-# }
 variable "image" {
   type = string
 }
