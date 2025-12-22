@@ -1,6 +1,6 @@
-data "aws_secretsmanager_secret_version" "github_webhook_secret" {
-  secret_id = var.github_webhook_secret
-}
+# data "aws_secretsmanager_secret_version" "github_webhook_secret" {
+#   secret_id = var.github_webhook_secret
+# }
 
 resource "aws_ecs_cluster" "cluster" {
   name = var.cluster_name
@@ -89,7 +89,7 @@ resource "aws_ecs_task_definition" "backend_task" {
           },
           {
             name  = "ATLANTIS_GH_WEBHOOK_SECRET"
-            value = data.aws_secretsmanager_secret_version.github_webhook_secret.secret_string
+            valueFrom = "${var.github_app_secret_arn}:webhook_secret::"
           }
         ]
       )
@@ -97,7 +97,7 @@ resource "aws_ecs_task_definition" "backend_task" {
       secrets = [
         {
           name      = "ATLANTIS_GH_APP_KEY"
-          valueFrom = var.gh_app_key
+          valueFrom = "${var.github_app_secret_arn}:private_key::"
         }
       ]
 

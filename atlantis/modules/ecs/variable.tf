@@ -148,3 +148,6 @@ variable "gh_app_id" {
 variable "github_webhook_secret" {
   type        = string
 }
+variable "github_app_secret_arn" {
+  type        = string
+}

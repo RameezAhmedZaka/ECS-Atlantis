@@ -1,11 +1,11 @@
 aws = {
   region  = "us-east-1"
-  profile = ""
+  profile = "admin"
 }
 
 vpc = {
   vpc_name             = "atlantis"
-  cide_block           = "10.75.0.0/16"
+  cidr_block           = "10.75.0.0/16"
   public_subnets       = ["10.75.0.0/20", "10.75.16.0/20", "10.75.32.0/20"]
   private_subnets      = ["10.75.112.0/20", "10.75.128.0/20"]
   enable_nat_gateway   = true
@@ -53,6 +53,7 @@ atlantis_ecs = {
   region                        = "us-east-1"
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
+  github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
   github_webhook_secret         = "github_webhook_secret"          # name of secret that you pushed to secrets manager           
 
     environment_variables = [
@@ -62,7 +63,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/<org-name>/*"
+      value = "github.com/RameezAhmedZaka/*"
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
@@ -86,8 +87,9 @@ atlantis_ecs = {
 
 github_repositories_webhook = {
   github_owner               = "RameezAhmedZaka"                                    #organization name or user name
-  github_app_key_base64      = "/github/app/key_base64"                   
-  github_app_pem_file        = "/github/app/pem_file" 
+  github_app_key_base64      = ""                   
+  github_app_pem_file        = "" 
+  github_webhook_secret      = ""                                                    #secret name in secrets manager
   create                     = false                                                 #remains false as we dont need wehbook manually to create
   repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
   insecure_ssl               = false
