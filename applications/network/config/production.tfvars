@@ -1,6 +1,6 @@
 region      = "us-east-1"
 environment = "production"
-bucket_name = "network-prod-bucket427111543"
+bucket_name = "network-prod-bucket42711543"
 
 project_name         = "prod-atlantis"
 vpc_cidr             = "10.0.0.0/16"
