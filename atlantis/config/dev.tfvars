@@ -2,7 +2,7 @@ atlantis_secret = "/github/app/atlantis"
 
 aws = {
   region  = "us-east-1"
-  profile = "admin"
+  profile = ""
 }
 
 vpc = {
@@ -55,8 +55,6 @@ atlantis_ecs = {
   region                        = "us-east-1"
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
-  # github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
-
     environment_variables = [
     {
       name  = "ATLANTIS_PORT"
@@ -64,7 +62,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/RameezAhmedZaka/*"
+      value = "github.com/<org-name>/*"                  #name of the organization or user
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
@@ -87,14 +85,14 @@ atlantis_ecs = {
 
 
 github_repositories_webhook = {
-  github_owner               = "RameezAhmedZaka"                                    #organization name or user name
-  create                     = false                                                 #remains false as we dont need wehbook manually to create
-  repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
+  github_owner               = ""                                    #organization name or user name
+  create                     = false                                 #remains false as we dont need wehbook manually to create
+  repositories               = [""]                                  # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "2409368"                                         #enter the app_id
-  github_app_installation_id = "97957214"                                        #enter the installation_id
+  github_app_id              = ""                                        #enter the app_id
+  github_app_installation_id = ""                                        #enter the installation_id
 } 
 
 lb = {
