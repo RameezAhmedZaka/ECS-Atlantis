@@ -28,7 +28,7 @@ resource "aws_ecs_service" "atlantis_service" {
   }
 
   load_balancer {
-    container_name   = var.container_name
+    container_name   = var.container_name   
     container_port   = var.container_port
     target_group_arn = var.backend_target_group_arn
   }
