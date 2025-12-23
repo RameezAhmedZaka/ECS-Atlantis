@@ -118,9 +118,6 @@ variable "backend_execution_role_name" {
 variable "region" {
   type = string
 }
-variable "gh_app_key" {
-  type = string
-}
 variable "image" {
   type = string
 }
@@ -145,6 +142,6 @@ variable "repo_config_json" {
 variable "gh_app_id" {
   type        = string
 }
-variable "github_webhook_secret" {
+variable "atlantis_secret" {
   type        = string
 }

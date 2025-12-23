@@ -1,15 +1,9 @@
-data "aws_availability_zones" "all" {}
-
-locals {
-  repo_config_json = jsonencode(yamldecode(file(var.atlantis_ecs.repo_config_file)))
-}
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
 
   name                 = var.vpc.vpc_name
-  cidr                 = var.vpc.cide_block
+  cidr                 = var.vpc.cidr_block
   azs                  = data.aws_availability_zones.all.names
   public_subnets       = var.vpc.public_subnets
   private_subnets      = var.vpc.private_subnets
@@ -19,8 +13,60 @@ module "vpc" {
   enable_dns_support   = var.vpc.enable_dns_support
 }
 
+module "lb" {
+  source             = "./modules/lb"
+  lb_name            = var.lb.lb_name
+  internal           = var.lb.internal
+  load_balancer_type = var.lb.load_balancer_type
+  public_subnets     = module.vpc.public_subnets
+  target_group_name  = var.lb.target_group_name
+  port               = var.lb.port
+  protocol           = var.lb.protocol
+  vpc_id             = module.vpc.vpc_id
+  target_type        = var.lb.target_type
+  listener_port      = var.lb.listener_port
+  listener_protocol  = var.lb.listener_protocol
+  lb_sg_name         = var.lb.lb_sg_name
+}
+module "apigateway" {
+  source                   = "./modules/apigateway"
+  vpc_link                 = var.atlantis_api_gateway.vpc_link
+  vpc_id                   = module.vpc.vpc_id
+  private_subnets          = module.vpc.private_subnets
+  integration_type         = var.atlantis_api_gateway.integration_type
+  integration_method       = var.atlantis_api_gateway.integration_method
+  connection_type          = var.atlantis_api_gateway.connection_type
+  payload_format_version   = var.atlantis_api_gateway.payload_format_version
+  request_parameters       = var.atlantis_api_gateway.request_parameters
+  atlantis_gui_route_key   = var.atlantis_api_gateway.atlantis_gui_route_key
+  atlantis_proxy_route_key = var.atlantis_api_gateway.atlantis_proxy_route_key
+  atlantis_sg_name         = var.atlantis_api_gateway.atlantis_sg_name
+  atlantis_sg_description  = var.atlantis_api_gateway.atlantis_sg_description
+  from_port                = var.atlantis_api_gateway.from_port
+  to_port                  = var.atlantis_api_gateway.to_port
+  protocol                 = var.atlantis_api_gateway.protocol
+  cidr_blocks              = var.atlantis_api_gateway.cidr_blocks
+  lb_listener_arn          = module.lb.lb_listener_arn
+  api_name                 = var.atlantis_api_gateway.api_name
+}
+
+module "github_webhook" {
+  source                     = "./modules/github-repository-webhook"
+  
+  github_owner               = var.github_repositories_webhook.github_owner
+  github_app_id              = var.github_repositories_webhook.github_app_id
+  github_app_installation_id = var.github_repositories_webhook.github_app_installation_id
+  create                     = var.github_repositories_webhook.create
+  repositories               = var.github_repositories_webhook.repositories
+  webhook_url                = module.apigateway.atlantis_url_webhook
+  content_type               = var.github_repositories_webhook.content_type
+  insecure_ssl               = var.github_repositories_webhook.insecure_ssl
+  events                     = var.github_repositories_webhook.events
+}
+
 module "backend" {
-  source                        = "./modules/ecs"
+  source = "./modules/ecs"
+
   cluster_name                  = var.atlantis_ecs.cluster_name
   capacity_providers            = var.atlantis_ecs.capacity_providers
   base                          = var.atlantis_ecs.base
@@ -61,67 +107,11 @@ module "backend" {
   cidr_blocks                   = var.atlantis_ecs.cidr_blocks
   backend_task_role_name        = var.atlantis_ecs.backend_task_role_name
   backend_execution_role_name   = var.atlantis_ecs.backend_execution_role_name
-  gh_app_key                    = module.github_webhook.gh_app_key
   image                         = var.atlantis_ecs.image
   repo_config_file              = var.atlantis_ecs.repo_config_file
   environment_variables         = var.atlantis_ecs.environment_variables
   atlantis_url                  = module.apigateway.atlantis_url_gui
+  atlantis_secret               = data.aws_secretsmanager_secret_version.github_app.arn
   gh_app_id                     = var.github_repositories_webhook.github_app_id
   repo_config_json              = local.repo_config_json
-  github_webhook_secret         = var.atlantis_ecs.github_webhook_secret
-}
-
-module "github_webhook" {
-  source                     = "./modules/github-repository-webhook"
-  github_app_key_base64      = var.github_repositories_webhook.github_app_key_base64
-  github_app_pem_file        = var.github_repositories_webhook.github_app_pem_file
-  github_owner               = var.github_repositories_webhook.github_owner
-  create                     = var.github_repositories_webhook.create
-  repositories               = var.github_repositories_webhook.repositories
-  webhook_url                = module.apigateway.atlantis_url_webhook
-  content_type               = var.github_repositories_webhook.insecure_ssl
-  insecure_ssl               = var.github_repositories_webhook.insecure_ssl
-  events                     = var.github_repositories_webhook.events
-  github_app_id              = var.github_repositories_webhook.github_app_id
-  github_app_installation_id = var.github_repositories_webhook.github_app_installation_id
-
-}
-
-module "lb" {
-  source             = "./modules/lb"
-  lb_name            = var.lb.lb_name
-  internal           = var.lb.internal
-  load_balancer_type = var.lb.load_balancer_type
-  public_subnets     = module.vpc.public_subnets
-  target_group_name  = var.lb.target_group_name
-  port               = var.lb.port
-  protocol           = var.lb.protocol
-  vpc_id             = module.vpc.vpc_id
-  target_type        = var.lb.target_type
-  listener_port      = var.lb.listener_port
-  listener_protocol  = var.lb.listener_protocol
-  lb_sg_name         = var.lb.lb_sg_name
-}
-
-
-module "apigateway" {
-  source                   = "./modules/apigateway"
-  vpc_link                 = var.atlantis_api_gateway.vpc_link
-  vpc_id                   = module.vpc.vpc_id
-  private_subnets          = module.vpc.private_subnets
-  integration_type         = var.atlantis_api_gateway.integration_type
-  integration_method       = var.atlantis_api_gateway.integration_method
-  connection_type          = var.atlantis_api_gateway.connection_type
-  payload_format_version   = var.atlantis_api_gateway.payload_format_version
-  request_parameters       = var.atlantis_api_gateway.request_parameters
-  atlantis_gui_route_key   = var.atlantis_api_gateway.atlantis_gui_route_key
-  atlantis_proxy_route_key = var.atlantis_api_gateway.atlantis_proxy_route_key
-  atlantis_sg_name         = var.atlantis_api_gateway.atlantis_sg_name
-  atlantis_sg_description  = var.atlantis_api_gateway.atlantis_sg_description
-  from_port                = var.atlantis_api_gateway.from_port
-  to_port                  = var.atlantis_api_gateway.to_port
-  protocol                 = var.atlantis_api_gateway.protocol
-  cidr_blocks              = var.atlantis_api_gateway.cidr_blocks
-  lb_listener_arn          = module.lb.lb_listener_arn
-  api_name                 = var.atlantis_api_gateway.api_name
 }

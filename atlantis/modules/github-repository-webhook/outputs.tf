@@ -3,6 +3,6 @@ output "repository_webhook_urls" {
   value       = github_repository_webhook.webhook[*].url
 }
 
-output "gh_app_key" {
-  value = data.aws_ssm_parameter.github_app_pem_file.arn
-}
+# output "gh_app_key" {
+#   value = data.aws_ssm_parameter.github_app_pem_file.arn
+# }

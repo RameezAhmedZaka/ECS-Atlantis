@@ -1,6 +1,6 @@
 region      = "us-east-1"
 environment = "staging"
-bucket_name = "network-stage-bucket335745"
+bucket_name = "network-stage-bucket3345"
 
 
 project_name         = "stage-atlantis"

@@ -1,3 +1,7 @@
+variable "atlantis_secret" {
+  type = string
+}
+
 variable "aws" {
   type = object({
     region  = string
@@ -8,7 +12,7 @@ variable "aws" {
 variable "vpc" {
   type = object({
     vpc_name             = string
-    cide_block           = string
+    cidr_block           = string
     public_subnets       = list(string)
     private_subnets      = list(string)
     enable_nat_gateway   = bool
@@ -16,7 +20,6 @@ variable "vpc" {
     enable_dns_support   = bool
   })
 }
-
 variable "atlantis_ecs" {
   type = object({
     cluster_name                  = string
@@ -25,7 +28,7 @@ variable "atlantis_ecs" {
     weight                        = number
     capacity_provider             = string
     ecs_service_name              = string
-    desired_count_service         = string
+    desired_count_service         = number
     launch_type                   = string
     assign_public_ip              = bool
     container_name                = string
@@ -57,30 +60,26 @@ variable "atlantis_ecs" {
     backend_execution_role_name   = string
     region                        = string
     image                         = string
+    # github_app_secret_arn         = string
     repo_config_file              = string
-    github_webhook_secret         = string
     environment_variables         = list(object({
       name  = string
       value = string
     }))
   })
 }
-
 variable "github_repositories_webhook" {
   type = object({
-    github_app_key_base64      = string
-    github_app_pem_file        = string
     github_owner               = string
+    github_app_id              = string
+    github_app_installation_id = string
     create                     = bool
     repositories               = list(string)
     insecure_ssl               = bool
     content_type               = string
     events                     = list(string)
-    github_app_id              = string
-    github_app_installation_id = string
   })
 }
-
 variable "lb" {
   type = object({
     lb_name            = string
@@ -95,7 +94,6 @@ variable "lb" {
     lb_sg_name         = string
   })
 }
-
 variable "atlantis_api_gateway" {
   type = object({
     vpc_link                 = string

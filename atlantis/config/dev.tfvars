@@ -1,3 +1,5 @@
+atlantis_secret = "/github/app/atlantis"
+
 aws = {
   region  = "us-east-1"
   profile = ""
@@ -5,7 +7,7 @@ aws = {
 
 vpc = {
   vpc_name             = "atlantis"
-  cide_block           = "10.75.0.0/16"
+  cidr_block           = "10.75.0.0/16"
   public_subnets       = ["10.75.0.0/20", "10.75.16.0/20", "10.75.32.0/20"]
   private_subnets      = ["10.75.112.0/20", "10.75.128.0/20"]
   enable_nat_gateway   = true
@@ -53,8 +55,6 @@ atlantis_ecs = {
   region                        = "us-east-1"
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
-  github_webhook_secret         = "github_webhook_secret"          # name of secret that you pushed to secrets manager           
-
     environment_variables = [
     {
       name  = "ATLANTIS_PORT"
@@ -62,7 +62,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/<org-name>/*"
+      value = "github.com/<org-name>/*"                  #name of the organization or user
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
@@ -86,15 +86,13 @@ atlantis_ecs = {
 
 github_repositories_webhook = {
   github_owner               = ""                                    #organization name or user name
-  github_app_key_base64      = "/github/app/key_base64"                   
-  github_app_pem_file        = "/github/app/pem_file" 
-  create                     = false                                                 #remains false as we dont need wehbook manually to create
-  repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
+  create                     = false                                 #remains false as we dont need wehbook manually to create
+  repositories               = [""]                                  # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "2409368"                                        #enter the app_id
-  github_app_installation_id = "97957214"                                        #enter the installation_id
+  github_app_id              = ""                                        #enter the app_id
+  github_app_installation_id = ""                                        #enter the installation_id
 } 
 
 lb = {
@@ -127,6 +125,11 @@ atlantis_api_gateway = {
   from_port                = 4141
   to_port                  = 4141
   protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]                   
+  cidr_blocks              =[
+  "192.30.252.0/22",
+  "185.199.108.0/22",
+  "140.82.112.0/20",
+  "143.55.64.0/20"
+]                 
   api_name                 = "atlantis-api"
 }

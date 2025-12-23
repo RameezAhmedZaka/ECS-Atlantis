@@ -1,14 +1,18 @@
-data "aws_ssm_parameter" "github_app_key_base64" {
-  name = var.github_app_key_base64
+data "aws_secretsmanager_secret_version" "github_app" {
+  secret_id = "/github/app/atlantis"
 }
-data "aws_ssm_parameter" "github_app_pem_file" {
-  name = var.github_app_pem_file
+
+locals {
+  github_app_secret = jsondecode(
+    data.aws_secretsmanager_secret_version.github_app.secret_string
+  )
 }
+
 provider "github" {
   owner = var.github_owner
   app_auth {
     id              = var.github_app_id
-    pem_file        = base64decode(data.aws_ssm_parameter.github_app_key_base64.value)
+    pem_file        = base64decode(local.github_app_secret.key_base64)
     installation_id = var.github_app_installation_id
   }
 }
