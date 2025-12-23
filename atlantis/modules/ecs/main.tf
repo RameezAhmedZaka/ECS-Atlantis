@@ -85,7 +85,7 @@ resource "aws_ecs_task_definition" "backend_task" {
           },
           {
             name  = "ATLANTIS_GH_WEBHOOK_SECRET"
-            valueFrom = "${var.github_app_secret_arn}:webhook_secret::"
+            valueFrom = "${var.atlantis_secret}:webhook_secret::"
           }
         ]
       )
@@ -93,7 +93,7 @@ resource "aws_ecs_task_definition" "backend_task" {
       secrets = [
         {
           name      = "ATLANTIS_GH_APP_KEY"
-          valueFrom = "${var.github_app_secret_arn}:private_key::"
+          valueFrom = "${var.atlantis_secret}:private_key::"
         }
       ]
 

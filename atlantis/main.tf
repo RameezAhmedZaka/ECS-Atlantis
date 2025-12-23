@@ -1,14 +1,3 @@
-data "aws_availability_zones" "all" {}
-
-data "aws_secretsmanager_secret_version" "github_app" {
-  secret_id = "/github/app/atlantis"
-}
-
-locals {
-  repo_config_json = jsonencode(yamldecode(file(var.atlantis_ecs.repo_config_file)))
-  github_app_secret = jsondecode(data.aws_secretsmanager_secret_version.github_app.secret_string)
-}
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
@@ -122,7 +111,7 @@ module "backend" {
   repo_config_file              = var.atlantis_ecs.repo_config_file
   environment_variables         = var.atlantis_ecs.environment_variables
   atlantis_url                  = module.apigateway.atlantis_url_gui
-  github_app_secret_arn         = data.aws_secretsmanager_secret_version.github_app.arn
+  atlantis_secret               = data.aws_secretsmanager_secret_version.github_app.arn
   gh_app_id                     = var.github_repositories_webhook.github_app_id
   repo_config_json              = local.repo_config_json
 }

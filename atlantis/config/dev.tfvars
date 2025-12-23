@@ -1,3 +1,5 @@
+atlantis_secret = "/github/app/atlantis"
+
 aws = {
   region  = "us-east-1"
   profile = "admin"
@@ -53,7 +55,7 @@ atlantis_ecs = {
   region                        = "us-east-1"
   image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
-  github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
+  # github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
 
     environment_variables = [
     {

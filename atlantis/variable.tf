@@ -1,3 +1,7 @@
+variable "atlantis_secret" {
+  type = string
+}
+
 variable "aws" {
   type = object({
     region  = string
@@ -56,7 +60,7 @@ variable "atlantis_ecs" {
     backend_execution_role_name   = string
     region                        = string
     image                         = string
-    github_app_secret_arn         = string
+    # github_app_secret_arn         = string
     repo_config_file              = string
     environment_variables         = list(object({
       name  = string

@@ -142,9 +142,6 @@ variable "repo_config_json" {
 variable "gh_app_id" {
   type        = string
 }
-# variable "github_webhook_secret" {
-#   type        = string
-# }
-variable "github_app_secret_arn" {
+variable "atlantis_secret" {
   type        = string
 }
