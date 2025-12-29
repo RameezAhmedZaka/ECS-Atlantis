@@ -30,7 +30,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Fill details:
    - Name: <unique-name>
    - Homepage URL: your project URL (optional) add the same as wehbook url.
-   - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created using the terraform code.)
+   - Webhook URL: ```https://your-api-endpoint/atlantis/events```                        (api with default stage that you created using the terraform code but for now you won't have the api id so place any random id and afterwards after unning the terraform code when you will get this update here.)
      may looks like this ```https://28werguykc3.execute-api.us-east-1.amazonaws.com/atlantis/events```
    - Add the secret the same secret that you pushed to secrets manager before.  
   
