@@ -63,7 +63,7 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Click Create GitHub App.
 - Generate App Private Key
 - Download the .pem file from the GitHub App dashboard. Keep it secure.
-- Encode Private Key and than place both files in parameter store.
+- Encode Private Key and than place both files in secrets manager using the below command.
   
 ## Covert into base64
 ```
