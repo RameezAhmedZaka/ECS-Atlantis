@@ -106,8 +106,6 @@ aws = {
 }
 github_repositories_webhook = {
   github_owner               = ""                         # owner-of-github-app
-  github_app_key_base64      = "/github/app/key_base64"   # base64 PEM file
-  github_app_pem_file        = "/github/app/pem_file"     # PEM file as-is
   repositories               = [""]                       # repositories on which you want to run alantis and on which you installed github app      
   github_app_id              = ""                         # app_id
   github_app_installation_id = ""                         # installation id              
