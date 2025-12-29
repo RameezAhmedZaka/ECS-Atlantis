@@ -20,20 +20,8 @@ Atlantis enables GitOps-style workflows by automating `terraform plan` and `appl
 - **GitHub Webhook**: Automatically created and linked to your repository  
 
 ---
-  
-### Create the Secrets for terraform code
-Send the secret to secret manager
-```
-aws secretsmanager create-secret \
-  --name github_webhook_secret \                         
-  --description "Secret for verifying GitHub App webhooks" \
-  --secret-string "<place-secret-here>"                  
 
-```
-### Instruction for secret manager command above:
-- Set the same name as github_webhook_secret or if changing than update in atlantis/config/dev.tfvars for variable github_webhook_secret.
-- Specify region if you are not using default one 
-
+## NOTE: Create the github app first and than run terraform code.
 ## 🔑 GitHub Integration
 
 Atlantis interacts with GitHub using a **GitHub App**.
@@ -76,37 +64,32 @@ Atlantis interacts with GitHub using a **GitHub App**.
 - Generate App Private Key
 - Download the .pem file from the GitHub App dashboard. Keep it secure.
 - Encode Private Key and than place both files in parameter store.
-Store the PEM file
-```
-aws ssm put-parameter \
-  --name "/github/app/pem_file" \                      
-  --value "$(cat name_pem_file)" \                   
-  --type "SecureString" \
-  --overwrite                                         
-```
-### Instruction for Paramater Store command above:
-- Set the same name as /github/app/pem_file or if changing than update in atlantis/config/dev.tfvars for variable github_app_pem_file.
-- Name of file that you downloaded placed after cat "$(cat name_pem_file)"
-- Specify region if you are not using default one
   
-Covert into base64
+## Covert into base64
 ```
-base64 <file-name-downloaded> > <file-name-want-to-create.base64>
+base64 <file-name-downloaded.pem> > <file-name-want-to-create.base64>
 ```
 Command may looks like base64 atlantis-app.2025-11-07.private-key.pem > atlantis-app.pem.base64.
 
-Store the Base64 key.
+### Create the Secrets for terraform code
+Send the secret to secret manager
 ```
-aws ssm put-parameter \
-  --name "/github/app/key_base64" \                    
-  --value "$(cat name_of_file)" \                       
-  --type "SecureString" \
-  --overwrite                                         
+aws secretsmanager create-secret \
+  --name "/github/app/atlantis" \ 
+  --description "Atlantis GitHub App credentials" \
+  --secret-string "$(jq -n \
+    --arg webhook_secret 'webhook123' \
+    --arg private_key "$(cat terragrunt-0987.2025-12-04.private-key.pem)" \
+    --arg key_base64 "$(cat terragrunt.base64)" \
+    '{webhook_secret: $webhook_secret, private_key: $private_key, key_base64: $key_base64}')"                 
 ```
-### Instruction for Paramater Store command above:
-- Set the same name as /github/app/key_base64 or if changing than update in atlantis/config/dev.tfvars for variable github_app_key_base64.
-- Name of file that you downloaded placed after cat "$(cat name_of_file)"
-- Specify region if you are not using default one
+### Instruction for secret manager command above:
+- --name "name of the secrets in secret manager" in my case it is /github/app/atlantis
+- --arg webhook_secret 'webhook123' the wehbook secret also place the same secret in the github app for authentication.
+- --arg private_key "$(cat terragrunt-0987.2025-12-04.private-key.pem)" the pem file you downloaded.
+- -arg key_base64 "$(cat terragrunt.base64)"  The pem file you converted into base64.
+- Set the same name as "/github/app/atlantis" or if changing than update in atlantis/config/dev.tfvars for variable atlantis_secret.
+- Specify region if you are not using default one. 
 
 ### Install GitHub App
 - Install the App on selected repositories.
@@ -116,6 +99,8 @@ aws ssm put-parameter \
 ### GitHub App Parameters in `atlantis/config/dev.tfvars`
 
 ```hcl
+atlantis_secret = "/github/app/atlantis"
+
 aws = {
   profile = ""                                           # mention profile
 }
