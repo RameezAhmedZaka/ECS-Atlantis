@@ -87,15 +87,15 @@ atlantis_ecs = {
 
 
 github_repositories_webhook = {
-  github_owner               = "RameezAhmedZaka"                                    #organization name or user name
+  github_owner               = ""                                    #organization name or user name
   create                     = false                                                 #remains false as we dont need wehbook manually to create
-  repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
+  repositories               = [""]                                      # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = "2409368"                                         #enter the app_id
-  github_app_installation_id = "97957214"                                        #enter the installation_id
-  atlantis_secret            = "/github/app/atlantis"
+  github_app_id              = ""                                         #enter the app_id
+  github_app_installation_id = ""                                        #enter the installation_id
+  atlantis_secret            = ""
 }
 
 lb = {
