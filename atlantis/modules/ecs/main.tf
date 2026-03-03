@@ -159,10 +159,9 @@ resource "aws_iam_role" "backend_task_role" {
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy_doc.json
 }
 
-# Attach full admin to Task Role
-resource "aws_iam_role_policy_attachment" "admin_access" {
+resource "aws_iam_role_policy_attachment" "task_policy" {
   role       = aws_iam_role.backend_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/terraform_policy_assumerole_policy-stage"
 }
 
 data "aws_iam_policy_document" "allow_all_secrets_manager_doc" {
@@ -187,27 +186,9 @@ data "aws_iam_policy_document" "allow_all_secrets_manager_doc" {
   }
 }
 
-data "aws_iam_policy_document" "allow_api_gateway_execute" {
-  version = "2012-10-17"
-
-  statement {
-    actions = [
-      "execute-api:Invoke",
-      "execute-api:ManageConnections"
-    ]
-    effect    = "Allow"
-    resources = ["arn:aws:execute-api:${var.region}:*:*"]
-  }
-}
-
 resource "aws_iam_policy" "secrets_manager_access" {
   name   = "SecretsManagerAccess"
   policy = data.aws_iam_policy_document.allow_all_secrets_manager_doc.json
-}
-
-resource "aws_iam_policy" "api_gateway_access" {
-  name   = "APIGatewayExecute"
-  policy = data.aws_iam_policy_document.allow_api_gateway_execute.json
 }
 
 resource "aws_iam_role" "backend_execution_role" {

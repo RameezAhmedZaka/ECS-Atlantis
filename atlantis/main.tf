@@ -62,6 +62,7 @@ module "github_webhook" {
   content_type               = var.github_repositories_webhook.content_type
   insecure_ssl               = var.github_repositories_webhook.insecure_ssl
   events                     = var.github_repositories_webhook.events
+  atlantis_secret            = var.github_repositories_webhook.atlantis_secret
 }
 
 module "backend" {

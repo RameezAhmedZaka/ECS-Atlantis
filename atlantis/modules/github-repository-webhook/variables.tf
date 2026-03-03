@@ -31,3 +31,6 @@ variable "github_app_id" {
 variable "github_app_installation_id" {
   type = string
 }
+variable "atlantis_secret" {
+  type = string
+}

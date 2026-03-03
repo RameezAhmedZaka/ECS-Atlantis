@@ -78,6 +78,7 @@ variable "github_repositories_webhook" {
     insecure_ssl               = bool
     content_type               = string
     events                     = list(string)
+    atlantis_secret            = string
   })
 }
 variable "lb" {
