@@ -255,3 +255,30 @@ resource "aws_iam_role_policy_attachment" "attach_assume_policy" {
   role       = aws_iam_role.backend_task_role.name
   policy_arn = aws_iam_policy.assume_stage_prod_policy.arn
 }
+
+# 1️⃣ IAM policy for S3 access (only your TF state bucket)
+data "aws_iam_policy_document" "s3_access_doc" {
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      "arn:aws:s3:::tf-state-prod517",        # Bucket
+      "arn:aws:s3:::tf-state-prod517/*"       # Objects
+    ]
+  }
+}
+
+resource "aws_iam_policy" "s3_access_policy" {
+  name   = "AtlantisS3Access"
+  policy = data.aws_iam_policy_document.s3_access_doc.json
+}
+
+# 2️⃣ Attach S3 policy to backend_task_role
+resource "aws_iam_role_policy_attachment" "attach_s3_to_task_role" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = aws_iam_policy.s3_access_policy.arn
+}
