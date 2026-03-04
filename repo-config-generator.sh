@@ -140,7 +140,6 @@ find_matching_tfvars_file() {
 # Function to get role ARN based on environment
 get_role_arn() {
     local env="$1"
-    local account_id="${2:-}"  # Optional account ID if needed
     
     case "$env" in
         production|prod)
@@ -152,12 +151,36 @@ get_role_arn() {
             echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
             ;;
         development|dev)
-            # Development role
-            echo "arn:aws:iam::DEVELOPMENT_ACCOUNT_ID:role/atlantis-development-role"
+            # Development role - same account as staging for now
+            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
             ;;
         *)
-            # Default role - could be empty or a generic role
+            # Default role - empty
             echo ""
+            ;;
+    esac
+}
+
+# Function to determine authentication method
+get_auth_method() {
+    local env="$1"
+    
+    case "$env" in
+        production|prod)
+            # Production - use role assumption
+            echo "role"
+            ;;
+        staging|stage|stg)
+            # Staging - use role assumption
+            echo "role"
+            ;;
+        development|dev)
+            # Development - use existing credentials
+            echo "env"
+            ;;
+        *)
+            # Default - use existing credentials
+            echo "env"
             ;;
     esac
 }
@@ -250,23 +273,24 @@ while IFS= read -r project_dir; do
         backend_config=$(find_matching_backend_config "$project_dir" "$env")
         tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
         
-        # Get role ARN for this environment
+        # Get role ARN and auth method for this environment
         role_arn=$(get_role_arn "$env")
+        auth_method=$(get_auth_method "$env")
         
         # Store configs if found
         if [ -n "$backend_config" ]; then
-            # Use a compound key with project and env, now including role ARN
-            echo "${project_dir}|${env}|${backend_config}|${role_arn}" >> "$BACKEND_FILE"
+            # Use a compound key with project and env, including role ARN and auth method
+            echo "${project_dir}|${env}|${backend_config}|${role_arn}|${auth_method}" >> "$BACKEND_FILE"
             echo "    Found backend config for $env: $backend_config"
             if [ -n "$role_arn" ]; then
-                echo "      Using role: $role_arn"
+                echo "      Using role: $role_arn (auth: $auth_method)"
             fi
         else
             echo "    Warning: No backend config found for $env"
         fi
         
         if [ -n "$tfvars_file" ]; then
-            echo "${project_dir}|${env}|${tfvars_file}|${role_arn}" >> "$TFVARS_FILE"
+            echo "${project_dir}|${env}|${tfvars_file}|${role_arn}|${auth_method}" >> "$TFVARS_FILE"
             echo "    Found tfvars file for $env: $tfvars_file"
         else
             echo "    Warning: No tfvars file found for $env"
@@ -292,8 +316,15 @@ get_tfvars_file_for_project() {
 get_role_for_project() {
     local project_dir="$1"
     local env="$2"
-    # Get role ARN from either backend or tfvars file (they should be the same)
+    # Get role ARN
     awk -F'|' -v proj="$project_dir" -v env_name="$env" '$1 == proj && $2 == env_name {print $4}' "$BACKEND_FILE" | head -1
+}
+
+get_auth_for_project() {
+    local project_dir="$1"
+    local env="$2"
+    # Get auth method
+    awk -F'|' -v proj="$project_dir" -v env_name="$env" '$1 == proj && $2 == env_name {print $5}' "$BACKEND_FILE" | head -1
 }
 
 # Debug: Show what configs were found
@@ -330,6 +361,7 @@ while IFS= read -r project_dir; do
         backend_config=$(get_backend_config_for_project "$project_dir" "$env")
         tfvars_file=$(get_tfvars_file_for_project "$project_dir" "$env")
         role_arn=$(get_role_for_project "$project_dir" "$env")
+        auth_method=$(get_auth_for_project "$project_dir" "$env")
         
         if [ -z "$backend_config" ]; then
             backend_config=$(find_matching_backend_config "$project_dir" "$env")
@@ -354,7 +386,7 @@ while IFS= read -r project_dir; do
         echo "$workflow_name" >> "$WORKFLOWS_FILE"
         
         # Store project info for reference
-        echo "${project_dir}|${env}|${relative_to_root}|${workflow_name}|${role_arn}" >> "$PROJECT_INFO_FILE"
+        echo "${project_dir}|${env}|${relative_to_root}|${workflow_name}|${role_arn}|${auth_method}" >> "$PROJECT_INFO_FILE"
         
         # Write project configuration
         {
@@ -383,10 +415,10 @@ workflows:
 EOF
 
     # Read each project info and create its workflow
-    while IFS='|' read -r project_dir env relative_to_root workflow_name role_arn; do
+    while IFS='|' read -r project_dir env relative_to_root workflow_name role_arn auth_method; do
         [ -z "$project_dir" ] && continue
         
-        echo "Generating workflow: $workflow_name for $project_dir env $env"
+        echo "Generating workflow: $workflow_name for $project_dir env $env (auth: $auth_method)"
         
         # Get config files for this specific project and environment
         backend_config=$(get_backend_config_for_project "$project_dir" "$env")
@@ -411,21 +443,30 @@ EOF
         echo "      steps:"
         } >> atlantis.yaml
         
-        # Add assume role step if role_arn is provided
-        if [ -n "$role_arn" ]; then
+        # Only add assume role step for environments that need it and have a role ARN
+        if [ "$auth_method" = "role" ] && [ -n "$role_arn" ]; then
             {
             echo "        - run: |"
-            echo "            # Assume the ${env} role"
+            echo "            # Assume the ${env} role using AWS CLI (must be installed in Atlantis)"
             echo "            export AWS_STS_REGIONAL_ENDPOINTS=regional"
             echo "            export AWS_DEFAULT_REGION=us-east-1"
+            echo "            echo \"Assuming role: $role_arn\""
             echo "            TEMP_ROLE=\$(aws sts assume-role \\"
             echo "              --role-arn \"$role_arn\" \\"
             echo "              --role-session-name \"atlantis-${workflow_name}\" \\"
             echo "              --duration-seconds 3600 \\"
-            echo "              --output json)"
-            echo "            export AWS_ACCESS_KEY_ID=\$(echo \$TEMP_ROLE | jq -r '.Credentials.AccessKeyId')"
-            echo "            export AWS_SECRET_ACCESS_KEY=\$(echo \$TEMP_ROLE | jq -r '.Credentials.SecretAccessKey')"
-            echo "            export AWS_SESSION_TOKEN=\$(echo \$TEMP_ROLE | jq -r '.Credentials.SessionToken')"
+            echo "              --output json 2>/dev/null || echo '{\"Credentials\":{\"AccessKeyId\":\"\",\"SecretAccessKey\":\"\",\"SessionToken\":\"\"}}')"
+            echo "            export AWS_ACCESS_KEY_ID=\$(echo \$TEMP_ROLE | grep -o '\"AccessKeyId\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            export AWS_SECRET_ACCESS_KEY=\$(echo \$TEMP_ROLE | grep -o '\"SecretAccessKey\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            export AWS_SESSION_TOKEN=\$(echo \$TEMP_ROLE | grep -o '\"SessionToken\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            if [ -z \"\$AWS_ACCESS_KEY_ID\" ]; then"
+            echo "              echo \"Warning: Failed to assume role, continuing with existing credentials\""
+            echo "            fi"
+            } >> atlantis.yaml
+        else
+            {
+            echo "        - run: |"
+            echo "            echo \"Using existing AWS credentials for $env environment\""
             } >> atlantis.yaml
         fi
         
@@ -440,21 +481,25 @@ EOF
         echo "      steps:"
         } >> atlantis.yaml
         
-        # Add assume role step for apply if role_arn is provided
-        if [ -n "$role_arn" ]; then
+        # Add assume role step for apply if needed
+        if [ "$auth_method" = "role" ] && [ -n "$role_arn" ]; then
             {
             echo "        - run: |"
-            echo "            # Assume the ${env} role"
+            echo "            # Assume the ${env} role for apply"
             echo "            export AWS_STS_REGIONAL_ENDPOINTS=regional"
             echo "            export AWS_DEFAULT_REGION=us-east-1"
+            echo "            echo \"Assuming role: $role_arn\""
             echo "            TEMP_ROLE=\$(aws sts assume-role \\"
             echo "              --role-arn \"$role_arn\" \\"
             echo "              --role-session-name \"atlantis-${workflow_name}-apply\" \\"
             echo "              --duration-seconds 3600 \\"
-            echo "              --output json)"
-            echo "            export AWS_ACCESS_KEY_ID=\$(echo \$TEMP_ROLE | jq -r '.Credentials.AccessKeyId')"
-            echo "            export AWS_SECRET_ACCESS_KEY=\$(echo \$TEMP_ROLE | jq -r '.Credentials.SecretAccessKey')"
-            echo "            export AWS_SESSION_TOKEN=\$(echo \$TEMP_ROLE | jq -r '.Credentials.SessionToken')"
+            echo "              --output json 2>/dev/null || echo '{\"Credentials\":{\"AccessKeyId\":\"\",\"SecretAccessKey\":\"\",\"SessionToken\":\"\"}}')"
+            echo "            export AWS_ACCESS_KEY_ID=\$(echo \$TEMP_ROLE | grep -o '\"AccessKeyId\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            export AWS_SECRET_ACCESS_KEY=\$(echo \$TEMP_ROLE | grep -o '\"SecretAccessKey\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            export AWS_SESSION_TOKEN=\$(echo \$TEMP_ROLE | grep -o '\"SessionToken\":\"[^\"]*\"' | cut -d'\"' -f4)"
+            echo "            if [ -z \"\$AWS_ACCESS_KEY_ID\" ]; then"
+            echo "              echo \"Warning: Failed to assume role, continuing with existing credentials\""
+            echo "            fi"
             } >> atlantis.yaml
         fi
         
