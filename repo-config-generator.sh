@@ -411,61 +411,67 @@ EOF
             {
             echo "        - run: |"
             echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            # Assume the role and export credentials"
+            echo "            # Assume the role and export credentials in the same shell"
             echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}\" --duration-seconds 3600 --output text)"
             echo "            if [ \$? -eq 0 ]; then"
             echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
             echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
             echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
             echo "              echo \"Successfully assumed role for $env\""
+            echo "              echo \"Now using credentials from: \$AWS_ACCESS_KEY_ID\""
             echo "            else"
             echo "              echo \"Failed to assume role for $env, using existing credentials\""
             echo "            fi"
+            echo "            # Now run terraform with the assumed role credentials"
+            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+            echo "            rm -rf .terraform .terraform.lock.hcl"
+            echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
+            echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
             } >> atlantis.yaml
         else
             {
             echo "        - run: |"
             echo "            echo \"Using existing AWS credentials for $env environment\""
+            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+            echo "            rm -rf .terraform .terraform.lock.hcl"
+            echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
+            echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
             } >> atlantis.yaml
         fi
         
-        # Add terraform steps
-        {
-        echo "        - run: |"
-        echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-        echo "            rm -rf .terraform .terraform.lock.hcl"
-        echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
-        echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
-        echo "    apply:"
-        echo "      steps:"
-        } >> atlantis.yaml
+        echo "    apply:" >> atlantis.yaml
+        echo "      steps:" >> atlantis.yaml
         
         # Add assume role step for apply if role_arn is provided
         if [ -n "$role_arn" ]; then
             {
             echo "        - run: |"
             echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            # Assume the role and export credentials"
+            echo "            # Assume the role and export credentials in the same shell"
             echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}-apply\" --duration-seconds 3600 --output text)"
             echo "            if [ \$? -eq 0 ]; then"
             echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
             echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
             echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
             echo "              echo \"Successfully assumed role for $env\""
+            echo "              echo \"Now using credentials from: \$AWS_ACCESS_KEY_ID\""
             echo "            else"
             echo "              echo \"Failed to assume role for $env, using existing credentials\""
             echo "            fi"
+            echo "            echo \"Project: \$PROJECT_NAME\""
+            echo "            echo \"Environment: $env\""
+            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+            echo "            terraform apply -auto-approve \$PLANFILE"
+            } >> atlantis.yaml
+        else
+            {
+            echo "        - run: |"
+            echo "            echo \"Project: \$PROJECT_NAME\""
+            echo "            echo \"Environment: $env\""
+            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+            echo "            terraform apply -auto-approve \$PLANFILE"
             } >> atlantis.yaml
         fi
-        
-        # Add terraform apply step
-        {
-        echo "        - run: |"
-        echo "            echo \"Project: \$PROJECT_NAME\""
-        echo "            echo \"Environment: $env\""
-        echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-        echo "            terraform apply -auto-approve \$PLANFILE"
-        } >> atlantis.yaml
     done < "$PROJECT_INFO_FILE"
 else
     echo "Warning: No project info found, skipping workflows"
