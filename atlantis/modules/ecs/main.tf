@@ -86,6 +86,10 @@ resource "aws_ecs_task_definition" "backend_task" {
           {
             name  = "ATLANTIS_GH_WEBHOOK_SECRET"
             valueFrom = "${var.atlantis_secret}:webhook_secret::"
+          },
+          {
+            name  = "ATLANTIS_AUTOPLAN_ENABLED"
+            value = "false"
           }
         ]
       )
@@ -159,10 +163,10 @@ resource "aws_iam_role" "backend_task_role" {
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy_doc.json
 }
 
-resource "aws_iam_role_policy_attachment" "task_policy" {
-  role       = aws_iam_role.backend_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/terraform_policy_assumerole_policy-stage"
-}
+# resource "aws_iam_role_policy_attachment" "task_policy" {
+#   role       = aws_iam_role.backend_task_role.name
+#   policy_arn = "arn:aws:iam::aws:policy/terraform_policy_assumerole_policy-stage"
+# }
 
 data "aws_iam_policy_document" "allow_all_secrets_manager_doc" {
   version = "2012-10-17"
@@ -186,10 +190,28 @@ data "aws_iam_policy_document" "allow_all_secrets_manager_doc" {
   }
 }
 
+# data "aws_iam_policy_document" "allow_api_gateway_execute" {
+#   version = "2012-10-17"
+
+#   statement {
+#     actions = [
+#       "execute-api:Invoke",
+#       "execute-api:ManageConnections"
+#     ]
+#     effect    = "Allow"
+#     resources = ["arn:aws:execute-api:${var.region}:*:*"]
+#   }
+# }
+
 resource "aws_iam_policy" "secrets_manager_access" {
   name   = "SecretsManagerAccess"
   policy = data.aws_iam_policy_document.allow_all_secrets_manager_doc.json
 }
+
+# resource "aws_iam_policy" "api_gateway_access" {
+#   name   = "APIGatewayExecute"
+#   policy = data.aws_iam_policy_document.allow_api_gateway_execute.json
+# }
 
 resource "aws_iam_role" "backend_execution_role" {
   name               = var.backend_execution_role_name
@@ -208,4 +230,28 @@ resource "aws_iam_role_policy_attachment" "execution_role_attachment" {
 resource "aws_iam_role_policy_attachment" "attach_secrets_to_execution_role" {
   role       = aws_iam_role.backend_execution_role.name
   policy_arn = aws_iam_policy.secrets_manager_access.arn
+}
+
+data "aws_iam_policy_document" "assume_stage_prod_roles" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+
+    resources = [
+      "arn:aws:iam::569023477847:role/atlantis-cross-account-role-prod",
+      "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "assume_stage_prod_policy" {
+  name   = "AllowAssumeStageProd"
+  policy = data.aws_iam_policy_document.assume_stage_prod_roles.json
+}
+
+resource "aws_iam_role_policy_attachment" "attach_assume_policy" {
+  role       = aws_iam_role.backend_task_role.name
+  policy_arn = aws_iam_policy.assume_stage_prod_policy.arn
 }

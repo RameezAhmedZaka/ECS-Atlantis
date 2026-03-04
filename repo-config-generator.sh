@@ -308,7 +308,7 @@ while IFS= read -r project_dir; do
         echo "  - name: ${project_name}-${env}"
         echo "    dir: $env_path"
         echo "    autoplan:"
-        echo "      enabled: true"
+        echo "      enabled: false"
         echo "      when_modified:"
         echo "        - \"${relative_to_root}/*.tf\""
         echo "        - \"${relative_to_root}/*.tfvars\""
