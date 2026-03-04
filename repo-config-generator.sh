@@ -411,31 +411,31 @@ EOF
             {
             echo "        - run: |"
             echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            # Assume the role and export credentials"
-            echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}\" --duration-seconds 3600 --output text)"
-            echo "            if [ \$? -eq 0 ]; then"
-            echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
-            echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
-            echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
+            echo "            "
+            echo "            # Properly assume role and extract credentials"
+            echo "            read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN <<< \$(aws sts assume-role \\"
+            echo "              --role-arn \"$role_arn\" \\"
+            echo "              --role-session-name \"atlantis-${workflow_name}\" \\"
+            echo "              --duration-seconds 3600 \\"
+            echo "              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \\"
+            echo "              --output text)"
+            echo "            "
+            echo "            if [ -n \"\$AWS_ACCESS_KEY_ID\" ]; then"
+            echo "              export AWS_ACCESS_KEY_ID"
+            echo "              export AWS_SECRET_ACCESS_KEY"
+            echo "              export AWS_SESSION_TOKEN"
             echo "              echo \"Successfully assumed role for $env\""
-            echo "              echo \"Now using credentials from: \$AWS_ACCESS_KEY_ID\""
-            echo "              # Unset the original credentials to ensure we use the assumed role"
-            echo "              unset AWS_PROFILE AWS_DEFAULT_PROFILE"
+            echo "              aws sts get-caller-identity"
             echo "            else"
-            echo "              echo \"Failed to assume role for $env, using existing credentials\""
+            echo "              echo \"Failed to assume role for $env\""
+            echo "              exit 1"
             echo "            fi"
-            echo "            # Now run all terraform commands with the assumed role credentials"
+            echo "            "
             echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
             echo "            rm -rf .terraform .terraform.lock.hcl"
-            echo "            # Use the assumed role credentials for all commands"
-            echo "            AWS_ACCESS_KEY_ID=\$AWS_ACCESS_KEY_ID \\"
-            echo "            AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_ACCESS_KEY \\"
-            echo "            AWS_SESSION_TOKEN=\$AWS_SESSION_TOKEN \\"
+            echo "            "
             echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
-            echo ""
-            echo "            AWS_ACCESS_KEY_ID=\$AWS_ACCESS_KEY_ID \\"
-            echo "            AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_ACCESS_KEY \\"
-            echo "            AWS_SESSION_TOKEN=\$AWS_SESSION_TOKEN \\"
+            echo "            "
             echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
             } >> atlantis.yaml
         else
@@ -448,35 +448,37 @@ EOF
             echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
             } >> atlantis.yaml
         fi
-        
+
         echo "    apply:" >> atlantis.yaml
         echo "      steps:" >> atlantis.yaml
-        
+
         # Add assume role step for apply if role_arn is provided
         if [ -n "$role_arn" ]; then
             {
             echo "        - run: |"
             echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            # Assume the role and export credentials"
-            echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}-apply\" --duration-seconds 3600 --output text)"
-            echo "            if [ \$? -eq 0 ]; then"
-            echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
-            echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
-            echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
+            echo "            "
+            echo "            read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN <<< \$(aws sts assume-role \\"
+            echo "              --role-arn \"$role_arn\" \\"
+            echo "              --role-session-name \"atlantis-${workflow_name}-apply\" \\"
+            echo "              --duration-seconds 3600 \\"
+            echo "              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \\"
+            echo "              --output text)"
+            echo "            "
+            echo "            if [ -n \"\$AWS_ACCESS_KEY_ID\" ]; then"
+            echo "              export AWS_ACCESS_KEY_ID"
+            echo "              export AWS_SECRET_ACCESS_KEY"
+            echo "              export AWS_SESSION_TOKEN"
             echo "              echo \"Successfully assumed role for $env\""
-            echo "              echo \"Now using credentials from: \$AWS_ACCESS_KEY_ID\""
-            echo "              # Unset the original credentials to ensure we use the assumed role"
-            echo "              unset AWS_PROFILE AWS_DEFAULT_PROFILE"
+            echo "              aws sts get-caller-identity"
             echo "            else"
-            echo "              echo \"Failed to assume role for $env, using existing credentials\""
+            echo "              echo \"Failed to assume role for $env\""
+            echo "              exit 1"
             echo "            fi"
+            echo "            "
             echo "            echo \"Project: \$PROJECT_NAME\""
             echo "            echo \"Environment: $env\""
             echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-            echo "            # Use the assumed role credentials for apply"
-            echo "            AWS_ACCESS_KEY_ID=\$AWS_ACCESS_KEY_ID \\"
-            echo "            AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_ACCESS_KEY \\"
-            echo "            AWS_SESSION_TOKEN=\$AWS_SESSION_TOKEN \\"
             echo "            terraform apply -auto-approve \$PLANFILE"
             } >> atlantis.yaml
         else
@@ -488,15 +490,6 @@ EOF
             echo "            terraform apply -auto-approve \$PLANFILE"
             } >> atlantis.yaml
         fi
-    done < "$PROJECT_INFO_FILE"
-else
-    echo "Warning: No project info found, skipping workflows"
-    # Still add empty workflows section
-    cat >> atlantis.yaml <<EOF
-workflows:
-EOF
-fi
-
 # Count workflows created
 workflow_count=$(sort -u "$WORKFLOWS_FILE" | wc -l)
 echo "Generated $workflow_count unique workflows"
