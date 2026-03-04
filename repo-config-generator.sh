@@ -137,6 +137,26 @@ find_matching_tfvars_file() {
     echo ""
 }
 
+# Function to get role ARN based on environment
+get_role_arn() {
+    local env="$1"
+    
+    case "$env" in
+        production|prod)
+            # Production role
+            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-prod"
+            ;;
+        staging|stage|stg)
+            # Staging role
+            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
+            ;;
+        *)
+            # Default role - empty for other environments
+            echo ""
+            ;;
+    esac
+}
+
 # Function to get project name based on directory path
 get_project_name() {
     local project_dir="$1"
@@ -225,16 +245,23 @@ while IFS= read -r project_dir; do
         backend_config=$(find_matching_backend_config "$project_dir" "$env")
         tfvars_file=$(find_matching_tfvars_file "$project_dir" "$env")
         
+        # Get role ARN for this environment
+        role_arn=$(get_role_arn "$env")
+        
         # Store configs if found
         if [ -n "$backend_config" ]; then
-            echo "${project_dir}|${env}|${backend_config}" >> "$BACKEND_FILE"
+            # Use a compound key with project and env, including role ARN
+            echo "${project_dir}|${env}|${backend_config}|${role_arn}" >> "$BACKEND_FILE"
             echo "    Found backend config for $env: $backend_config"
+            if [ -n "$role_arn" ]; then
+                echo "      Will use role: $role_arn"
+            fi
         else
             echo "    Warning: No backend config found for $env"
         fi
         
         if [ -n "$tfvars_file" ]; then
-            echo "${project_dir}|${env}|${tfvars_file}" >> "$TFVARS_FILE"
+            echo "${project_dir}|${env}|${tfvars_file}|${role_arn}" >> "$TFVARS_FILE"
             echo "    Found tfvars file for $env: $tfvars_file"
         else
             echo "    Warning: No tfvars file found for $env"
@@ -246,13 +273,22 @@ done < "$ALL_PROJECTS_FILE"
 get_backend_config_for_project() {
     local project_dir="$1"
     local env="$2"
+    # Use awk with pipe delimiter to properly handle paths with colons
     awk -F'|' -v proj="$project_dir" -v env_name="$env" '$1 == proj && $2 == env_name {print $3}' "$BACKEND_FILE" | head -1
 }
 
 get_tfvars_file_for_project() {
     local project_dir="$1"
     local env="$2"
+    # Use awk with pipe delimiter to properly handle paths with colons
     awk -F'|' -v proj="$project_dir" -v env_name="$env" '$1 == proj && $2 == env_name {print $3}' "$TFVARS_FILE" | head -1
+}
+
+get_role_for_project() {
+    local project_dir="$1"
+    local env="$2"
+    # Get role ARN from backend file
+    awk -F'|' -v proj="$project_dir" -v env_name="$env" '$1 == proj && $2 == env_name {print $4}' "$BACKEND_FILE" | head -1
 }
 
 # Debug: Show what configs were found
@@ -288,6 +324,7 @@ while IFS= read -r project_dir; do
         # Get config files specific to this project
         backend_config=$(get_backend_config_for_project "$project_dir" "$env")
         tfvars_file=$(get_tfvars_file_for_project "$project_dir" "$env")
+        role_arn=$(get_role_for_project "$project_dir" "$env")
         
         if [ -z "$backend_config" ]; then
             backend_config=$(find_matching_backend_config "$project_dir" "$env")
@@ -312,7 +349,7 @@ while IFS= read -r project_dir; do
         echo "$workflow_name" >> "$WORKFLOWS_FILE"
         
         # Store project info for reference
-        echo "${project_dir}|${env}|${relative_to_root}|${workflow_name}" >> "$PROJECT_INFO_FILE"
+        echo "${project_dir}|${env}|${relative_to_root}|${workflow_name}|${role_arn}" >> "$PROJECT_INFO_FILE"
         
         # Write project configuration
         {
@@ -341,7 +378,7 @@ workflows:
 EOF
 
     # Read each project info and create its workflow
-    while IFS='|' read -r project_dir env relative_to_root workflow_name; do
+    while IFS='|' read -r project_dir env relative_to_root workflow_name role_arn; do
         [ -z "$project_dir" ] && continue
         
         echo "Generating workflow: $workflow_name for $project_dir env $env"
@@ -362,19 +399,67 @@ EOF
             relative_to_root="../.."  # Default fallback
         fi
 
-        # Write workflow configuration - NO ROLE ASSUMPTION
+        # Start writing workflow configuration
         {
         echo "  ${workflow_name}:"
         echo "    plan:"
         echo "      steps:"
+        } >> atlantis.yaml
+        
+        # Add assume role step if role_arn is provided (for production and staging)
+        if [ -n "$role_arn" ]; then
+            {
+            echo "        - run: |"
+            echo "            echo \"Assuming role: $role_arn for $env environment\""
+            echo "            # Assume the role and export credentials"
+            echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}\" --duration-seconds 3600 --output text)"
+            echo "            if [ \$? -eq 0 ]; then"
+            echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
+            echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
+            echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
+            echo "              echo \"Successfully assumed role for $env\""
+            echo "            else"
+            echo "              echo \"Failed to assume role for $env, using existing credentials\""
+            echo "            fi"
+            } >> atlantis.yaml
+        else
+            {
+            echo "        - run: |"
+            echo "            echo \"Using existing AWS credentials for $env environment\""
+            } >> atlantis.yaml
+        fi
+        
+        # Add terraform steps
+        {
         echo "        - run: |"
-        echo "            echo \"Using Atlantis instance credentials for $env environment\""
         echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
         echo "            rm -rf .terraform .terraform.lock.hcl"
         echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
         echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
         echo "    apply:"
         echo "      steps:"
+        } >> atlantis.yaml
+        
+        # Add assume role step for apply if role_arn is provided
+        if [ -n "$role_arn" ]; then
+            {
+            echo "        - run: |"
+            echo "            echo \"Assuming role: $role_arn for $env environment\""
+            echo "            # Assume the role and export credentials"
+            echo "            OUTPUT=\$(aws sts assume-role --role-arn \"$role_arn\" --role-session-name \"atlantis-${workflow_name}-apply\" --duration-seconds 3600 --output text)"
+            echo "            if [ \$? -eq 0 ]; then"
+            echo "              export AWS_ACCESS_KEY_ID=\$(echo \"\$OUTPUT\" | grep '^AWS_ACCESS_KEY_ID' | cut -f2)"
+            echo "              export AWS_SECRET_ACCESS_KEY=\$(echo \"\$OUTPUT\" | grep '^AWS_SECRET_ACCESS_KEY' | cut -f2)"
+            echo "              export AWS_SESSION_TOKEN=\$(echo \"\$OUTPUT\" | grep '^AWS_SESSION_TOKEN' | cut -f2)"
+            echo "              echo \"Successfully assumed role for $env\""
+            echo "            else"
+            echo "              echo \"Failed to assume role for $env, using existing credentials\""
+            echo "            fi"
+            } >> atlantis.yaml
+        fi
+        
+        # Add terraform apply step
+        {
         echo "        - run: |"
         echo "            echo \"Project: \$PROJECT_NAME\""
         echo "            echo \"Environment: $env\""
