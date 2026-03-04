@@ -490,6 +490,15 @@ EOF
             echo "            terraform apply -auto-approve \$PLANFILE"
             } >> atlantis.yaml
         fi
+    done < "$PROJECT_INFO_FILE"
+else
+    echo "Warning: No project info found, skipping workflows"
+    # Still add empty workflows section
+    cat >> atlantis.yaml <<EOF
+workflows:
+EOF
+fi
+
 # Count workflows created
 workflow_count=$(sort -u "$WORKFLOWS_FILE" | wc -l)
 echo "Generated $workflow_count unique workflows"
