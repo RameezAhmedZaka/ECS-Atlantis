@@ -31,6 +31,9 @@ is_terraform_project() {
     return 0
 }
 
+
+
+
 # Function to find all Terraform projects recursively (excluding modules)
 find_terraform_projects() {
     local search_path="$1"
