@@ -157,6 +157,65 @@ get_role_arn() {
     esac
 }
 
+# Function to update provider.tf with role ARN
+update_provider_tf() {
+    local project_dir="$1"
+    local env="$2"
+    local role_arn="$3"
+    
+    local provider_file="$project_dir/provider.tf"
+    
+    # Check if provider.tf exists
+    if [ ! -f "$provider_file" ]; then
+        echo "    Warning: provider.tf not found in $project_dir"
+        return 1
+    fi
+    
+    # Create a backup
+    cp "$provider_file" "${provider_file}.backup"
+    
+    # Check if provider.tf already has assume_role configuration
+    if grep -q "assume_role" "$provider_file"; then
+        # Update existing assume_role block
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s|role_arn *= *\".*\"|role_arn = \"$role_arn\"|g" "$provider_file"
+        else
+            # Linux
+            sed -i "s|role_arn *= *\".*\"|role_arn = \"$role_arn\"|g" "$provider_file"
+        fi
+    else
+        # Add assume_role block after the provider "aws" block
+        local temp_file=$(mktemp)
+        awk -v role="$role_arn" '
+        /provider "aws" {/ {
+            print $0
+            print "  assume_role {"
+            print "    role_arn = \"" role "\""
+            print "  }"
+            next
+        }
+        { print }
+        ' "$provider_file" > "$temp_file"
+        mv "$temp_file" "$provider_file"
+    fi
+    
+    echo "    Updated provider.tf with role: $role_arn"
+    return 0
+}
+
+# Function to restore provider.tf from backup
+restore_provider_tf() {
+    local project_dir="$1"
+    local provider_file="$project_dir/provider.tf"
+    local backup_file="${provider_file}.backup"
+    
+    if [ -f "$backup_file" ]; then
+        mv "$backup_file" "$provider_file"
+        echo "    Restored provider.tf from backup"
+    fi
+}
+
 # Function to get project name based on directory path
 get_project_name() {
     local project_dir="$1"
@@ -254,7 +313,7 @@ while IFS= read -r project_dir; do
             echo "${project_dir}|${env}|${backend_config}|${role_arn}" >> "$BACKEND_FILE"
             echo "    Found backend config for $env: $backend_config"
             if [ -n "$role_arn" ]; then
-                echo "      Will use role: $role_arn"
+                echo "      Will configure role: $role_arn in provider.tf"
             fi
         else
             echo "    Warning: No backend config found for $env"
@@ -341,6 +400,13 @@ while IFS= read -r project_dir; do
             continue
         fi
 
+        # Update provider.tf with role ARN if needed
+        if [ -n "$role_arn" ]; then
+            if update_provider_tf "$project_dir" "$env" "$role_arn"; then
+                echo "  Updated provider.tf for $env environment in $project_dir"
+            fi
+        fi
+
         # Calculate relative path from env directory to project root
         relative_to_root=$(get_relative_path_to_root "$env_path" "$project_dir")
         
@@ -399,107 +465,35 @@ EOF
             relative_to_root="../.."  # Default fallback
         fi
 
-        # Start writing workflow configuration
+        # Write workflow configuration - NOTE: No assume-role steps needed now!
         {
         echo "  ${workflow_name}:"
         echo "    plan:"
         echo "      steps:"
+        echo "        - run: |"
+        echo "            echo \"Using provider-configured AWS role for $env environment\""
+        echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+        echo "            rm -rf .terraform .terraform.lock.hcl"
+        echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
+        echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
+        echo "    apply:"
+        echo "      steps:"
+        echo "        - run: |"
+        echo "            echo \"Project: \$PROJECT_NAME\""
+        echo "            echo \"Environment: $env\""
+        echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+        echo "            terraform apply -auto-approve \$PLANFILE"
         } >> atlantis.yaml
-        
-        # Add assume role step if role_arn is provided (for production and staging)
-        if [ -n "$role_arn" ]; then
-            {
-            echo "        - run: |"
-            echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            "
-            echo "            # Assume role and save output to temp file"
-            echo "            aws sts assume-role \\"
-            echo "              --role-arn \"$role_arn\" \\"
-            echo "              --role-session-name \"atlantis-${workflow_name}\" \\"
-            echo "              --duration-seconds 3600 \\"
-            echo "              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \\"
-            echo "              --output text > /tmp/assume-role-output-\$\$.txt"
-            echo "            "
-            echo "            # Read credentials from temp file"
-            echo "            read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN < /tmp/assume-role-output-\$\$.txt"
-            echo "            rm -f /tmp/assume-role-output-\$\$.txt"
-            echo "            "
-            echo "            if [ -n \"\$AWS_ACCESS_KEY_ID\" ]; then"
-            echo "              export AWS_ACCESS_KEY_ID"
-            echo "              export AWS_SECRET_ACCESS_KEY"
-            echo "              export AWS_SESSION_TOKEN"
-            echo "              echo \"Successfully assumed role for $env\""
-            echo "              echo \"Using credentials: \$AWS_ACCESS_KEY_ID\""
-            echo "            else"
-            echo "              echo \"Failed to assume role for $env\""
-            echo "              exit 1"
-            echo "            fi"
-            echo "            "
-            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-            echo "            rm -rf .terraform .terraform.lock.hcl"
-            echo "            "
-            echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
-            echo "            "
-            echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
-            } >> atlantis.yaml
-        else
-            {
-            echo "        - run: |"
-            echo "            echo \"Using existing AWS credentials for $env environment\""
-            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-            echo "            rm -rf .terraform .terraform.lock.hcl"
-            echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
-            echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
-            } >> atlantis.yaml
-        fi
-
-        echo "    apply:" >> atlantis.yaml
-        echo "      steps:" >> atlantis.yaml
-
-        # Add assume role step for apply if role_arn is provided
-        if [ -n "$role_arn" ]; then
-            {
-            echo "        - run: |"
-            echo "            echo \"Assuming role: $role_arn for $env environment\""
-            echo "            "
-            echo "            # Assume role and save output to temp file"
-            echo "            aws sts assume-role \\"
-            echo "              --role-arn \"$role_arn\" \\"
-            echo "              --role-session-name \"atlantis-${workflow_name}-apply\" \\"
-            echo "              --duration-seconds 3600 \\"
-            echo "              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \\"
-            echo "              --output text > /tmp/assume-role-output-\$\$.txt"
-            echo "            "
-            echo "            # Read credentials from temp file"
-            echo "            read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN < /tmp/assume-role-output-\$\$.txt"
-            echo "            rm -f /tmp/assume-role-output-\$\$.txt"
-            echo "            "
-            echo "            if [ -n \"\$AWS_ACCESS_KEY_ID\" ]; then"
-            echo "              export AWS_ACCESS_KEY_ID"
-            echo "              export AWS_SECRET_ACCESS_KEY"
-            echo "              export AWS_SESSION_TOKEN"
-            echo "              echo \"Successfully assumed role for $env\""
-            echo "              echo \"Using credentials: \$AWS_ACCESS_KEY_ID\""
-            echo "            else"
-            echo "              echo \"Failed to assume role for $env\""
-            echo "              exit 1"
-            echo "            fi"
-            echo "            "
-            echo "            echo \"Project: \$PROJECT_NAME\""
-            echo "            echo \"Environment: $env\""
-            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-            echo "            terraform apply -auto-approve \$PLANFILE"
-            } >> atlantis.yaml
-        else
-            {
-            echo "        - run: |"
-            echo "            echo \"Project: \$PROJECT_NAME\""
-            echo "            echo \"Environment: $env\""
-            echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-            echo "            terraform apply -auto-approve \$PLANFILE"
-            } >> atlantis.yaml
-        fi
     done < "$PROJECT_INFO_FILE"
+    
+    # Note: We're not restoring provider.tf files because we want to keep the role configuration
+    # for future runs. If you need to restore them, uncomment the following lines:
+    # while IFS='|' read -r project_dir env relative_to_root workflow_name role_arn; do
+    #     if [ -n "$role_arn" ]; then
+    #         restore_provider_tf "$project_dir"
+    #     fi
+    # done < "$PROJECT_INFO_FILE"
+    
 else
     echo "Warning: No project info found, skipping workflows"
     # Still add empty workflows section

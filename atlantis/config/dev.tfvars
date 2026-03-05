@@ -53,8 +53,9 @@ atlantis_ecs = {
   backend_task_role_name        = "atlantis-task-role"
   backend_execution_role_name   = "atlantis-execution-role"
   region                        = "us-east-1"
-  image                         = "<image-name>"
+  image                         = "569023477847.dkr.ecr.us-east-1.amazonaws.com/atlantis-aws-cli"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
+  # github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
 
     environment_variables = [
     {
@@ -63,7 +64,7 @@ atlantis_ecs = {
     },
     {
       name  = "ATLANTIS_REPO_ALLOWLIST"
-      value = "github.com/<org-name>/*"
+      value = "github.com/RameezAhmedZaka/*"
     },
     {
       name  = "ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT"
@@ -86,15 +87,15 @@ atlantis_ecs = {
 
 
 github_repositories_webhook = {
-  github_owner               = ""                                    #organization name or user name
+  github_owner               = "RameezAhmedZaka"                                    #organization name or user name
   create                     = false                                                 #remains false as we dont need wehbook manually to create
-  repositories               = [""]                                      # repositories to add webhook to
+  repositories               = ["ECS-Atlantis"]                                      # repositories to add webhook to
   insecure_ssl               = false
   content_type               = "application/json"
   events                     = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
-  github_app_id              = ""                                         #enter the app_id
-  github_app_installation_id = ""                                        #enter the installation_id
-  atlantis_secret            = "/github/app/atlantis"
+  github_app_id              = "2409368"                                         #enter the app_id
+  github_app_installation_id = "97957214"                                        #enter the installation_id
+  atlantis_secret = "/github/app/atlantis"
 } 
 
 lb = {
