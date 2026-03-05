@@ -53,7 +53,7 @@ atlantis_ecs = {
   backend_task_role_name        = "atlantis-task-role"
   backend_execution_role_name   = "atlantis-execution-role"
   region                        = "us-east-1"
-  image                         = "569023477847.dkr.ecr.us-east-1.amazonaws.com/atlantis-aws-cli"
+  image                         = "ghcr.io/runatlantis/atlantis:v0.35.0"
   repo_config_file              = "modules/ecs/server-atlantis.yaml"
   # github_app_secret_arn         = "arn:aws:secretsmanager:us-east-1:569023477847:secret:/github/app/atlantis-mjAgxX"
 
