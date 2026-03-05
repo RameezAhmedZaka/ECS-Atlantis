@@ -31,9 +31,6 @@ is_terraform_project() {
     return 0
 }
 
-
-
-
 # Function to find all Terraform projects recursively (excluding modules)
 find_terraform_projects() {
     local search_path="$1"
@@ -147,11 +144,11 @@ get_role_arn() {
     case "$env" in
         production|prod)
             # Production role
-            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-prod"
+            echo "arn:aws:iam::<ACCOUNT_ID>:role/atlantis-cross-account-role-prod"
             ;;
         staging|stage|stg)
             # Staging role
-            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
+            echo "arn:aws:iam::<ACCOUNT_ID>:role/atlantis-cross-account-role-stage"
             ;;
         *)
             # Default role - empty for other environments
@@ -167,43 +164,100 @@ update_providers_tf() {
     local role_arn="$3"
     
     local providers_file="$project_dir/providerss.tf"
-
-    # Check if providerss.tf exists
+    
+    # Check if providerss.tf exists, if not try providers.tf
     if [ ! -f "$providers_file" ]; then
-        echo "    Warning: providerss.tf not found in $project_dir"
-        return 1
+        providers_file="$project_dir/providers.tf"
+    fi
+    
+    # Check if providers file exists
+    if [ ! -f "$providers_file" ]; then
+        echo "    Warning: No providers configuration file found in $project_dir"
+        echo "    Creating providerss.tf with role configuration..."
+        
+        # Create providerss.tf with the role configuration
+        cat > "$providers_file" <<EOF
+terraform {
+  required_version = ">= 1.0"
+  required_providerss {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+providers "aws" {
+  region = var.aws_region
+  
+  assume_role {
+    role_arn = "$role_arn"
+  }
+}
+EOF
+        echo "    Created $providers_file with role: $role_arn"
+        return 0
     fi
     
     # Create a backup
     cp "$providers_file" "${providers_file}.backup"
     
-    # Check if providers.tf already has assume_role configuration
-    if grep -q "assume_role" "$providers_file"; then
-        # Update existing assume_role block
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            sed -i '' "s|role_arn *= *\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
+    # Check if providers "aws" block exists
+    if grep -q 'providers[[:space:]]*"aws"[[:space:]]*{' "$providers_file"; then
+        # Check if assume_role block exists
+        if grep -q 'assume_role[[:space:]]*{' "$providers_file"; then
+            # Update existing assume_role block
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                # macOS
+                sed -i '' "s|role_arn[[:space:]]*=[[:space:]]*\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
+            else
+                # Linux
+                sed -i "s|role_arn[[:space:]]*=[[:space:]]*\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
+            fi
+            echo "    Updated existing assume_role in providers block with role: $role_arn"
         else
-            # Linux
-            sed -i "s|role_arn *= *\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
+            # Add assume_role block inside existing providers block
+            local temp_file=$(mktemp)
+            awk -v role="$role_arn" '
+            /providers[[:space:]]*"aws"[[:space:]]*{/ {
+                print $0
+                print "  assume_role {"
+                print "    role_arn = \"" role "\""
+                print "  }"
+                in_providers = 1
+                next
+            }
+            /}/ {
+                if (in_providers) {
+                    print $0
+                    in_providers = 0
+                    next
+                }
+            }
+            !in_providers { print }
+            ' "$providers_file" > "$temp_file"
+            mv "$temp_file" "$providers_file"
+            echo "    Added assume_role block to providers with role: $role_arn"
         fi
     else
-        # Add assume_role block after the providers "aws" block
-        local temp_file=$(mktemp)
-        awk -v role="$role_arn" '
-        /providers "aws" {/ {
-            print $0
-            print "  assume_role {"
-            print "    role_arn = \"" role "\""
-            print "  }"
-            next
-        }
-        { print }
-        ' "$providers_file" > "$temp_file"
-        mv "$temp_file" "$providers_file"
+        # No providers block found, append one
+        cat >> "$providers_file" <<EOF
+
+providers "aws" {
+  region = var.aws_region
+  
+  assume_role {
+    role_arn = "$role_arn"
+  }
+}
+EOF
+        echo "    Appended providers block with role: $role_arn"
     fi
     
-    echo "    Updated providerss.tf with role: $role_arn"
+    # Verify the providers configuration
+    echo "    providers configuration after update:"
+    grep -A5 -B2 "providers" "$providers_file" | sed 's/^/      /' || true
+    
     return 0
 }
 
@@ -211,11 +265,16 @@ update_providers_tf() {
 restore_providers_tf() {
     local project_dir="$1"
     local providers_file="$project_dir/providerss.tf"
+    
+    if [ ! -f "$providers_file" ]; then
+        providers_file="$project_dir/providers.tf"
+    fi
+    
     local backup_file="${providers_file}.backup"
     
     if [ -f "$backup_file" ]; then
         mv "$backup_file" "$providers_file"
-        echo "    Restored providers.tf from backup"
+        echo "    Restored $providers_file from backup"
     fi
 }
 
@@ -405,8 +464,9 @@ while IFS= read -r project_dir; do
 
         # Update providers.tf with role ARN if needed
         if [ -n "$role_arn" ]; then
+            echo "  Updating providers for $env in $project_dir"
             if update_providers_tf "$project_dir" "$env" "$role_arn"; then
-                echo "  Updated providers.tf for $env environment in $project_dir"
+                echo "  Successfully updated providers for $env environment in $project_dir"
             fi
         fi
 
@@ -468,14 +528,30 @@ EOF
             relative_to_root="../.."  # Default fallback
         fi
 
-        # Write workflow configuration - NOTE: No assume-role steps needed now!
+        # Write workflow configuration - With debugging
         {
         echo "  ${workflow_name}:"
         echo "    plan:"
         echo "      steps:"
         echo "        - run: |"
         echo "            echo \"Using providers-configured AWS role for $env environment\""
+        echo "            echo \"Current directory: \$(pwd)\""
+        echo "            echo \"Project directory: \$PROJECT_DIR\""
+        echo "            echo \"Changing to: \$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
         echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
+        echo "            echo \"Now in: \$(pwd)\""
+        echo "            echo \"Checking providers configuration:\""
+        echo "            if [ -f providerss.tf ]; then"
+        echo "              echo \"providerss.tf exists:\""
+        echo "              grep -A10 \"providers\" providerss.tf || true"
+        echo "            elif [ -f providers.tf ]; then"
+        echo "              echo \"providers.tf exists:\""
+        echo "              grep -A10 \"providers\" providers.tf || true"
+        echo "            else"
+        echo "              echo \"No providers file found!\""
+        echo "            fi"
+        echo "            echo \"Current AWS identity:\""
+        echo "            aws sts get-caller-identity || echo \"Failed to get identity\""
         echo "            rm -rf .terraform .terraform.lock.hcl"
         echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
         echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
@@ -488,14 +564,6 @@ EOF
         echo "            terraform apply -auto-approve \$PLANFILE"
         } >> atlantis.yaml
     done < "$PROJECT_INFO_FILE"
-    
-    # Note: We're not restoring providers.tf files because we want to keep the role configuration
-    # for future runs. If you need to restore them, uncomment the following lines:
-    # while IFS='|' read -r project_dir env relative_to_root workflow_name role_arn; do
-    #     if [ -n "$role_arn" ]; then
-    #         restore_providers_tf "$project_dir"
-    #     fi
-    # done < "$PROJECT_INFO_FILE"
     
 else
     echo "Warning: No project info found, skipping workflows"
