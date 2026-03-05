@@ -144,11 +144,11 @@ get_role_arn() {
     case "$env" in
         production|prod)
             # Production role
-            echo "arn:aws:iam::<ACCOUNT_ID>:role/atlantis-cross-account-role-prod"
+            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-prod"
             ;;
         staging|stage|stg)
             # Staging role
-            echo "arn:aws:iam::<ACCOUNT_ID>:role/atlantis-cross-account-role-stage"
+            echo "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
             ;;
         *)
             # Default role - empty for other environments
