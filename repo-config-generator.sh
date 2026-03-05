@@ -482,31 +482,16 @@ EOF
             relative_to_root="../.."  # Default fallback
         fi
 
-        # Write workflow configuration - With debugging
+        # Write workflow configuration
         {
         echo "  ${workflow_name}:"
         echo "    plan:"
         echo "      steps:"
         echo "        - run: |"
         echo "            echo \"Using provider-configured AWS role for $env environment\""
-        echo "            echo \"Current directory: \$(pwd)\""
-        echo "            echo \"Project directory: \$PROJECT_DIR\""
-        echo "            echo \"Changing to: \$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
         echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
-        echo "            echo \"Now in: \$(pwd)\""
-        echo "            echo \"Checking provider configuration:\""
-        echo "            if [ -f provider.tf ]; then"
-        echo "              echo \"provider.tf exists:\""
-        echo "              cat provider.tf"
-        echo "            else"
-        echo "              echo \"No provider.tf file found!\""
-        echo "            fi"
-        echo "            echo \"Current AWS identity before assume_role:\""
-        echo "            aws sts get-caller-identity || echo \"Failed to get identity\""
         echo "            rm -rf .terraform .terraform.lock.hcl"
         echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
-        echo "            echo \"AWS identity after terraform init (should be assumed role):\""
-        echo "            aws sts get-caller-identity || echo \"Failed to get identity\""
         echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
         echo "    apply:"
         echo "      steps:"
