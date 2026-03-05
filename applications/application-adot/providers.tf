@@ -6,9 +6,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      environment = var.base.environment
-      project     = var.base.project
-      deployment  = "deployed with terraform"
+      deployment                       = "deployed with terraform"
       "cost-allocation:ApplicationId"  = "apollo"
       "cost-allocation:ComponentId"    = "sourcing"
       "cost-allocation:BusinessUnitId" = "procurement"
@@ -30,9 +28,7 @@ provider "aws" {
   default_tags {
 
     tags = {
-      environment = var.base.environment
-      project     = var.base.project
-      deployment  = "deployed with terraform"
+      deployment                       = "deployed with terraform"
       "cost-allocation:ApplicationId"  = "apollo"
       "cost-allocation:ComponentId"    = "apollo"
       "cost-allocation:BusinessUnitId" = "procurement"
