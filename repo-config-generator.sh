@@ -157,29 +157,27 @@ get_role_arn() {
     esac
 }
 
-# Function to update providers.tf with role ARN
-update_providers_tf() {
+# Function to update provider.tf with role ARN
+update_provider_tf() {
     local project_dir="$1"
     local env="$2"
     local role_arn="$3"
     
-    local providers_file="$project_dir/providerss.tf"
+    local provider_file="$project_dir/provider.tf"
     
-    # Check if providerss.tf exists, if not try providers.tf
-    if [ ! -f "$providers_file" ]; then
-        providers_file="$project_dir/providers.tf"
+    # Create or update provider.tf with correct configuration
+    echo "    Configuring provider.tf with role: $role_arn"
+    
+    # Create a backup if file exists
+    if [ -f "$provider_file" ]; then
+        cp "$provider_file" "${provider_file}.backup"
     fi
     
-    # Check if providers file exists
-    if [ ! -f "$providers_file" ]; then
-        echo "    Warning: No providers configuration file found in $project_dir"
-        echo "    Creating providerss.tf with role configuration..."
-        
-        # Create providerss.tf with the role configuration
-        cat > "$providers_file" <<EOF
+    # Write the correct provider configuration
+    cat > "$provider_file" <<EOF
 terraform {
   required_version = ">= 1.0"
-  required_providerss {
+  required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
@@ -187,94 +185,35 @@ terraform {
   }
 }
 
-providers "aws" {
+provider "aws" {
   region = var.aws_region
   
   assume_role {
     role_arn = "$role_arn"
   }
 }
-EOF
-        echo "    Created $providers_file with role: $role_arn"
-        return 0
-    fi
-    
-    # Create a backup
-    cp "$providers_file" "${providers_file}.backup"
-    
-    # Check if providers "aws" block exists
-    if grep -q 'providers[[:space:]]*"aws"[[:space:]]*{' "$providers_file"; then
-        # Check if assume_role block exists
-        if grep -q 'assume_role[[:space:]]*{' "$providers_file"; then
-            # Update existing assume_role block
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                # macOS
-                sed -i '' "s|role_arn[[:space:]]*=[[:space:]]*\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
-            else
-                # Linux
-                sed -i "s|role_arn[[:space:]]*=[[:space:]]*\".*\"|role_arn = \"$role_arn\"|g" "$providers_file"
-            fi
-            echo "    Updated existing assume_role in providers block with role: $role_arn"
-        else
-            # Add assume_role block inside existing providers block
-            local temp_file=$(mktemp)
-            awk -v role="$role_arn" '
-            /providers[[:space:]]*"aws"[[:space:]]*{/ {
-                print $0
-                print "  assume_role {"
-                print "    role_arn = \"" role "\""
-                print "  }"
-                in_providers = 1
-                next
-            }
-            /}/ {
-                if (in_providers) {
-                    print $0
-                    in_providers = 0
-                    next
-                }
-            }
-            !in_providers { print }
-            ' "$providers_file" > "$temp_file"
-            mv "$temp_file" "$providers_file"
-            echo "    Added assume_role block to providers with role: $role_arn"
-        fi
-    else
-        # No providers block found, append one
-        cat >> "$providers_file" <<EOF
 
-providers "aws" {
-  region = var.aws_region
-  
-  assume_role {
-    role_arn = "$role_arn"
-  }
+# Variables needed for the provider
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
 }
 EOF
-        echo "    Appended providers block with role: $role_arn"
-    fi
     
-    # Verify the providers configuration
-    echo "    providers configuration after update:"
-    grep -A5 -B2 "providers" "$providers_file" | sed 's/^/      /' || true
-    
+    echo "    Updated $provider_file with role: $role_arn"
     return 0
 }
 
-# Function to restore providers.tf from backup
-restore_providers_tf() {
+# Function to restore provider.tf from backup
+restore_provider_tf() {
     local project_dir="$1"
-    local providers_file="$project_dir/providerss.tf"
-    
-    if [ ! -f "$providers_file" ]; then
-        providers_file="$project_dir/providers.tf"
-    fi
-    
-    local backup_file="${providers_file}.backup"
+    local provider_file="$project_dir/provider.tf"
+    local backup_file="${provider_file}.backup"
     
     if [ -f "$backup_file" ]; then
-        mv "$backup_file" "$providers_file"
-        echo "    Restored $providers_file from backup"
+        mv "$backup_file" "$provider_file"
+        echo "    Restored $provider_file from backup"
     fi
 }
 
@@ -375,7 +314,7 @@ while IFS= read -r project_dir; do
             echo "${project_dir}|${env}|${backend_config}|${role_arn}" >> "$BACKEND_FILE"
             echo "    Found backend config for $env: $backend_config"
             if [ -n "$role_arn" ]; then
-                echo "      Will configure role: $role_arn in providers.tf"
+                echo "      Will configure role: $role_arn in provider.tf"
             fi
         else
             echo "    Warning: No backend config found for $env"
@@ -462,11 +401,11 @@ while IFS= read -r project_dir; do
             continue
         fi
 
-        # Update providers.tf with role ARN if needed
+        # Update provider.tf with role ARN if needed
         if [ -n "$role_arn" ]; then
-            echo "  Updating providers for $env in $project_dir"
-            if update_providers_tf "$project_dir" "$env" "$role_arn"; then
-                echo "  Successfully updated providers for $env environment in $project_dir"
+            echo "  Updating provider for $env in $project_dir"
+            if update_provider_tf "$project_dir" "$env" "$role_arn"; then
+                echo "  Successfully updated provider for $env environment in $project_dir"
             fi
         fi
 
@@ -534,26 +473,25 @@ EOF
         echo "    plan:"
         echo "      steps:"
         echo "        - run: |"
-        echo "            echo \"Using providers-configured AWS role for $env environment\""
+        echo "            echo \"Using provider-configured AWS role for $env environment\""
         echo "            echo \"Current directory: \$(pwd)\""
         echo "            echo \"Project directory: \$PROJECT_DIR\""
         echo "            echo \"Changing to: \$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
         echo "            cd \"\$(dirname \"\$PROJECT_DIR\")/$relative_to_root\""
         echo "            echo \"Now in: \$(pwd)\""
-        echo "            echo \"Checking providers configuration:\""
-        echo "            if [ -f providerss.tf ]; then"
-        echo "              echo \"providerss.tf exists:\""
-        echo "              grep -A10 \"providers\" providerss.tf || true"
-        echo "            elif [ -f providers.tf ]; then"
-        echo "              echo \"providers.tf exists:\""
-        echo "              grep -A10 \"providers\" providers.tf || true"
+        echo "            echo \"Checking provider configuration:\""
+        echo "            if [ -f provider.tf ]; then"
+        echo "              echo \"provider.tf exists:\""
+        echo "              cat provider.tf"
         echo "            else"
-        echo "              echo \"No providers file found!\""
+        echo "              echo \"No provider.tf file found!\""
         echo "            fi"
-        echo "            echo \"Current AWS identity:\""
+        echo "            echo \"Current AWS identity before assume_role:\""
         echo "            aws sts get-caller-identity || echo \"Failed to get identity\""
         echo "            rm -rf .terraform .terraform.lock.hcl"
         echo "            terraform init -backend-config=\"env/$env/$backend_config_file\" -reconfigure -lock=false -input=false"
+        echo "            echo \"AWS identity after terraform init (should be assumed role):\""
+        echo "            aws sts get-caller-identity || echo \"Failed to get identity\""
         echo "            terraform plan -compact-warnings -var-file=\"config/$tfvars_config_file\" -lock-timeout=10m -out=\$PLANFILE"
         echo "    apply:"
         echo "      steps:"
