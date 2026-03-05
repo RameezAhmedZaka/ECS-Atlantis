@@ -1,4 +1,7 @@
 provider "aws" {
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
   region  = "eu-west-1"
 
   default_tags {
@@ -18,6 +21,9 @@ provider "aws" {
 }
 
 provider "aws" {
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
   region  = "eu-central-1"
   alias   = "replica"
 
