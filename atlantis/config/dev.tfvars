@@ -11,7 +11,7 @@ vpc = {
   public_subnets       = ["10.75.0.0/20", "10.75.16.0/20", "10.75.32.0/20"]
   private_subnets      = ["10.75.112.0/20", "10.75.128.0/20"]
   enable_nat_gateway   = true
-  enable_dns_hostnames = true
+  enable_dns_hostnames = true    
   enable_dns_support   = true
 }
    
