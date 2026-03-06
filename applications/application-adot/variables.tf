@@ -28,3 +28,9 @@ variable "private_subnet_cidrs" {
 variable "availability_zones" {
   type = list(string)
 }
+
+variable "assume_role_arn" {
+  description = "Role for cross account deployment"
+  type        = string
+  default     = null
+}
