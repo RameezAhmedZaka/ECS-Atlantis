@@ -1,4 +1,5 @@
 module "vpc" {
+  count  = contains(["stage", "production"], var.base.environment) ? 0 : 1
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
 
@@ -14,25 +15,27 @@ module "vpc" {
 }
 
 module "lb" {
+  count  = contains(["stage", "production"], var.base.environment) ? 0 : 1
   source             = "./modules/lb"
   lb_name            = var.lb.lb_name
   internal           = var.lb.internal
   load_balancer_type = var.lb.load_balancer_type
-  public_subnets     = module.vpc.public_subnets
+  public_subnets     = try(module.vpc[0].private_subnets, [])
   target_group_name  = var.lb.target_group_name
   port               = var.lb.port
   protocol           = var.lb.protocol
-  vpc_id             = module.vpc.vpc_id
+  vpc_id             = try(module.vpc[0].vpc_id, null)
   target_type        = var.lb.target_type
   listener_port      = var.lb.listener_port
   listener_protocol  = var.lb.listener_protocol
   lb_sg_name         = var.lb.lb_sg_name
 }
 module "apigateway" {
+  count  = contains(["stage", "production"], var.base.environment) ? 0 : 1
   source                   = "./modules/apigateway"
   vpc_link                 = var.atlantis_api_gateway.vpc_link
-  vpc_id                   = module.vpc.vpc_id
-  private_subnets          = module.vpc.private_subnets
+  vpc_id                   = try(module.vpc[0].vpc_id, null)
+  private_subnets          = try(module.vpc[0].private_subnets, [])
   integration_type         = var.atlantis_api_gateway.integration_type
   integration_method       = var.atlantis_api_gateway.integration_method
   connection_type          = var.atlantis_api_gateway.connection_type
@@ -46,11 +49,12 @@ module "apigateway" {
   to_port                  = var.atlantis_api_gateway.to_port
   protocol                 = var.atlantis_api_gateway.protocol
   cidr_blocks              = var.atlantis_api_gateway.cidr_blocks
-  lb_listener_arn          = module.lb.lb_listener_arn
+  lb_listener_arn          = try(module.lb[0].lb_listener_arn, null)
   api_name                 = var.atlantis_api_gateway.api_name
 }
 
 module "github_webhook" {
+  enabled                    = !contains(["stage","production"], var.base.environment)
   source                     = "./modules/github-repository-webhook"
   
   github_owner               = var.github_repositories_webhook.github_owner
@@ -58,14 +62,15 @@ module "github_webhook" {
   github_app_installation_id = var.github_repositories_webhook.github_app_installation_id
   create                     = var.github_repositories_webhook.create
   repositories               = var.github_repositories_webhook.repositories
-  webhook_url                = module.apigateway.atlantis_url_webhook
+  webhook_url                = length(data.aws_secretsmanager_secret_version.github_app) > 0 ? module.apigateway[0].atlantis_url_webhook : ""
   content_type               = var.github_repositories_webhook.content_type
   insecure_ssl               = var.github_repositories_webhook.insecure_ssl
   events                     = var.github_repositories_webhook.events
-  atlantis_secret            = var.github_repositories_webhook.atlantis_secret
+  atlantis_secret            = contains(["stage","production"], var.base.environment) ? null : var.github_repositories_webhook.atlantis_secret
 }
 
 module "backend" {
+  count = contains(["stage", "production"], var.base.environment) ? 0 : 1
   source = "./modules/ecs"
 
   cluster_name                  = var.atlantis_ecs.cluster_name
@@ -76,11 +81,11 @@ module "backend" {
   ecs_service_name              = var.atlantis_ecs.ecs_service_name
   desired_count_service         = var.atlantis_ecs.desired_count_service
   launch_type                   = var.atlantis_ecs.launch_type
-  private_subnets               = module.vpc.private_subnets
+  private_subnets               = try(module.vpc[0].private_subnets, [])
   assign_public_ip              = var.atlantis_ecs.assign_public_ip
   container_name                = var.atlantis_ecs.container_name
   container_port                = var.atlantis_ecs.container_port
-  backend_target_group_arn      = module.lb.target_group_arn
+  backend_target_group_arn      = try(module.lb[0].target_group_arn, null)
   backend_task_family           = var.atlantis_ecs.backend_task_family
   network_mode                  = var.atlantis_ecs.network_mode
   requires_compatibilities      = var.atlantis_ecs.requires_compatibilities
@@ -101,7 +106,7 @@ module "backend" {
   log_retention                 = var.atlantis_ecs.log_retention
   backend_service_sg            = var.atlantis_ecs.backend_service_sg
   backend_sg_description        = var.atlantis_ecs.backend_sg_description
-  vpc_id                        = module.vpc.vpc_id
+  vpc_id                        = try(module.vpc[0].vpc_id, null)
   protocol                      = var.atlantis_ecs.protocol
   from_port                     = var.atlantis_ecs.from_port
   to_port                       = var.atlantis_ecs.to_port
@@ -111,8 +116,29 @@ module "backend" {
   image                         = var.atlantis_ecs.image
   repo_config_file              = var.atlantis_ecs.repo_config_file
   environment_variables         = var.atlantis_ecs.environment_variables
-  atlantis_url                  = module.apigateway.atlantis_url_gui
-  atlantis_secret               = data.aws_secretsmanager_secret_version.github_app.arn
+  atlantis_url                  = try(module.apigateway[0].atlantis_url_gui, null)
+  atlantis_secret               = var.atlantis_secret != null ? data.aws_secretsmanager_secret_version.github_app[0].arn : null
   gh_app_id                     = var.github_repositories_webhook.github_app_id
   repo_config_json              = local.repo_config_json
+}
+
+module "role" {
+  count                   = contains(["production", "stage"], var.base.environment) ? 1 : 0
+  source                  = "./modules/role"
+  environment             = var.base.environment
+  prod_account_id         = var.base.prod_account_id
+  stage_account_id        = var.base.stage_account_id
+  svc_account_id          = var.base.svc_account_id
+  svc_role_name           = var.base.svc_role_name
+  terraform_role_name     = var.role.terraform_role_name
+}
+
+module "policy" {
+  count               = contains(["production", "stage"], var.base.environment) ? 1 : 0
+  source              = "./modules/policy"
+  policy_name         = var.policy.policy_name
+  path                = var.policy.path
+  description         = var.policy.description
+  terraform_role_name = module.role[0].terraform_role.name
+  environment         = var.base.environment
 }

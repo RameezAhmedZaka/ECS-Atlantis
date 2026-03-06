@@ -1,9 +1,7 @@
-# variable "github_app_key_base64" {
-#   type = string
-# }
-# variable "github_app_pem_file" {
-#   type = string
-# }
+variable "enabled" {
+  type = bool
+  default = true
+}
 variable "github_owner" {
   type = string
 }

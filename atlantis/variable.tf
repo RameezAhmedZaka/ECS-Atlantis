@@ -1,116 +1,146 @@
 variable "atlantis_secret" {
-  type = string
-}
-
-variable "aws" {
-  type = object({
-    region  = string
-    profile = string
-  })
+  type    = string
+  default = ""
 }
 
 variable "vpc" {
   type = object({
-    vpc_name             = string
-    cidr_block           = string
-    public_subnets       = list(string)
-    private_subnets      = list(string)
-    enable_nat_gateway   = bool
-    enable_dns_hostnames = bool
-    enable_dns_support   = bool
+    vpc_name             = optional(string)
+    cidr_block           = optional(string)
+    public_subnets       = optional(list(string))
+    private_subnets      = optional(list(string))
+    enable_nat_gateway   = optional(bool)
+    enable_dns_hostnames = optional(bool)
+    enable_dns_support   = optional(bool)
   })
+  default = {}
 }
+
 variable "atlantis_ecs" {
   type = object({
-    cluster_name                  = string
-    capacity_providers            = list(string)
-    base                          = number
-    weight                        = number
-    capacity_provider             = string
-    ecs_service_name              = string
-    desired_count_service         = number
-    launch_type                   = string
-    assign_public_ip              = bool
-    container_name                = string
-    container_port                = number
-    backend_task_family           = string
-    network_mode                  = string
-    requires_compatibilities      = list(string)
-    cpu                           = number
-    memory                        = number
-    operating_system_family       = string
-    cpu_architecture              = string
-    container_cpu                 = number
-    container_memory              = number
-    container_essential           = bool
-    command                       = list(string)
-    containerPort                 = number
-    hostPort                      = number
-    log_driver                    = string
-    log_stream_prefix             = string
-    backend_cloudwatch_group_name = string
-    log_retention                 = number
-    backend_service_sg            = string
-    backend_sg_description        = string
-    protocol                      = string
-    from_port                     = number
-    to_port                       = number
-    cidr_blocks                   = list(string)
-    backend_task_role_name        = string
-    backend_execution_role_name   = string
-    region                        = string
-    image                         = string
-    # github_app_secret_arn         = string
-    repo_config_file              = string
-    environment_variables         = list(object({
-      name  = string
-      value = string
-    }))
+    cluster_name                  = optional(string)
+    capacity_providers            = optional(list(string))
+    base                          = optional(number)
+    weight                        = optional(number)
+    capacity_provider             = optional(string)
+    ecs_service_name              = optional(string)
+    desired_count_service         = optional(number)
+    launch_type                   = optional(string)
+    assign_public_ip              = optional(bool)
+    container_name                = optional(string)
+    container_port                = optional(number)
+    backend_task_family           = optional(string)
+    network_mode                  = optional(string)
+    requires_compatibilities      = optional(list(string))
+    cpu                           = optional(number)
+    memory                        = optional(number)
+    operating_system_family       = optional(string)
+    cpu_architecture              = optional(string)
+    container_cpu                 = optional(number)
+    container_memory              = optional(number)
+    container_essential           = optional(bool)
+    command                       = optional(list(string))
+    containerPort                 = optional(number)
+    hostPort                      = optional(number)
+    log_driver                    = optional(string)
+    log_stream_prefix             = optional(string)
+    backend_cloudwatch_group_name = optional(string)
+    log_retention                 = optional(number)
+    backend_service_sg            = optional(string)
+    backend_sg_description        = optional(string)
+    protocol                      = optional(string)
+    from_port                     = optional(number)
+    to_port                       = optional(number)
+    cidr_blocks                   = optional(list(string))
+    backend_task_role_name        = optional(string)
+    backend_execution_role_name   = optional(string)
+    region                        = optional(string)
+    image                         = optional(string)
+    repo_config_file              = optional(string)
+    environment_variables         = optional(list(object({
+      name  = optional(string)
+      value = optional(string)
+    })))
   })
+  default = {}
 }
 variable "github_repositories_webhook" {
   type = object({
-    github_owner               = string
-    github_app_id              = string
-    github_app_installation_id = string
-    create                     = bool
-    repositories               = list(string)
-    insecure_ssl               = bool
-    content_type               = string
-    events                     = list(string)
-    atlantis_secret            = string
+    github_owner               = optional(string)
+    github_app_id              = optional(string)
+    github_app_installation_id = optional(string)
+    create                     = optional(bool)
+    repositories               = optional(list(string))
+    insecure_ssl               = optional(bool)
+    content_type               = optional(string)
+    events                     = optional(list(string))
+    atlantis_secret            = optional(string)
+    enabled                    = optional(bool)
   })
+  default = {}  # now allowed
 }
 variable "lb" {
   type = object({
-    lb_name            = string
-    internal           = bool
-    load_balancer_type = string
-    target_group_name  = string
-    port               = number
-    protocol           = string
-    target_type        = string
-    listener_port      = number
-    listener_protocol  = string
-    lb_sg_name         = string
+    lb_name            = optional(string)
+    internal           = optional(bool)
+    load_balancer_type = optional(string)
+    target_group_name  = optional(string)
+    port               = optional(number)
+    protocol           = optional(string)
+    target_type        = optional(string)
+    listener_port      = optional(number)
+    listener_protocol  = optional(string)
+    lb_sg_name         = optional(string)
   })
+  default = {}
 }
+
 variable "atlantis_api_gateway" {
   type = object({
-    vpc_link                 = string
-    integration_type         = string
-    integration_method       = string
-    connection_type          = string
-    payload_format_version   = string
-    request_parameters       = map(string)
-    atlantis_gui_route_key   = string
-    atlantis_proxy_route_key = string
-    atlantis_sg_name         = string
-    atlantis_sg_description  = string
-    from_port                = number
-    to_port                  = number
-    protocol                 = string
-    cidr_blocks              = list(string)
-    api_name                 = string
+    vpc_link                 = optional(string)
+    integration_type         = optional(string)
+    integration_method       = optional(string)
+    connection_type          = optional(string)
+    payload_format_version   = optional(string)
+    request_parameters       = optional(map(string))
+    atlantis_gui_route_key   = optional(string)
+    atlantis_proxy_route_key = optional(string)
+    atlantis_sg_name         = optional(string)
+    atlantis_sg_description  = optional(string)
+    from_port                = optional(number)
+    to_port                  = optional(number)
+    protocol                 = optional(string)
+    cidr_blocks              = optional(list(string))
+    api_name                 = optional(string)
   })
+  default = {}
+}
+
+variable "base" {
+  type = object({
+    project          = optional(string)
+    environment      = optional(string)
+    owner_team       = optional(string)
+    prod_account_id  = optional(string)
+    stage_account_id = optional(string)
+    svc_account_id   = optional(string)
+    svc_role_name    = optional(string)
+  })
+  default = {}
+}
+
+variable "role" {
+  type = object({
+    terraform_role_name = optional(string)
+  })
+  default = {}
+}
+
+variable "policy" {
+  type = object({
+    policy_name = optional(string)
+    path        = optional(string)
+    description = optional(string)
+  })
+  default = {}
 }

@@ -1,8 +1,8 @@
 atlantis_secret = "/github/app/atlantis"
 
-aws = {
-  region  = "us-east-1"
-  profile = "admin"
+base = {
+  project          = "atlantis"
+  environment      = "shared-services"
 }
 
 vpc = {
