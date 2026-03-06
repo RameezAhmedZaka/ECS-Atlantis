@@ -144,11 +144,11 @@ get_role_arn() {
     case "$env" in
         production|prod)
             # Production role
-            echo "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-production"
+            echo "arn:aws:iam::569023477847:role/terraform-managed-atlantis-role-production"
             ;;
         staging|stage|stg)
             # Staging role
-            echo "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-stage"
+            echo "arn:aws:iam::569023477847:role/terraform-managed-atlantis-role-stage"
             ;;
         *)
             # Default role - empty for other environments
