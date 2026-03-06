@@ -240,8 +240,8 @@ data "aws_iam_policy_document" "assume_stage_prod_roles" {
     ]
 
     resources = [
-      "arn:aws:iam::569023477847:role/atlantis-cross-account-role-prod",
-      "arn:aws:iam::569023477847:role/atlantis-cross-account-role-stage"
+      "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-production",
+      "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-stage"
     ]
   }
 }
@@ -265,10 +265,7 @@ data "aws_iam_policy_document" "s3_access_doc" {
       "s3:DeleteObject",
       "s3:ListBucket"
     ]
-    resources = [
-      "arn:aws:s3:::tf-state-prod517",        # Bucket
-      "arn:aws:s3:::tf-state-prod517/*"       # Objects
-    ]
+    resources = ["*"]
   }
 }
 

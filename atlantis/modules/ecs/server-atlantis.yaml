@@ -1,6 +1,6 @@
 
  repos:
-  - id: github.com/RameezAhmedZaka/ECS-Atlantis
+  - id: github.com/<ORG-NAME>/<REPO_NAME>
     allow_custom_workflows: true
     allowed_overrides:
       - apply_requirements
