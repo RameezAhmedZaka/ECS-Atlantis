@@ -240,8 +240,8 @@ data "aws_iam_policy_document" "assume_stage_prod_roles" {
     ]
 
     resources = [
-      "arn:aws:iam::569023477847:role/terraform-managed-atlantis-role-production",
-      "arn:aws:iam::569023477847:role/terraform-managed-atlantis-role-stage"
+      "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-production",
+      "arn:aws:iam::<ACCOUNT-ID>:role/terraform-managed-atlantis-role-stage"
     ]
   }
 }
