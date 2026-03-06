@@ -14,7 +14,7 @@ vpc = {
   enable_dns_hostnames = true
   enable_dns_support   = true
 }
-
+   
 atlantis_ecs = {
   cluster_name                  = "atlantis"
   capacity_providers            = ["FARGATE"]
